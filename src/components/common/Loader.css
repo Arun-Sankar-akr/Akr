@@ -1,0 +1,61 @@
+
+.loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: rgba(251, 248, 242, 0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+    animation: loader-fade-in 0.2s ease;
+}
+
+.loader-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loader-gif {
+    width: 140px;
+    height:  140px;
+
+    object-fit: contain;
+
+    border-radius: 50%;
+
+    filter: drop-shadow(0 8px 24px rgba(20, 14, 4, 0.15));
+}
+
+@keyframes loader-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loader-overlay {
+        animation: none;
+    }
+}
+
+/* =========================================================
+   SMALL SCREENS
+   ========================================================= */
+
+@media (max-width: 420px) {
+    .loader-gif {
+        width: clamp(56px, 22vw, 110px);
+        height: clamp(56px, 22vw, 110px);
+    }
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Loader from "../components/common/Loader";
 
 export default function AttendantRoute() {
   const {
@@ -23,7 +24,7 @@ export default function AttendantRoute() {
     return (
       <div className="route-loading">
         <div className="route-loader" />
-        <p>Loading attendant workspace...</p>
+        <p><Loader/></p>
       </div>
     );
   }

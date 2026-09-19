@@ -72,7 +72,7 @@
 
     top: 16px;
     flex: 1;
-
+    margin-left: 30px;
     border-radius: 15px;
 
     box-shadow: 0px 0px 12px 10px #eff0f1;
@@ -231,6 +231,9 @@
 
 .app-shell button {
     -webkit-tap-highlight-color: transparent;
+    margin-left: -10px;
+    margin-top: 5px;
+    gap: 20px;
 }
 
 
@@ -304,7 +307,13 @@
         padding-bottom: 20px;
     }
 
+    .main{
+        margin-left: -00px;
+    }
+
     .app-shell {
+        width: 100%;
+        left: 0%;
         background:
             radial-gradient(circle at 50% 0%,
                 rgba(105, 86, 232, .055),

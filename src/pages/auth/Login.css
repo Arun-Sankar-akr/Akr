@@ -1062,13 +1062,14 @@
 @media (max-width: 520px) {
 
     .login-page {
-        min-height: 100svh;
-
+        position: absolute;
+        height: 100px;
         padding: 0;
-
-        place-items: stretch;
     }
 
+    .login-kicker{
+        visibility: hidden;
+    }
 
     .login-shell {
         width: 100%;
@@ -1089,7 +1090,7 @@
     .login-panel {
         justify-content: center;
 
-        padding: 28px 22px;
+        padding: 48px 42px;
     }
 
 

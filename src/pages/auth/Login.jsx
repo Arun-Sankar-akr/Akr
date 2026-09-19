@@ -280,8 +280,6 @@ export default function Login() {
 
                 <div className="login-panel">
 
-                    {/* MOBILE BRAND */}
-
                     <div className="mobile-brand">
 
                         <div className="showcase-logo-icon">
@@ -343,6 +341,7 @@ export default function Login() {
 
                                 <input
                                     id="login-email"
+                                    autoFocus
                                     value={email}
                                     onChange={(e) =>
                                         setEmail(
@@ -427,7 +426,8 @@ export default function Login() {
                         {/* ERROR */}
 
                         {error && (
-                            <div className="login-error">
+                            <div className="login-error" role="alert" aria-live="assertive">
+
 
                                 <AlertCircle size={17} />
 
@@ -451,11 +451,10 @@ export default function Login() {
 
                         <button
                             type="submit"
-                            className={`login-submit ${
-                                busy
+                            className={`login-submit ${busy
                                     ? "is-loading"
                                     : ""
-                            }`}
+                                }`}
                             disabled={busy}
                         >
 
@@ -489,31 +488,11 @@ export default function Login() {
 
                     {/* SECURITY */}
 
-                    <div className="login-security">
-
-                        <div className="security-icon">
-                            <ShieldCheck size={15} />
-                        </div>
-
-                        <div>
-
-                            <strong>
-                                Secure authentication
-                            </strong>
-
-                            <span>
-                                Protected by Firebase
-                                Authentication
-                            </span>
-
-                        </div>
-
-                    </div>
-
+                   
 
                     <p className="login-copyright">
                         © {new Date().getFullYear()} Akr Communications
-                        
+
                     </p>
 
                 </div>
