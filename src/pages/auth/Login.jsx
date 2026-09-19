@@ -3,9 +3,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 import "./Login.css"
-
+import logo from "../../assets/logo.png"
 import {
-    Sparkles,
     Eye,
     EyeOff,
     ArrowRight,
@@ -165,19 +164,19 @@ export default function Login() {
 
                         <div className="showcase-logo">
 
-                            <div className="showcase-logo-icon">
-                                <Sparkles size={20} />
+                            <div className="showcase-logo-icons">
+                                <img id='logo' src={logo} alt="" />
                             </div>
 
-                            <div>
+                            {/* <div>
                                 <strong>
-                                    PrintPoint
+                                    AKR Communications
                                 </strong>
 
                                 <span>
                                     SHOP ERP
                                 </span>
-                            </div>
+                            </div> */}
 
                         </div>
 
@@ -195,11 +194,6 @@ export default function Login() {
                     {/* SHOWCASE CONTENT */}
 
                     <div className="showcase-content">
-
-                        <div className="mini-badge">
-                            <Sparkles size={13} />
-                            BUSINESS MANAGEMENT
-                        </div>
 
                         <h1>
                             Run your shop.
@@ -291,18 +285,18 @@ export default function Login() {
                     <div className="mobile-brand">
 
                         <div className="showcase-logo-icon">
-                            <Sparkles size={19} />
+                            <img id='logo' src={logo} alt="" />
                         </div>
 
-                        <div>
+                        {/* <div>
                             <strong>
-                                PrintPoint
+                                Akr Communications
                             </strong>
 
                             <span>
                                 SHOP ERP
                             </span>
-                        </div>
+                        </div> */}
 
                     </div>
 
@@ -518,8 +512,8 @@ export default function Login() {
 
 
                     <p className="login-copyright">
-                        © {new Date().getFullYear()} PrintPoint
-                        Shop ERP
+                        © {new Date().getFullYear()} Akr Communications
+                        
                     </p>
 
                 </div>

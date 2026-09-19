@@ -1,7 +1,7 @@
 /* Shared AdminLayout / Sidebar / Navbar */
 
 :root {
-    --shell-sidebar: 248px;
+    --shell-sidebar: 238px;
     --shell-border: #e7e9ef;
     --shell-text: #273247;
     --shell-muted: #8993a5;

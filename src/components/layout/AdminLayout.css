@@ -1,0 +1,330 @@
+/* =========================================================
+   ADMIN LAYOUT — PREMIUM LIGHT GLASS
+   ========================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap");
+
+:root {
+    --layout-bg: #f4f7fb;
+    --layout-white: rgba(255, 255, 255, 0.72);
+
+    --layout-text: #172033;
+    --layout-muted: #8e99aa;
+
+    --layout-border: rgba(255, 255, 255, 0.9);
+    --layout-border-soft: rgba(222, 228, 238, 0.72);
+
+    --layout-primary: #6956e8;
+    --layout-primary-soft: rgba(105, 86, 232, 0.09);
+
+    --layout-shadow:
+        0 10px 35px rgba(40, 50, 70, 0.055);
+
+    --layout-shadow-heavy:
+        0 18px 45px rgba(40, 50, 70, 0.09);
+
+    --layout-ease: 220ms cubic-bezier(.2, .7, .2, 1);
+}
+
+
+/* =========================================================
+   APP SHELL
+   ========================================================= */
+
+.app-shell {
+    position: relative;
+
+    width: 90%;
+    left: 5%;
+    min-height: 100vh;
+
+    display: flex;
+
+    background:
+      #fff;
+
+    color: var(--layout-text);
+
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+.app-shell *,
+.app-shell *::before,
+.app-shell *::after {
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MAIN CONTENT AREA
+   ========================================================= */
+
+.main {
+    position: relative;
+
+    min-width: 0;
+    min-height: 100vh;
+
+    top: 16px;
+    flex: 1;
+
+    border-radius: 15px;
+
+    box-shadow: 0px 0px 12px 10px #eff0f1;
+
+    display: flex;
+    flex-direction: column;
+
+    transition:
+        margin-left var(--layout-ease),
+        width var(--layout-ease);
+        background: #fff;
+}
+
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.page {
+    position: relative;
+
+    width: 100%;
+
+    flex: 1;
+
+    padding: 0 0 35px;
+
+    overflow-x: hidden;
+
+    /* soft glass separation */
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, .18),
+            rgba(244, 247, 251, .35));
+}
+
+
+/* =========================================================
+   SUBTLE BACKGROUND LIGHT
+   ========================================================= */
+
+.page::before {
+    content: "";
+
+    position: fixed;
+
+    width: 360px;
+    height: 360px;
+
+    top: 120px;
+    right: -170px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(105, 86, 232, .035);
+
+    filter: blur(20px);
+
+    pointer-events: none;
+}
+
+.page::after {
+    content: "";
+
+    position: fixed;
+
+    width: 280px;
+    height: 280px;
+
+    bottom: -120px;
+    left: 250px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(67, 133, 232, .025);
+
+    filter: blur(20px);
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   SELECTION
+   ========================================================= */
+
+.app-shell ::selection {
+    background: rgba(105, 86, 232, .18);
+
+    color: #40349c;
+}
+
+
+/* =========================================================
+   GLOBAL SCROLLBAR
+   ========================================================= */
+
+.app-shell {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d9e3 transparent;
+}
+
+.app-shell::-webkit-scrollbar {
+    width: 6px;
+}
+
+.app-shell::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.app-shell::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+
+    background: #d4d9e3;
+}
+
+.app-shell::-webkit-scrollbar-thumb:hover {
+    background: #b9c1cf;
+}
+
+
+/* =========================================================
+   CONTENT SCROLLBAR
+   ========================================================= */
+
+.main::-webkit-scrollbar,
+.page::-webkit-scrollbar {
+    width: 6px;
+}
+
+.main::-webkit-scrollbar-track,
+.page::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.main::-webkit-scrollbar-thumb,
+.page::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+
+    background: #d9dee7;
+}
+
+
+/* =========================================================
+   COMMON FORM ELEMENTS
+   ========================================================= */
+
+.app-shell button,
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+    font-family: inherit;
+}
+
+.app-shell button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* =========================================================
+   GLASS UTILITY
+   Use className="glass-panel" anywhere if needed
+   ========================================================= */
+
+.glass-panel {
+    border:
+        1px solid var(--layout-border);
+
+    background:
+        rgba(255, 255, 255, .68);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+
+    box-shadow: var(--layout-shadow);
+
+    border-radius: 20px;
+}
+
+
+/* =========================================================
+   PREMIUM FOCUS
+   ========================================================= */
+
+.app-shell button:focus-visible,
+.app-shell a:focus-visible,
+.app-shell input:focus-visible,
+.app-shell select:focus-visible,
+.app-shell textarea:focus-visible {
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(105, 86, 232, .12),
+        0 0 0 1px rgba(105, 86, 232, .35);
+}
+
+
+/* =========================================================
+   MOBILE OVERLAY
+   This works if your Sidebar uses the .sidebar class.
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .app-shell {
+        display: block;
+    }
+
+    .main {
+        width: 100%;
+        min-height: 100vh;
+    }
+
+    .page {
+        padding-bottom: 25px;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .page {
+        padding-bottom: 20px;
+    }
+
+    .app-shell {
+        background:
+            radial-gradient(circle at 50% 0%,
+                rgba(105, 86, 232, .055),
+                transparent 25%),
+            var(--layout-bg);
+    }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .app-shell *,
+    .app-shell *::before,
+    .app-shell *::after {
+        transition: none !important;
+        animation: none !important;
+        scroll-behavior: auto !important;
+    }
+}
