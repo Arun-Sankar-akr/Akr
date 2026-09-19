@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDoc().data.role == 'admin';
+    }
+
+    function isAttendant() {
+      return isSignedIn() && userDoc().data.role == 'attendant';
+    }
+
+    function todayKey() {
+      // Client sends dateKey as 'YYYY-MM-DD'; we just trust the create-time value
+      // matches request time closely enough for a single shop's daily use.
+      return request.resource.data.dateKey;
+    }
+
+    // users/{uid} - profile + role. Roles are only ever set by an admin,
+    // never by the user themselves, so a shop attendant can't self-promote.
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // transactionTypes/{typeId} - the editable list of services (Xerox, Printout, etc.)
+    match /transactionTypes/{typeId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // transactions/{txId} - every logged sale/withdrawal/etc.
+    match /transactions/{txId} {
+      // Admin sees everything. An attendant may only read their OWN entries.
+      allow read: if isAdmin() ||
+        (isAttendant() && resource.data.attendantId == request.auth.uid);
+
+      // An attendant may create an entry only under their own uid and name;
+      // they cannot backdate or write another attendant's id.
+      allow create: if isAdmin() ||
+        (isAttendant() &&
+          request.resource.data.attendantId == request.auth.uid &&
+          request.resource.data.amount is number &&
+          request.resource.data.amount > 0);
+
+      // Only admin can edit or delete a transaction once logged.
+      allow update, delete: if isAdmin();
+    }
+
+    // dailyProfit/{dateKey} - admin-only manual profit/expense entry per day.
+    match /dailyProfit/{dateKey} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

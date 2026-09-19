@@ -1,0 +1,1 @@
+import CartItem from "./CartItem"; export default function Cart({items,onQty,onRemove}){return <div className="cart">{items.map(i=><CartItem key={i.id} item={i} onQty={onQty} onRemove={onRemove}/>)}</div>}

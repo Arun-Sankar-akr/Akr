@@ -1,0 +1,1143 @@
+/* =========================================================
+   WITHDRAWAL PAGE
+========================================================= */
+
+.withdrawal-page {
+    width: 100%;
+    min-height: 100%;
+    padding: 24px;
+    color: #172033;
+    background:
+        radial-gradient(circle at 5% 0%, rgba(99, 102, 241, 0.08), transparent 28%),
+        radial-gradient(circle at 95% 10%, rgba(14, 165, 233, 0.08), transparent 28%),
+        #f7f9fc;
+    box-sizing: border-box;
+}
+
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
+.page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.page-head>div:first-child {
+    min-width: 0;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+}
+
+.eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #6366f1, #06b6d4);
+}
+
+.page-head h1 {
+    margin: 0;
+    color: #111827;
+    font-size: clamp(26px, 3vw, 34px);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+}
+
+.page-head p {
+    margin: 8px 0 0;
+    color: #7b8798;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.primary-btn,
+.secondary-btn,
+.save-btn,
+.cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.primary-btn {
+    min-height: 42px;
+    padding: 0 16px;
+    color: #fff;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    box-shadow:
+        0 8px 22px rgba(79, 70, 229, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.primary-btn:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 12px 28px rgba(79, 70, 229, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.secondary-btn {
+    min-height: 38px;
+    padding: 0 13px;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+}
+
+.secondary-btn:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+/* =========================================================
+   STAT CARDS
+========================================================= */
+
+.withdrawal-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.withdrawal-stat-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 17px;
+    overflow: hidden;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow:
+        0 8px 28px rgba(15, 23, 42, 0.045),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+}
+
+.withdrawal-stat-card::after {
+    content: "";
+    position: absolute;
+    right: -28px;
+    bottom: -32px;
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.045);
+}
+
+.withdrawal-stat-icon {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+}
+
+.withdrawal-stat-icon.blue {
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+.withdrawal-stat-icon.purple {
+    color: #7c3aed;
+    background: #f5f3ff;
+}
+
+.withdrawal-stat-icon.green {
+    color: #059669;
+    background: #ecfdf5;
+}
+
+.withdrawal-stat-icon.orange {
+    color: #ea580c;
+    background: #fff7ed;
+}
+
+.withdrawal-stat-card>div:last-child {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.withdrawal-stat-card span {
+    display: block;
+    margin-bottom: 5px;
+    color: #7b8798;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.withdrawal-stat-card strong {
+    display: block;
+    overflow: hidden;
+    color: #172033;
+    font-size: 17px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   MAIN PANEL
+========================================================= */
+
+.panel {
+    overflow: hidden;
+    border: 1px solid #e6eaf0;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow:
+        0 12px 38px rgba(15, 23, 42, 0.055),
+        0 2px 8px rgba(15, 23, 42, 0.025);
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 20px 21px 15px;
+}
+
+.section-label {
+    margin-bottom: 5px;
+    color: #8b95a7;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.panel-header h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+}
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 21px 17px;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: min(390px, 100%);
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid #e4e8ee;
+    border-radius: 10px;
+    color: #94a3b8;
+    background: #f8fafc;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.search-bar:focus-within {
+    border-color: #a5b4fc;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.search-bar input {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    color: #1e293b;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.search-bar input::placeholder {
+    color: #a2acbb;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.result-count {
+    color: #8a94a6;
+    font-size: 11px;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.withdrawal-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.withdrawal-table-wrap::-webkit-scrollbar {
+    height: 7px;
+}
+
+.withdrawal-table-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.withdrawal-table-wrap::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+
+.withdrawal-table {
+    width: 100%;
+    min-width: 1050px;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.withdrawal-table th {
+    padding: 11px 17px;
+    color: #8b95a7;
+    border-bottom: 1px solid #edf0f4;
+    background: #fbfcfe;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.withdrawal-table td {
+    padding: 13px 17px;
+    border-bottom: 1px solid #f0f2f5;
+    color: #334155;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.withdrawal-table tbody tr {
+    transition: background 0.16s ease;
+}
+
+.withdrawal-table tbody tr:hover {
+    background: #fafbff;
+}
+
+.withdrawal-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* =========================================================
+   CUSTOMER
+========================================================= */
+
+.customer-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 175px;
+}
+
+.customer-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    color: #4f46e5;
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.customer-cell>div:last-child {
+    min-width: 0;
+}
+
+.customer-cell strong {
+    display: block;
+    max-width: 155px;
+    overflow: hidden;
+    color: #263247;
+    font-size: 12px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.customer-cell small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    color: #929daf;
+    font-size: 10px;
+}
+
+/* =========================================================
+   AMOUNTS
+========================================================= */
+
+.amount-text {
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.charge-text {
+    color: #7c3aed;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.receive-text {
+    color: #059669;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   PAYMENT BADGE
+========================================================= */
+
+.payment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    padding: 0 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    color: #475569;
+    background: #f8fafc;
+    font-size: 10px;
+    font-weight: 750;
+    text-transform: capitalize;
+}
+
+/* =========================================================
+   ATTENDANT
+========================================================= */
+
+.attendant-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 25px;
+    padding: 0 8px;
+    border-radius: 999px;
+    color: #047857;
+    background: #ecfdf5;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.date-text {
+    color: #8994a5;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   EMPTY / STATE
+========================================================= */
+
+.empty-module,
+.module-state {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 330px;
+    padding: 35px 20px;
+    text-align: center;
+}
+
+.module-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    margin-bottom: 14px;
+    border: 1px solid #e0e7ff;
+    border-radius: 16px;
+    color: #6366f1;
+    background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+    font-size: 22px;
+}
+
+.empty-module h2,
+.module-state h3 {
+    margin: 0;
+    color: #293548;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.empty-module p,
+.module-state p {
+    max-width: 450px;
+    margin: 8px auto 18px;
+    color: #8a95a6;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.module-state.error .module-icon {
+    color: #dc2626;
+    border-color: #fee2e2;
+    background: #fef2f2;
+}
+
+.module-state.error h3 {
+    color: #b91c1c;
+}
+
+.spin {
+    animation: withdrawalSpin 1.1s linear infinite;
+}
+
+@keyframes withdrawalSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   MODAL BACKDROP
+========================================================= */
+
+.modal-backdrop {
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.46);
+    backdrop-filter: blur(8px);
+    animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.withdrawal-modal {
+    width: min(650px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow:
+        0 30px 80px rgba(15, 23, 42, 0.2),
+        0 8px 30px rgba(15, 23, 42, 0.08);
+    animation: modalSlideUp 0.24s ease;
+}
+
+.withdrawal-modal::-webkit-scrollbar {
+    width: 5px;
+}
+
+.withdrawal-modal::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* =========================================================
+   MODAL HEADER
+========================================================= */
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 20px 21px;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    color: #4f46e5;
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+}
+
+.modal-title h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+.modal-title p {
+    margin: 4px 0 0;
+    color: #8a95a6;
+    font-size: 11px;
+}
+
+.modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    color: #64748b;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.modal-close:hover {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.withdrawal-modal form {
+    padding: 20px 21px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
+}
+
+.field {
+    min-width: 0;
+}
+
+.field label,
+.payment-section>label {
+    display: block;
+    margin-bottom: 7px;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 43px;
+    padding: 0 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #94a3b8;
+    background: #fbfcfe;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.input-wrap:focus-within {
+    border-color: #a5b4fc;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    color: #1e293b;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.input::placeholder {
+    color: #a7b0bd;
+    font-weight: 450;
+}
+
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+
+.input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+/* =========================================================
+   PAYMENT METHOD
+========================================================= */
+
+.payment-section {
+    margin-top: 18px;
+}
+
+.payment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+}
+
+.payment-method {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #64748b;
+    background: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 750;
+    cursor: pointer;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.payment-method:hover {
+    border-color: #c7d2fe;
+    background: #f8faff;
+    transform: translateY(-1px);
+}
+
+.payment-method.active {
+    border-color: #818cf8;
+    color: #4f46e5;
+    background: #eef2ff;
+    box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.08);
+}
+
+/* =========================================================
+   CALCULATION
+========================================================= */
+
+.withdrawal-calculation {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #e8ebf2;
+    border-radius: 13px;
+    background: #f8fafc;
+}
+
+.withdrawal-calculation>div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 5px 0;
+}
+
+.withdrawal-calculation span {
+    color: #7b8798;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.withdrawal-calculation strong {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.calculation-total {
+    margin-top: 7px;
+    padding-top: 11px !important;
+    border-top: 1px dashed #dbe1e9;
+}
+
+.calculation-total span {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.calculation-total strong {
+    color: #059669;
+    font-size: 15px;
+}
+
+/* =========================================================
+   MODAL ACTIONS
+========================================================= */
+
+.modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 20px;
+    padding-top: 17px;
+    border-top: 1px solid #edf0f4;
+}
+
+.cancel-btn {
+    min-height: 40px;
+    padding: 0 15px;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.cancel-btn:hover {
+    background: #f8fafc;
+}
+
+.save-btn {
+    min-height: 40px;
+    padding: 0 16px;
+    color: #fff;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    box-shadow: 0 7px 18px rgba(79, 70, 229, 0.2);
+}
+
+.save-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 23px rgba(79, 70, 229, 0.27);
+}
+
+.save-btn:disabled,
+.cancel-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1050px) {
+    .withdrawal-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 720px) {
+    .withdrawal-page {
+        padding: 16px;
+    }
+
+    .page-head {
+        align-items: stretch;
+        flex-direction: column;
+        margin-bottom: 18px;
+    }
+
+    .page-head .primary-btn {
+        width: 100%;
+    }
+
+    .page-head h1 {
+        font-size: 27px;
+    }
+
+    .withdrawal-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .withdrawal-stat-card {
+        padding: 13px;
+        gap: 9px;
+        border-radius: 14px;
+    }
+
+    .withdrawal-stat-icon {
+        flex-basis: 34px;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+    }
+
+    .withdrawal-stat-card span {
+        font-size: 9px;
+    }
+
+    .withdrawal-stat-card strong {
+        font-size: 14px;
+    }
+
+    .panel {
+        border-radius: 15px;
+    }
+
+    .panel-header {
+        padding: 17px 15px 13px;
+    }
+
+    .toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 0 15px 14px;
+    }
+
+    .search-bar {
+        width: 100%;
+    }
+
+    .toolbar-right {
+        justify-content: space-between;
+    }
+
+    .secondary-btn {
+        min-height: 36px;
+    }
+
+    .withdrawal-modal {
+        width: 100%;
+        max-height: calc(100vh - 20px);
+        border-radius: 17px;
+    }
+
+    .modal-header {
+        padding: 17px;
+    }
+
+    .withdrawal-modal form {
+        padding: 17px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 13px;
+    }
+
+    .payment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-method {
+        justify-content: flex-start;
+        padding: 0 14px;
+    }
+
+    .modal-actions {
+        position: sticky;
+        bottom: -17px;
+        margin-left: -17px;
+        margin-right: -17px;
+        margin-bottom: -17px;
+        padding: 12px 17px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(10px);
+    }
+
+    .modal-actions button {
+        flex: 1;
+    }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 430px) {
+    .withdrawal-page {
+        padding: 12px;
+    }
+
+    .withdrawal-stats {
+        gap: 8px;
+    }
+
+    .withdrawal-stat-card {
+        padding: 11px;
+    }
+
+    .withdrawal-stat-icon {
+        display: none;
+    }
+
+    .withdrawal-stat-card strong {
+        font-size: 13px;
+    }
+
+    .withdrawal-stat-card span {
+        font-size: 8px;
+    }
+
+    .page-head h1 {
+        font-size: 24px;
+    }
+
+    .page-head p {
+        font-size: 12px;
+    }
+
+    .empty-module,
+    .module-state {
+        min-height: 280px;
+        padding: 25px 15px;
+    }
+
+    .modal-title h2 {
+        font-size: 15px;
+    }
+
+    .modal-title p {
+        font-size: 10px;
+    }
+
+    .modal-actions {
+        gap: 7px;
+    }
+
+    .cancel-btn,
+    .save-btn {
+        padding: 0 10px;
+        font-size: 11px;
+    }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .primary-btn,
+    .secondary-btn,
+    .payment-method,
+    .withdrawal-table tbody tr,
+    .modal-close,
+    .save-btn {
+        transition: none;
+    }
+
+    .spin,
+    .modal-backdrop,
+    .withdrawal-modal {
+        animation: none;
+    }
+}

@@ -1,0 +1,1 @@
+export default function EmptyState({title="Nothing here yet",text="No records were found."}){return <div className="empty-state"><div>✦</div><h3>{title}</h3><p>{text}</p></div>}

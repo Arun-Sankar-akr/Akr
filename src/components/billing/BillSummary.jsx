@@ -1,0 +1,1 @@
+import {formatCurrency} from "../../utils/currency"; export default function BillSummary({total,onComplete,disabled}){return <><div className="bill-total"><span>Total</span><strong>{formatCurrency(total)}</strong></div><button className="primary-btn checkout" disabled={disabled} onClick={onComplete}>Complete sale · {formatCurrency(total)}</button></>}

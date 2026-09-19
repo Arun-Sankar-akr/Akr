@@ -1,0 +1,1 @@
+export default function DateRangePicker({start,end,onStart,onEnd}){return <div className="date-range"><input type="date" value={start} onChange={e=>onStart(e.target.value)}/><span>to</span><input type="date" value={end} onChange={e=>onEnd(e.target.value)}/></div>}
