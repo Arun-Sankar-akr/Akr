@@ -1,6 +1,8 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
+import Home from "../pages/home/Home"
+
 // Auth
 import Login from "../pages/auth/Login";
 
@@ -87,6 +89,9 @@ export default function AppRoutes() {
             {/* =====================================================
           PUBLIC
       ===================================================== */}
+
+            <Route path="/" element={<Home />} />
+
 
             <Route path="/login" element={<Login />} />
 
