@@ -53,6 +53,10 @@
     isolation: isolate;
 }
 
+#govt{
+    margin-top: 50px;
+}
+
 .akr-home *,
 .akr-home *::before,
 .akr-home *::after {
@@ -249,7 +253,7 @@ body.akr-home-page {
     flex-shrink: 0;
 }
 
-#logoakt{
+#logoakt {
     width: 130px;
     height: 60px;
 }
@@ -1575,7 +1579,7 @@ body.akr-home-page {
     .services-grid {
         display: grid;
 
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
 
         gap: 13px;
     }
@@ -2572,8 +2576,31 @@ body.akr-home-page {
 
 }
 
-#logost{
+#logost {
     position: relative;
     width: 250px;
     height: 120px;
+}
+
+/* Official logos on service / exam cards */
+.gov-icon-logo {
+    background: #ffffff;
+    padding: 8px;
+    border-radius: 100px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    width: 100px;
+    height: 100px;
+}
+
+.gov-icon-logo img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gov-card:hover .gov-icon-logo {
+    background: #ffffff;
 }

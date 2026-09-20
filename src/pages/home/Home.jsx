@@ -3,9 +3,15 @@ import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png"
 import "./Home.css";
 
-/* =========================================================
-   ICONS
-========================================================= */
+import Aadhar from "../../assets/aadhar1.png"
+import Pan from "../../assets/pan.png"
+import Tn from "../../assets/tn.png"
+import Tan from "../../assets/tangen.png"
+import Udyam from "../../assets/udyam.png"
+
+import ssc from "../../assets/ssc.png"
+import rrb from "../../assets/railway.png"
+import ibps from "../../assets/ibps.png"
 
 const Icon = ({ name, size = 24 }) => {
     const common = {
@@ -193,6 +199,7 @@ const governmentServices = [
         color: "violet",
         tag: "UIDAI",
         url: "https://uidai.gov.in/",
+        logo: Aadhar,
         featured: true,
     },
     {
@@ -204,6 +211,7 @@ const governmentServices = [
         color: "indigo",
         tag: "Income Tax",
         url: "https://www.incometax.gov.in/",
+        logo: Pan,
     },
     {
         title: "Patta / Chitta / FMB",
@@ -214,6 +222,7 @@ const governmentServices = [
         color: "orange",
         tag: "Tamil Nadu",
         url: "https://eservices.tn.gov.in/",
+        logo: Tn,
     },
     {
         title: "Ration Services",
@@ -224,6 +233,7 @@ const governmentServices = [
         color: "rose",
         tag: "TNPDS",
         url: "https://www.tnpds.gov.in/",
+        logo: Tn,
     },
     {
         title: "EB Bill Payment",
@@ -234,6 +244,7 @@ const governmentServices = [
         color: "cyan",
         tag: "TNPDCL",
         url: "https://www.tnebnet.org/qwp/qpay",
+        logo: Tan,
         wide: true,
     },
     {
@@ -245,6 +256,7 @@ const governmentServices = [
         color: "rose",
         tag: "CRSTN",
         url: "https://www.crstn.org/birth_death_tn/BCert",
+        logo: Tn,
         wide: true,
     },
     {
@@ -256,6 +268,7 @@ const governmentServices = [
         color: "indigo",
         tag: "UDAYAM",
         url: "https://www.udyamregistration.gov.in/Default.aspx",
+        logo: Udyam,
         wide: true,
     },
 ];
@@ -309,7 +322,7 @@ const digitalTools = [
     },
 
 
-    
+
 ];
 
 const govtExams = [
@@ -322,6 +335,7 @@ const govtExams = [
         color: "violet",
         tag: "RRB",
         url: "https://www.tnpsc.gov.in/",
+        logo: Tn,
         wide: true,
     },
     {
@@ -333,6 +347,7 @@ const govtExams = [
         color: "rose",
         tag: "RRB",
         url: "https://www.rrbapply.gov.in/#/auth/landing",
+        logo: rrb,
         wide: true,
     },
     {
@@ -344,6 +359,7 @@ const govtExams = [
         color: "orange",
         tag: "IBPS",
         url: "https://www.ibps.in/",
+        logo: ibps,
         wide: true,
     },
     {
@@ -355,6 +371,7 @@ const govtExams = [
         color: "cyan",
         tag: "SSC",
         url: "https://ssc.gov.in/",
+        logo: ssc,
         wide: true,
     },
 ];
@@ -363,6 +380,9 @@ const govtExams = [
 ========================================================= */
 
 const GovernmentCard = ({ service, index }) => {
+    const [logoFailed, setLogoFailed] = useState(false);
+    const showLogo = service.logo && !logoFailed;
+
     return (
         <a
             className={`gov-card gov-card-${service.color} ${service.featured ? "gov-card-featured" : ""
@@ -375,8 +395,17 @@ const GovernmentCard = ({ service, index }) => {
             <div className="gov-card-glow" />
 
             <div className="gov-card-top">
-                <div className="gov-icon">
-                    <Icon name={service.icon} size={27} />
+                <div className={`gov-icon ${showLogo ? "gov-icon-logo" : ""}`}>
+                    {showLogo ? (
+                        <img
+                            src={service.logo}
+                            alt={`${service.shortTitle} logo`}
+                            loading="lazy"
+                            onError={() => setLogoFailed(true)}
+                        />
+                    ) : (
+                        <Icon name={service.icon} size={27} />
+                    )}
                 </div>
 
                 <span className="gov-tag">{service.tag}</span>
@@ -563,7 +592,7 @@ const Home = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="section-container">
+                    <div className="section-container" id="govt">
                         <div className="section-heading reveal-item">
                             <div className="section-heading-left">
                                 <h1>
