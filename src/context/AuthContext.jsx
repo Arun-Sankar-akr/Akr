@@ -42,15 +42,10 @@ export function AuthProvider({ children }) {
    */
 
   useEffect(() => {
-    console.log("AUTH CONTEXT → Starting auth listener...");
 
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        console.log(
-          "AUTH STATE CHANGED:",
-          firebaseUser?.email || "No user"
-        );
 
         try {
           // -------------------------------------------------
@@ -58,9 +53,6 @@ export function AuthProvider({ children }) {
           // -------------------------------------------------
 
           if (!firebaseUser) {
-            console.log(
-              "AUTH → No authenticated Firebase user"
-            );
 
             setUser(null);
             setProfile(null);
@@ -76,16 +68,6 @@ export function AuthProvider({ children }) {
 
           setUser(firebaseUser);
 
-          console.log(
-            "AUTH → Firebase user:",
-            firebaseUser.email
-          );
-
-          console.log(
-            "AUTH → UID:",
-            firebaseUser.uid
-          );
-
           // -------------------------------------------------
           // Get Firestore profile
           // -------------------------------------------------
@@ -96,11 +78,6 @@ export function AuthProvider({ children }) {
             firebaseUser.uid
           );
 
-          console.log(
-            "AUTH → Reading:",
-            `users/${firebaseUser.uid}`
-          );
-
           const snapshot = await getDoc(userRef);
 
           // -------------------------------------------------
@@ -108,9 +85,6 @@ export function AuthProvider({ children }) {
           // -------------------------------------------------
 
           if (!snapshot.exists()) {
-            console.warn(
-              "AUTH → Firestore profile NOT FOUND"
-            );
 
             setProfile(null);
             setRole(null);
@@ -125,33 +99,10 @@ export function AuthProvider({ children }) {
 
           const data = snapshot.data();
 
-          console.log(
-            "AUTH → Firestore profile:",
-            data
-          );
-
-          console.log(
-            "AUTH → Firestore role:",
-            data.role
-          );
-
           setProfile(data);
           setRole(data.role || null);
 
         } catch (error) {
-          console.error(
-            "AUTH → Failed to restore authentication"
-          );
-
-          console.error(
-            "Error code:",
-            error?.code
-          );
-
-          console.error(
-            "Error message:",
-            error?.message
-          );
 
           setProfile(null);
           setRole(null);
@@ -163,9 +114,6 @@ export function AuthProvider({ children }) {
     );
 
     return () => {
-      console.log(
-        "AUTH CONTEXT → Removing auth listener"
-      );
 
       unsubscribe();
     };
@@ -179,26 +127,6 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const cleanEmail = email.trim();
-
-    console.log("");
-    console.log("=================================");
-    console.log("LOGIN START");
-    console.log("=================================");
-
-    console.log(
-      "Email:",
-      cleanEmail
-    );
-
-    console.log(
-      "Firebase project:",
-      auth.app.options.projectId
-    );
-
-    console.log(
-      "Auth domain:",
-      auth.app.options.authDomain
-    );
 
     try {
       // -----------------------------------------------------
@@ -214,20 +142,6 @@ export function AuthProvider({ children }) {
 
       const firebaseUser = credential.user;
 
-      console.log(
-        "LOGIN → Firebase authentication SUCCESS"
-      );
-
-      console.log(
-        "LOGIN → UID:",
-        firebaseUser.uid
-      );
-
-      console.log(
-        "LOGIN → Email:",
-        firebaseUser.email
-      );
-
       // -----------------------------------------------------
       // 2. Firestore profile
       // -----------------------------------------------------
@@ -238,11 +152,6 @@ export function AuthProvider({ children }) {
         firebaseUser.uid
       );
 
-      console.log(
-        "LOGIN → Reading Firestore:",
-        `users/${firebaseUser.uid}`
-      );
-
       const snapshot = await getDoc(userRef);
 
       // -----------------------------------------------------
@@ -250,9 +159,6 @@ export function AuthProvider({ children }) {
       // -----------------------------------------------------
 
       if (!snapshot.exists()) {
-        console.error(
-          "LOGIN → Firestore profile NOT FOUND"
-        );
 
         await signOut(auth);
 
@@ -267,16 +173,6 @@ export function AuthProvider({ children }) {
 
       const data = snapshot.data();
 
-      console.log(
-        "LOGIN → Firestore profile:",
-        data
-      );
-
-      console.log(
-        "LOGIN → Firestore role:",
-        data.role
-      );
-
       // -----------------------------------------------------
       // 3. Validate role
       // -----------------------------------------------------
@@ -285,10 +181,6 @@ export function AuthProvider({ children }) {
         data.role !== "admin" &&
         data.role !== "attendant"
       ) {
-        console.error(
-          "LOGIN → Invalid role:",
-          data.role
-        );
 
         await signOut(auth);
 
@@ -302,9 +194,6 @@ export function AuthProvider({ children }) {
       // -----------------------------------------------------
 
       if (data.active === false) {
-        console.error(
-          "LOGIN → Account disabled"
-        );
 
         await signOut(auth);
 
@@ -321,20 +210,6 @@ export function AuthProvider({ children }) {
       setProfile(data);
       setRole(data.role);
 
-      console.log(
-        "LOGIN → Context updated"
-      );
-
-      console.log(
-        "LOGIN → ROLE:",
-        data.role
-      );
-
-      console.log("");
-      console.log("=================================");
-      console.log("LOGIN SUCCESS");
-      console.log("=================================");
-
       // -----------------------------------------------------
       // Return login result
       // -----------------------------------------------------
@@ -346,26 +221,6 @@ export function AuthProvider({ children }) {
       };
 
     } catch (error) {
-      console.error("");
-      console.error(
-        "================================="
-      );
-      console.error(
-        "LOGIN FAILED"
-      );
-      console.error(
-        "================================="
-      );
-
-      console.error(
-        "Error code:",
-        error?.code
-      );
-
-      console.error(
-        "Error message:",
-        error?.message
-      );
 
       throw error;
     }
@@ -379,9 +234,6 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      console.log(
-        "AUTH → Logging out..."
-      );
 
       await signOut(auth);
 
@@ -389,15 +241,7 @@ export function AuthProvider({ children }) {
       setProfile(null);
       setRole(null);
 
-      console.log(
-        "AUTH → Logout successful"
-      );
-
     } catch (error) {
-      console.error(
-        "AUTH → Logout failed:",
-        error
-      );
 
       throw error;
     }

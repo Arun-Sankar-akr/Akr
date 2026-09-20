@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     ArrowLeft,
     AlertCircle,
@@ -113,11 +113,57 @@ export default function NewTransaction() {
        SERVICES
        ===================================================== */
 
-    const availableServices =
-        Array.isArray(services) &&
-            services.length > 0
-            ? services
-            : defaultServices;
+    // Normalize the Firebase service schema used by AdminDashboard.
+    // Admin stores the live rate as `price` + `profit`; billing uses
+    // `sellingPrice` + `costPrice`. Keeping this mapping here makes both
+    // screens use the same Firebase service/rate source.
+    const availableServices = useMemo(() => {
+        const source =
+            Array.isArray(services) && services.length > 0
+                ? services
+                : defaultServices;
+
+        return source
+            .filter((service) => service?.active !== false)
+            .map((service) => {
+                const sellingPrice = Number(
+                    service?.sellingPrice ??
+                    service?.price ??
+                    0
+                ) || 0;
+
+                const profit = Number(
+                    service?.profit ??
+                    service?.profitPerUnit ??
+                    0
+                ) || 0;
+
+                const storedCost = Number(service?.costPrice);
+
+                return {
+                    ...service,
+                    id: service.id,
+                    name:
+                        service.name ??
+                        service.serviceName ??
+                        "Unnamed service",
+                    serviceName:
+                        service.serviceName ??
+                        service.name ??
+                        "Unnamed service",
+                    category: service.category ?? "General",
+                    unit: service.unit ?? "unit",
+                    sellingPrice,
+                    price: sellingPrice,
+                    profit,
+                    profitPerUnit: profit,
+                    costPrice: Number.isFinite(storedCost)
+                        ? storedCost
+                        : Math.max(0, sellingPrice - profit),
+                    active: service.active !== false,
+                };
+            });
+    }, [services]);
 
     /* =====================================================
        STATE
@@ -284,6 +330,16 @@ export default function NewTransaction() {
                         costPrice:
                             Number(
                                 item.costPrice
+                            ) || 0,
+
+                        profit:
+                            Number(
+                                item.profit ??
+                                item.profitPerUnit ??
+                                (
+                                    Number(item.sellingPrice || 0) -
+                                    Number(item.costPrice || 0)
+                                )
                             ) || 0,
                     })
                 ),

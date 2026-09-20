@@ -14,16 +14,20 @@ export default function Loader({ duration = 9000, onComplete }) {
         return () => clearTimeout(timer);
     }, [duration, onComplete]);
 
-    if (!visible) return null;
+    if (!visible) {
+        return null;
+    }
 
     return (
-        <div className="loader-overlay">
-            <div className="loader-content">
-                <img
-                    src={loaderGif}
-                    alt="Loading"
-                    className="loader-gif"
-                />
+        <div className="protected-route-loading">
+            <div className="loader-overlay">
+                <div className="loader-content">
+                    <img
+                        src={loaderGif}
+                        alt="Loading"
+                        className="loader-gif"
+                    />
+                </div>
             </div>
         </div>
     );

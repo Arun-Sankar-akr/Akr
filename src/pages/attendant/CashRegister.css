@@ -2453,3 +2453,315 @@
         transition-duration: 0.01ms !important;
     }
 }
+
+.cash-history-view-heading,
+.cash-history-view-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.cash-view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 0 11px;
+    border: 1px solid #e4e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #344054;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.cash-view-btn:hover {
+    transform: translateY(-1px);
+    border-color: #cfd7e6;
+    background: #f7f9fc;
+    color: #2563eb;
+    box-shadow: 0 7px 18px rgba(15, 23, 42, .07);
+}
+
+.cash-history-detail-modal {
+    width: min(1080px, calc(100vw - 28px));
+    max-height: 90vh;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e7ebf2;
+    border-radius: 24px;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .18);
+    padding: 22px;
+}
+
+.cash-history-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.cash-history-detail-summary>div {
+    padding: 14px;
+    border: 1px solid #edf0f5;
+    border-radius: 14px;
+    background: #f8fafc;
+}
+
+.cash-history-detail-summary span,
+.cash-history-detail-footer span {
+    display: block;
+    margin-bottom: 5px;
+    color: #8a94a6;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.cash-history-detail-summary strong {
+    display: block;
+    color: #172033;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+.cash-history-breakdown-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.cash-history-breakdown-card {
+    padding: 17px;
+    border: 1px solid #e9edf3;
+    border-radius: 18px;
+    background: #fbfcfe;
+}
+
+.cash-history-breakdown-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.cash-history-breakdown-head h3 {
+    margin: 4px 0;
+    color: #172033;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.cash-history-breakdown-head p {
+    margin: 0;
+    color: #8a94a6;
+    font-size: 11px;
+}
+
+.cash-breakdown-kicker {
+    color: #2563eb;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .11em;
+}
+
+.cash-breakdown-kicker.close {
+    color: #d97706;
+}
+
+.cash-breakdown-total {
+    padding: 8px 10px;
+    border: 1px solid #dce7ff;
+    border-radius: 10px;
+    background: #f3f7ff;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.cash-breakdown-total.close {
+    border-color: #f5e2bf;
+    background: #fff8eb;
+    color: #b45309;
+}
+
+.cash-history-denomination-list {
+    display: grid;
+    gap: 7px;
+}
+
+.cash-history-denomination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 49px;
+    padding: 8px 10px;
+    border: 1px solid #edf0f4;
+    border-radius: 12px;
+    background: #fff;
+    opacity: .58;
+}
+
+.cash-history-denomination.has-value {
+    opacity: 1;
+    border-color: #e2e7ef;
+}
+
+.cash-history-denomination-left {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.cash-history-denomination-icon {
+    width: 31px;
+    height: 31px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.cash-history-denomination-icon.note {
+    background: #eef5ff;
+    color: #2563eb;
+}
+
+.cash-history-denomination-icon.coin {
+    background: #fff7e8;
+    color: #b7791f;
+}
+
+.cash-history-denomination-left strong {
+    display: block;
+    color: #273244;
+    font-size: 12px;
+}
+
+.cash-history-denomination-left span {
+    display: block;
+    color: #a0a8b5;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.cash-history-denomination-right {
+    display: flex;
+    gap: 12px;
+    text-align: right;
+}
+
+.cash-history-denomination-right strong {
+    color: #475467;
+    font-size: 11px;
+}
+
+.cash-history-denomination-right span {
+    min-width: 82px;
+    color: #172033;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.cash-history-not-closed {
+    min-height: 270px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 25px;
+    border: 1px dashed #d9dee8;
+    border-radius: 15px;
+    color: #98a2b3;
+    text-align: center;
+}
+
+.cash-history-not-closed strong {
+    color: #475467;
+    font-size: 13px;
+}
+
+.cash-history-not-closed span {
+    max-width: 300px;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.cash-history-detail-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    align-items: center;
+    gap: 18px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border: 1px solid #e9edf3;
+    border-radius: 15px;
+    background: #f8fafc;
+}
+
+.cash-history-detail-footer strong {
+    color: #344054;
+    font-size: 12px;
+}
+
+.cash-history-detail-footer strong.positive {
+    color: #16855b;
+}
+
+.cash-history-detail-footer strong.negative {
+    color: #d04444;
+}
+
+.cash-history-detail-footer strong.zero {
+    color: #667085;
+}
+
+@media (max-width: 850px) {
+    .cash-history-detail-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .cash-history-breakdown-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cash-history-detail-footer {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .cash-history-detail-modal {
+        width: calc(100vw - 18px);
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .cash-history-breakdown-head {
+        display: block;
+    }
+
+    .cash-breakdown-total {
+        display: inline-block;
+        margin-top: 10px;
+    }
+
+    .cash-history-denomination-right {
+        gap: 7px;
+    }
+
+    .cash-history-denomination-right span {
+        min-width: 68px;
+    }
+
+    .cash-history-detail-footer {
+        grid-template-columns: 1fr;
+    }
+}

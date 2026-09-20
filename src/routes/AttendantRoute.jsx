@@ -3,6 +3,9 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
 
+import "./router.css"
+
+
 export default function AttendantRoute() {
   const {
     user,
@@ -11,20 +14,20 @@ export default function AttendantRoute() {
     loading,
   } = useAuth();
 
-  console.log("========== ATTENDANT ROUTE ==========");
-  console.log("Firebase user:", user);
-  console.log("Firebase UID:", user?.uid);
-  console.log("Firebase email:", user?.email);
-  console.log("Firestore profile:", profile);
-  console.log("Role:", role);
-  console.log("Loading:", loading);
+  // console.log("========== ATTENDANT ROUTE ==========");
+  // console.log("Firebase user:", user);
+  // console.log("Firebase UID:", user?.uid);
+  // console.log("Firebase email:", user?.email);
+  // console.log("Firestore profile:", profile);
+  // console.log("Role:", role);
+  // console.log("Loading:", loading);
 
   // Wait until Firebase + Firestore profile is restored
   if (loading) {
     return (
       <div className="route-loading">
         <div className="route-loader" />
-        <p><Loader/></p>
+        <div className="protected-route-loading"><p><Loader /></p></div>
       </div>
     );
   }

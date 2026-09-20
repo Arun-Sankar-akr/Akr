@@ -1,21 +1,16 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
-  ArrowLeftRight,
   BarChart3,
-  Banknote,
   Bell,
+  Banknote,
   Boxes,
   CalendarDays,
-  ChevronRight,
   CircleDollarSign,
   Clock3,
-  FileText,
   IndianRupee,
-  Package,
   Plus,
-  Printer,
   ReceiptText,
   Search,
   Sparkles,
@@ -23,20 +18,21 @@ import {
   UserRound,
   Users,
   WalletCards,
+  X,
+  CheckCircle2,
+  Pencil,
+  Trash2,
+  Tags,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
+import { db } from "../../services/firebase";
 import { formatCurrency } from "../../utils/currency";
 import { useTransactions } from "../../hooks/useTransactions";
 import "./AdminDashboard.css";
 
-const quickActions = [
-  { label: "New transaction", sub: "Create bill", icon: Plus, to: "/admin/new-transaction", tone: "primary" },
-  { label: "Xerox", sub: "B&W / copies", icon: Printer, to: "/admin/new-transaction", tone: "violet" },
-  { label: "Printout", sub: "Print documents", icon: FileText, to: "/admin/new-transaction", tone: "blue" },
-  { label: "Lamination", sub: "Protect pages", icon: Package, to: "/admin/new-transaction", tone: "amber" },
-  { label: "Money transfer", sub: "Transfer service", icon: ArrowLeftRight, to: "/admin/money-transfer", tone: "green" },
-  { label: "Withdrawal", sub: "Cash service", icon: Banknote, to: "/admin/money-transfer", tone: "rose" },
-];
+
 
 function toDate(value) {
   if (!value) return null;
@@ -57,9 +53,9 @@ function getTransactionDate(transaction) {
 function getPaymentMethod(transaction) {
   return String(
     transaction.paymentMethod ||
-      transaction.paymentMode ||
-      transaction.payment ||
-      "Other"
+    transaction.paymentMode ||
+    transaction.payment ||
+    "Other"
   )
     .trim()
     .toLowerCase();
@@ -204,6 +200,182 @@ function PaymentRing({ payments, total }) {
 export default function AdminDashboard() {
   const { transactions: rawTransactions, loading, error } = useTransactions(1000);
   const transactions = Array.isArray(rawTransactions) ? rawTransactions : [];
+
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [serviceSaving, setServiceSaving] = useState(false);
+  const [serviceMessage, setServiceMessage] = useState("");
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    name: "",
+    category: "",
+    price: "",
+    profit: "",
+    unit: "",
+  });
+
+  // Firebase is the single source of truth for service names, rates and profit.
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "services"),
+      (snapshot) => {
+        setServices(
+          snapshot.docs
+            .map((item) => ({ id: item.id, ...item.data() }))
+            .sort((a, b) =>
+              String(a.name || a.serviceName || "").localeCompare(
+                String(b.name || b.serviceName || "")
+              )
+            )
+        );
+        setServicesLoading(false);
+      },
+      (err) => {
+        console.error("Services listener error:", err);
+        setServicesLoading(false);
+        setServiceMessage(
+          err?.code === "permission-denied"
+            ? "Permission denied while loading services."
+            : "Could not load services."
+        );
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  const emptyServiceForm = () => ({
+    name: "",
+    category: "",
+    price: "",
+    profit: "",
+    unit: "",
+  });
+
+  const openAddService = () => {
+    setEditingServiceId(null);
+    setServiceForm(emptyServiceForm());
+    setServiceMessage("");
+    setShowServiceModal(true);
+  };
+
+  const openEditService = (service) => {
+    const price = Number(service.price ?? service.sellingPrice ?? 0);
+    const profit = Number(service.profit ?? service.profitPerUnit ?? 0);
+
+    setEditingServiceId(service.id);
+    setServiceForm({
+      name: service.name ?? service.serviceName ?? "",
+      category: service.category ?? "",
+      price: Number.isFinite(price) ? String(price) : "",
+      profit: Number.isFinite(profit) ? String(profit) : "",
+      unit: service.unit ?? "",
+    });
+    setServiceMessage("");
+    setShowServiceModal(true);
+  };
+
+  const closeServiceModal = () => {
+    if (serviceSaving) return;
+    setShowServiceModal(false);
+    setEditingServiceId(null);
+    setServiceMessage("");
+  };
+
+  const updateServiceField = (field, value) => {
+    setServiceForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveService = async (event) => {
+    event.preventDefault();
+    setServiceMessage("");
+
+    const name = serviceForm.name.trim();
+    const category = serviceForm.category.trim();
+    const unit = serviceForm.unit.trim();
+    const price = Number(serviceForm.price);
+    const profit = Number(serviceForm.profit);
+
+    if (!name) return setServiceMessage("Please enter a service name.");
+    if (!category) return setServiceMessage("Please enter a category.");
+    if (!unit) return setServiceMessage("Please enter a pricing unit.");
+    if (!Number.isFinite(price) || price < 0) {
+      return setServiceMessage("Please enter a valid selling price.");
+    }
+    if (!Number.isFinite(profit) || profit < 0) {
+      return setServiceMessage("Please enter a valid profit.");
+    }
+    if (profit > price) {
+      return setServiceMessage("Profit cannot be greater than the selling price.");
+    }
+
+    const payload = {
+      name,
+      serviceName: name,
+      category,
+      price,
+      sellingPrice: price,
+      profit,
+      profitPerUnit: profit,
+      costPrice: Math.max(0, price - profit),
+      unit,
+      active: true,
+      updatedAt: serverTimestamp(),
+    };
+
+    try {
+      setServiceSaving(true);
+
+      if (editingServiceId) {
+        await updateDoc(doc(db, "services", editingServiceId), payload);
+        setServiceMessage("Service updated successfully.");
+      } else {
+        await addDoc(collection(db, "services"), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
+        setServiceMessage("Service added successfully.");
+      }
+
+      setServiceForm(emptyServiceForm());
+      setTimeout(() => {
+        setShowServiceModal(false);
+        setEditingServiceId(null);
+        setServiceMessage("");
+      }, 700);
+    } catch (err) {
+      console.error("Save service error:", err);
+      setServiceMessage(
+        err?.code === "permission-denied"
+          ? "Permission denied. Only an admin can manage services."
+          : "Could not save the service. Please try again."
+      );
+    } finally {
+      setServiceSaving(false);
+    }
+  };
+
+  const handleDeleteService = async (service) => {
+    if (!service?.id) return;
+    const name = service.name || service.serviceName || "this service";
+
+    if (!window.confirm(`Delete "${name}"? This will remove it from New Transaction.`)) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "services", service.id));
+      setServiceMessage("Service deleted successfully.");
+      setTimeout(() => setServiceMessage(""), 1200);
+    } catch (err) {
+      console.error("Delete service error:", err);
+      setServiceMessage(
+        err?.code === "permission-denied"
+          ? "Permission denied. Only an admin can delete services."
+          : "Could not delete the service."
+      );
+    }
+  };
 
   const todayKey = new Date().toDateString();
 
@@ -430,30 +602,71 @@ export default function AdminDashboard() {
         </article>
       </section>
 
-      <section className="quick-section">
-        <div className="section-title-row">
-          <div>
-            <span className="section-label">SHORTCUTS</span>
-            <h2>Quick actions</h2>
+      <section className="add-service-section">
+        <div className="add-service-content">
+          <div className="add-service-copy">
+            <div className="add-service-icon"><Tags size={21} /></div>
+            <div>
+              <span className="section-label">SERVICE MANAGEMENT</span>
+              <h2>Services & rates</h2>
+              <p>Create, view, edit and delete services. Rates here are synced live with New Transaction.</p>
+            </div>
           </div>
-          <span>Common shop operations</span>
+          <button type="button" className="dashboard-add-service-btn" onClick={openAddService}>
+            <Plus size={15} /> Add Service
+          </button>
+        </div>
+      </section>
+
+      <section className="dashboard-card service-manager-card">
+        <div className="card-heading">
+          <div>
+            <span className="section-label">CRUD MANAGEMENT</span>
+            <h2>Service catalogue</h2>
+            <p>Firebase services collection • live billing rates</p>
+          </div>
+          <span className="service-live-count">
+            {servicesLoading ? "Loading…" : `${services.length} service${services.length === 1 ? "" : "s"}`}
+          </span>
         </div>
 
-        <div className="quick-grid">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link className={`quick-card ${action.tone}`} to={action.to} key={action.label}>
-                <div className="quick-icon"><Icon size={19} /></div>
-                <div>
-                  <strong>{action.label}</strong>
-                  <span>{action.sub}</span>
+        {serviceMessage && !showServiceModal && (
+          <div className="service-form-message success service-manager-message">
+            <CheckCircle2 size={15} /> {serviceMessage}
+          </div>
+        )}
+
+        {servicesLoading ? (
+          <div className="empty-dashboard"><Boxes size={25} /><strong>Loading services…</strong><span>Syncing the service catalogue from Firebase.</span></div>
+        ) : services.length === 0 ? (
+          <div className="empty-dashboard"><Tags size={25} /><strong>No services yet</strong><span>Add your first service and it will appear in New Transaction.</span></div>
+        ) : (
+          <div className="service-manager-list">
+            {services.map((service) => {
+              const price = Number(service.price ?? service.sellingPrice ?? 0) || 0;
+              const profit = Number(service.profit ?? service.profitPerUnit ?? 0) || 0;
+              const cost = Math.max(0, price - profit);
+              return (
+                <div className="service-manager-row" key={service.id}>
+                  <div className="service-manager-main">
+                    <div className="service-manager-icon"><Tags size={16} /></div>
+                    <div>
+                      <strong>{service.name || service.serviceName || "Unnamed service"}</strong>
+                      <span>{service.category || "General"} • {service.unit || "unit"}</span>
+                    </div>
+                  </div>
+                  <div className="service-manager-rate"><span>Rate</span><strong>{formatCurrency(price)}</strong></div>
+                  <div className="service-manager-profit"><span>Profit</span><strong>{formatCurrency(profit)}</strong></div>
+                  <div className="service-manager-cost"><span>Cost</span><strong>{formatCurrency(cost)}</strong></div>
+                  <div className="service-manager-actions">
+                    <button type="button" className="service-edit-btn" onClick={() => openEditService(service)}><Pencil size={15} /> Edit</button>
+                    <button type="button" className="service-delete-btn" onClick={() => handleDeleteService(service)}><Trash2 size={15} /> Delete</button>
+                  </div>
                 </div>
-                <ChevronRight size={17} />
-              </Link>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="lower-grid">
@@ -464,7 +677,9 @@ export default function AdminDashboard() {
               <h2>Today's service performance</h2>
               <p>Calculated from transaction line items.</p>
             </div>
-            <Link to="/admin/services" className="card-link">Manage services <ArrowUpRight size={14} /></Link>
+            <Link to="/admin/services" className="card-link">
+              Manage services <ArrowUpRight size={14} />
+            </Link>
           </div>
 
           {servicePerformance.length === 0 ? (
@@ -595,6 +810,156 @@ export default function AdminDashboard() {
           </div>
         )}
       </section>
+
+      {showServiceModal && (
+        <div
+          className="service-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeServiceModal();
+          }}
+        >
+          <div className="service-modal">
+            <div className="service-modal-head">
+              <div className="service-modal-title">
+                <div className="service-modal-icon">
+                  <Tags size={18} />
+                </div>
+                <div>
+                  <span>TRANSACTION SERVICES</span>
+                  <h2>{editingServiceId ? "Edit Service" : "Add New Service"}</h2>
+                  <p>This service will become available when creating a new transaction.</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="service-modal-close"
+                onClick={closeServiceModal}
+                disabled={serviceSaving}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form className="service-form" onSubmit={handleSaveService}>
+              <div className="service-form-grid">
+                <label className="service-field service-field-wide">
+                  <span>Service name</span>
+                  <input
+                    value={serviceForm.name}
+                    onChange={(event) =>
+                      updateServiceField("name", event.target.value)
+                    }
+                    placeholder="e.g. Colour Xerox"
+                    autoFocus
+                  />
+                </label>
+
+                <label className="service-field">
+                  <span>Category</span>
+                  <input
+                    type="text"
+                    value={serviceForm.category}
+                    onChange={(event) =>
+                      updateServiceField("category", event.target.value)
+                    }
+                    placeholder="e.g. Xerox, Printing, Online"
+                  />
+                </label>
+
+                <label className="service-field">
+                  <span>Selling price (₹)</span>
+                  <div className="service-price-input">
+                    <IndianRupee size={15} />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={serviceForm.price}
+                      onChange={(event) =>
+                        updateServiceField("price", event.target.value)
+                      }
+                      placeholder="0.00"
+                    />
+                  </div>
+                </label>
+
+                <label className="service-field">
+                  <span>Profit per unit (₹)</span>
+                  <div className="service-profit-input">
+                    <IndianRupee size={15} />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={serviceForm.profit}
+                      onChange={(event) =>
+                        updateServiceField("profit", event.target.value)
+                      }
+                      placeholder="0.00"
+                    />
+                  </div>
+                </label>
+
+                <label className="service-field">
+                  <span>Unit / pricing</span>
+                  <input
+                    type="text"
+                    value={serviceForm.unit}
+                    onChange={(event) =>
+                      updateServiceField("unit", event.target.value)
+                    }
+                    placeholder="e.g. per page"
+                  />
+                </label>
+              </div>
+
+              <div className="service-form-note">
+                Profit is saved for this service and can be used when calculating transaction profit.
+              </div>
+
+              {serviceMessage && (
+                <div
+                  className={`service-form-message ${serviceMessage.includes("successfully") ? "success" : "error"
+                    }`}
+                >
+                  <CheckCircle2 size={15} />
+                  {serviceMessage}
+                </div>
+              )}
+
+              <div className="service-modal-footer">
+                <button
+                  type="button"
+                  className="service-cancel-btn"
+                  onClick={closeServiceModal}
+                  disabled={serviceSaving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="service-save-btn"
+                  disabled={serviceSaving}
+                >
+                  {serviceSaving ? (
+                    <>
+                      <span className="service-mini-spinner" />
+                      {editingServiceId ? "Saving..." : "Adding..."}
+                    </>
+                  ) : (
+                    <>
+                      {editingServiceId ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                      {editingServiceId ? "Save changes" : "Add service"}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <footer className="dashboard-footer">
         <span><CircleDollarSign size={14} /> Business workspace</span>

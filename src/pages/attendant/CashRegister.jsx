@@ -33,6 +33,7 @@ import {
   X,
   ChevronRight,
   Calculator,
+  Eye,
 } from "lucide-react";
 
 import { db } from "../../services/firebase";
@@ -281,6 +282,9 @@ export default function CashRegister() {
 
   const [saving, setSaving] =
     useState(false);
+
+  const [selectedHistoryRegister, setSelectedHistoryRegister] =
+    useState(null);
 
   // ----------------------------------------------------------
   // FIRESTORE LISTENER
@@ -1735,6 +1739,10 @@ export default function CashRegister() {
                   <th>
                     Difference
                   </th>
+
+                  <th className="cash-history-view-heading">
+                    View
+                  </th>
                 </tr>
               </thead>
 
@@ -1861,6 +1869,19 @@ export default function CashRegister() {
                           ) : (
                             "—"
                           )}
+                        </td>
+
+                        <td className="cash-history-view-cell">
+                          <button
+                            type="button"
+                            className="cash-view-btn"
+                            onClick={() =>
+                              setSelectedHistoryRegister(item)
+                            }
+                          >
+                            <Eye size={14} />
+                            View
+                          </button>
                         </td>
 
                       </tr>
@@ -2204,6 +2225,193 @@ export default function CashRegister() {
 
           </div>
         )}
+
+      {selectedHistoryRegister && (
+        <div
+          className="cash-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedHistoryRegister(null);
+            }
+          }}
+        >
+          <div className="cash-history-detail-modal">
+            <div className="cash-modal-head">
+              <div className="cash-modal-title">
+                <div className="cash-modal-icon">
+                  <Eye size={17} />
+                </div>
+                <div>
+                  <strong>Cash Session Details</strong>
+                  <span>
+                    {formatDate(selectedHistoryRegister.dateKey)}
+                    {" • "}
+                    {selectedHistoryRegister.status === "closed"
+                      ? "Closed Session"
+                      : "Open Session"}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="cash-modal-close"
+                onClick={() => setSelectedHistoryRegister(null)}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="cash-history-detail-summary">
+              <div>
+                <span>Opening Cash</span>
+                <strong>{formatCurrency(Number(selectedHistoryRegister.openingCash || 0))}</strong>
+              </div>
+              <div>
+                <span>Cash Sales</span>
+                <strong>{formatCurrency(Number(selectedHistoryRegister.cashSales || 0))}</strong>
+              </div>
+              <div>
+                <span>Expected Cash</span>
+                <strong>{formatCurrency(Number(selectedHistoryRegister.expectedCash || 0))}</strong>
+              </div>
+              <div>
+                <span>Closing Cash</span>
+                <strong>
+                  {selectedHistoryRegister.status === "closed"
+                    ? formatCurrency(Number(selectedHistoryRegister.closingCash || 0))
+                    : "—"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="cash-history-breakdown-grid">
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker">OPEN</span>
+                    <h3>Opening Cash Breakdown</h3>
+                    <p>Exactly how many ₹500, ₹200, ₹100 etc. were added.</p>
+                  </div>
+                  <div className="cash-breakdown-total">
+                    {formatCurrency(Number(selectedHistoryRegister.openingCash || 0))}
+                  </div>
+                </div>
+
+                <div className="cash-history-denomination-list">
+                  {DENOMINATIONS.map((item) => {
+                    const pcs = Number(
+                      selectedHistoryRegister.openingDenominations?.[item.value] || 0
+                    );
+                    return (
+                      <div
+                        className={`cash-history-denomination ${pcs > 0 ? "has-value" : ""}`}
+                        key={`open-${item.value}`}
+                      >
+                        <div className="cash-history-denomination-left">
+                          <div className={`cash-history-denomination-icon ${item.type}`}>
+                            {item.type === "note" ? <Banknote size={14} /> : <Coins size={14} />}
+                          </div>
+                          <div>
+                            <strong>{item.label}</strong>
+                            <span>{item.type === "note" ? "NOTE" : "COIN"}</span>
+                          </div>
+                        </div>
+                        <div className="cash-history-denomination-right">
+                          <strong>{pcs} pcs</strong>
+                          <span>{formatCurrency(pcs * item.value)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker close">CLOSE</span>
+                    <h3>Closing Cash Breakdown</h3>
+                    <p>Exactly how many notes and coins were counted at close.</p>
+                  </div>
+                  <div className="cash-breakdown-total close">
+                    {selectedHistoryRegister.status === "closed"
+                      ? formatCurrency(Number(selectedHistoryRegister.closingCash || 0))
+                      : "—"}
+                  </div>
+                </div>
+
+                {selectedHistoryRegister.status === "closed" ? (
+                  <div className="cash-history-denomination-list">
+                    {DENOMINATIONS.map((item) => {
+                      const pcs = Number(
+                        selectedHistoryRegister.closingDenominations?.[item.value] || 0
+                      );
+                      return (
+                        <div
+                          className={`cash-history-denomination ${pcs > 0 ? "has-value" : ""}`}
+                          key={`close-${item.value}`}
+                        >
+                          <div className="cash-history-denomination-left">
+                            <div className={`cash-history-denomination-icon ${item.type}`}>
+                              {item.type === "note" ? <Banknote size={14} /> : <Coins size={14} />}
+                            </div>
+                            <div>
+                              <strong>{item.label}</strong>
+                              <span>{item.type === "note" ? "NOTE" : "COIN"}</span>
+                            </div>
+                          </div>
+                          <div className="cash-history-denomination-right">
+                            <strong>{pcs} pcs</strong>
+                            <span>{formatCurrency(pcs * item.value)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="cash-history-not-closed">
+                    <LockKeyhole size={18} />
+                    <strong>Register is still open</strong>
+                    <span>Closing denomination details will appear after the register is closed.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="cash-history-detail-footer">
+              <div>
+                <span>Cash Added</span>
+                <strong>{formatCurrency(Number(selectedHistoryRegister.cashAdded || 0))}</strong>
+              </div>
+              <div>
+                <span>Cash Removed</span>
+                <strong>{formatCurrency(Number(selectedHistoryRegister.cashRemoved || 0))}</strong>
+              </div>
+              <div>
+                <span>Difference</span>
+                <strong className={
+                  Number(selectedHistoryRegister.difference || 0) > 0
+                    ? "positive"
+                    : Number(selectedHistoryRegister.difference || 0) < 0
+                      ? "negative"
+                      : "zero"
+                }>
+                  {Number(selectedHistoryRegister.difference || 0) > 0 ? "+" : ""}
+                  {formatCurrency(Number(selectedHistoryRegister.difference || 0))}
+                </strong>
+              </div>
+              <button
+                type="button"
+                className="cash-cancel-btn"
+                onClick={() => setSelectedHistoryRegister(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
