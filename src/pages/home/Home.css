@@ -53,7 +53,7 @@
     isolation: isolate;
 }
 
-#govt{
+#govt {
     margin-top: 50px;
 }
 
@@ -621,15 +621,6 @@ body.akr-home-page {
     font-size: 9px;
 }
 
-/* =========================================================
-   SERVICES GRID
-   STRICT ORDER:
-   01 Aadhaar
-   02 PAN
-   03 Patta
-   04 Ration
-   05 EB Bill
-========================================================= */
 
 .services-grid {
     display: grid;
@@ -1560,9 +1551,7 @@ body.akr-home-page {
         margin-top: 13px;
 
         font-size:
-            clamp(36px,
-                12vw,
-                51px);
+            40px;
     }
 
     .section-heading p {
@@ -1582,6 +1571,28 @@ body.akr-home-page {
         grid-template-columns: repeat(2, minmax(0, 1fr));
 
         gap: 13px;
+    }
+
+    .gov-icon-logo {
+        background: #ffffff;
+        padding: 8px;
+        border-radius: 100px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+        width: 80px;
+        height: 80px;
+    }
+
+    .gov-icon-logo img {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gov-card:hover .gov-icon-logo {
+        background: #ffffff;
     }
 
     .gov-card {
@@ -1657,6 +1668,28 @@ body.akr-home-page {
 
     .brand-text small {
         letter-spacing: 0.12em;
+    }
+
+    .gov-icon-logo {
+        background: #ffffff;
+        padding: 8px;
+        border-radius: 100px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+        width: 80px;
+        height: 80px;
+    }
+
+    .gov-icon-logo img {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gov-card:hover .gov-icon-logo {
+        background: #ffffff;
     }
 
     .section-heading h1 {
@@ -2582,25 +2615,28 @@ body.akr-home-page {
     height: 120px;
 }
 
-/* Official logos on service / exam cards */
-.gov-icon-logo {
-    background: #ffffff;
-    padding: 8px;
-    border-radius: 100px;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-    width: 100px;
-    height: 100px;
-}
+@media (min-width:621px) {
 
-.gov-icon-logo img {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    /* Official logos on service / exam cards */
+    .gov-icon-logo {
+        background: #ffffff;
+        padding: 8px;
+        border-radius: 100px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+        width: 100px;
+        height: 100px;
+    }
 
-.gov-card:hover .gov-icon-logo {
-    background: #ffffff;
+    .gov-icon-logo img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gov-card:hover .gov-icon-logo {
+        background: #ffffff;
+    }
 }
