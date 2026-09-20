@@ -238,13 +238,24 @@ const governmentServices = [
     },
     {
         title: "Birth Certificate",
-        shortTitle: "Bith/Death",
+        shortTitle: "Birth/Death",
         description:
             "Access the Birth/Death Certificate all over Tamil Nadu.",
         icon: "card",
-        color: "pink",
+        color: "rose",
         tag: "CRSTN",
         url: "https://www.crstn.org/birth_death_tn/BCert",
+        wide: true,
+    },
+    {
+        title: "Udayam Registration",
+        shortTitle: "Udayam",
+        description:
+            "Udayam Registration for entrepreneurs all over Tamil Nadu.",
+        icon: "card",
+        color: "indigo",
+        tag: "UDAYAM",
+        url: "https://www.udyamregistration.gov.in/Default.aspx",
         wide: true,
     },
 ];
@@ -286,8 +297,67 @@ const digitalTools = [
         url: "https://bigpdf.11zon.com/en/compress-pdf/",
         number: "04",
     },
+
+    {
+        title: "Passport Photo Maker",
+        description:
+            "Passport size photo and photo copy.",
+        icon: "compress",
+        color: "violey",
+        url: "https://image.pi7.org/passport-size-photo",
+        number: "04",
+    },
+
+
+    
 ];
 
+const govtExams = [
+    {
+        title: "Tamil Nadu Public Service Commision",
+        shortTitle: "TNPSC",
+        description:
+            "GROUP-4, GROUP-1, GROUP-2/2A.",
+        icon: "card",
+        color: "violet",
+        tag: "RRB",
+        url: "https://www.tnpsc.gov.in/",
+        wide: true,
+    },
+    {
+        title: "RRB Railways",
+        shortTitle: "Railways",
+        description:
+            "RRB Ntpc, RRB ALP, RRB Group-D, Section Controller.",
+        icon: "card",
+        color: "rose",
+        tag: "RRB",
+        url: "https://www.rrbapply.gov.in/#/auth/landing",
+        wide: true,
+    },
+    {
+        title: "Bank Exams",
+        shortTitle: "Bank",
+        description:
+            "Clerck, Reginoal Rural Bank, Office Assitant, PO/SO, Multipurpose.",
+        icon: "card",
+        color: "orange",
+        tag: "IBPS",
+        url: "https://www.ibps.in/",
+        wide: true,
+    },
+    {
+        title: "Central Exams",
+        shortTitle: "SSC",
+        description:
+            "GST Inspector, Multitasking, Steno, Office Assistants, .",
+        icon: "card",
+        color: "cyan",
+        tag: "SSC",
+        url: "https://ssc.gov.in/",
+        wide: true,
+    },
+];
 /* =========================================================
    SERVICE CARD
 ========================================================= */
@@ -429,13 +499,11 @@ const Home = () => {
                 <span className="art-grid" />
             </div>
 
-            {/* =================================================
-          NAVBAR
-      ================================================= */}
             <header className="akr-navbar-wrap">
                 <nav className="akr-navbar">
+
                     <Link to="/" className="akr-brand" onClick={closeMenu}>
-                        <img src={logo} id="logo" alt="" />
+                        <img src={logo} id="logoakt" alt="" />
                     </Link>
 
                     <div className={`akr-nav-links ${menuOpen ? "nav-open" : ""}`}>
@@ -478,21 +546,35 @@ const Home = () => {
                     <div className="section-container">
                         <div className="section-heading reveal-item">
                             <div className="section-heading-left">
-
-
                                 <h1>
                                     Quick
                                     <span> Links.</span>
                                 </h1>
-
-
                             </div>
-
-
                         </div>
 
                         <div className="services-grid">
                             {governmentServices.map((service, index) => (
+                                <GovernmentCard
+                                    key={service.title}
+                                    service={service}
+                                    index={index}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="section-container">
+                        <div className="section-heading reveal-item">
+                            <div className="section-heading-left">
+                                <h1>
+                                    Govt.
+                                    <span> Exams</span>
+                                </h1>
+                            </div>
+                        </div>
+
+                        <div className="services-grid">
+                            {govtExams.map((service, index) => (
                                 <GovernmentCard
                                     key={service.title}
                                     service={service}
@@ -543,45 +625,196 @@ const Home = () => {
                 </section>
             </main>
 
-            {/* =================================================
-          FOOTER
-      ================================================= */}
             <footer className="akr-footer">
+
                 <div className="footer-inner">
-                    <div className="footer-brand">
-                        <Link to="/" className="akr-brand footer-brand-link">
-                            <span className="brand-mark">
-                                <span>A</span>
-                                <i />
+
+
+
+                    <Link to="/" className="footer-logo-link">
+                        <span className="footer-logo-text">
+                            <img src={logo} id="logost" alt="" />
+                        </span>
+                    </Link>
+
+
+
+                    <div className="footer-link-area">
+
+                        {/* PLATFORM */}
+                        <div className="footer-column">
+
+                            <span className="footer-column-title">
+                                PLATFORM
                             </span>
 
-                            <span className="brand-text">
-                                <strong>AKR</strong>
-                                <small>COMMUNICATIONS</small>
+                            <a href="#services">
+                                Government Services
+                            </a>
+
+                            <a href="#services">
+                                Aadhaar Services
+                            </a>
+
+                            <a href="#services">
+                                PAN Services
+                            </a>
+
+                            <a href="#services">
+                                Land Records
+                            </a>
+
+                            <a href="#services">
+                                Digital Services
+                            </a>
+
+                        </div>
+
+
+                        {/* DIGITAL TOOLS */}
+                        <div className="footer-column">
+
+                            <span className="footer-column-title">
+                                DIGITAL TOOLS
                             </span>
-                        </Link>
 
-                        <p>
-                            Digital access made simple for everyday services and document
-                            needs.
-                        </p>
-                    </div>
+                            <a href="#tools">
+                                Image Resizer
+                            </a>
 
-                    <div className="footer-links">
-                        <a href="#services">Government Services</a>
-                        <a href="#tools">Digital Tools</a>
-                        <Link to="/login">Login</Link>
+                            <a href="#tools">
+                                Image to PDF
+                            </a>
+
+                            <a href="#tools">
+                                PDF to Image
+                            </a>
+
+                            <a href="#tools">
+                                PDF Compressor
+                            </a>
+
+                            <a href="#tools">
+                                Free Utilities
+                            </a>
+
+                        </div>
+
+
+                        {/* RESOURCES */}
+                        <div className="footer-column">
+
+                            <span className="footer-column-title">
+                                RESOURCES
+                            </span>
+
+                            <Link to="/">
+                                About AKR
+                            </Link>
+
+                            <a href="#services">
+                                Government Portals
+                            </a>
+
+                            <a href="#tools">
+                                Digital Resources
+                            </a>
+
+                            <Link to="/login">
+                                User Login
+                            </Link>
+
+                            <a href="#services">
+                                Help & Support
+                            </a>
+
+                        </div>
+
+
+                        {/* CONTACT */}
+                        <div className="footer-column">
+
+                            <span className="footer-column-title">
+                                CONTACT
+                            </span>
+
+                            <a href="mailto:contact@akrdeveloper.in">
+                                Email us
+                            </a>
+
+                            <a href="tel:+919000000000">
+                                Call us
+                            </a>
+
+                            <a
+                                href="https://arunakr.netlify.app"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Developer Website
+                            </a>
+
+                            <a href="#services">
+                                Services
+                            </a>
+
+                            <a href="#tools">
+                                Digital Tools
+                            </a>
+
+                        </div>
+
                     </div>
 
                     <div className="footer-bottom">
-                        <span>© {new Date().getFullYear()} AKR Communications</span>
 
-                        <span className="footer-status">
-                            <span />
-                            Digital service portal
-                        </span>
+                        <div className="footer-copyright">
+                            <span>
+                                © {new Date().getFullYear()} AKR Communications.
+                            </span>
+
+                            <span className="copyright-separator">
+                                All rights reserved.
+                            </span>
+                        </div>
+
+
+                        <div className="developer-credit">
+
+                            <span>Design and Developed By</span>
+
+                            <a
+                                href="https://arunakr.netlify.app"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                AKR Developer
+                                <Icon name="external" size={13} />
+                            </a>
+
+                        </div>
+
+
+                        <div className="footer-legal">
+
+                            <a href="#services">
+                                Privacy Policy
+                            </a>
+
+                            <a href="#services">
+                                Terms of Use
+                            </a>
+
+                            <a href="#services">
+                                Legal
+                            </a>
+
+                        </div>
+
                     </div>
+
                 </div>
+
             </footer>
         </div>
     );
