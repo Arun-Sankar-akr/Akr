@@ -38,12 +38,11 @@ const admin = [
 ];
 
 const attendant = [
-    ["Dashboard", "/attendant", LayoutDashboard],
-    ["New Transaction", "/attendant/new-transaction", ReceiptText],
-    ["My Transactions", "/attendant/transactions", ReceiptText],
     ["Cash Register", "/attendant/cash", Banknote],
+    ["New Transaction", "/attendant/new-transaction", ReceiptText],
     ["Money Transfer", "/attendant/money-transfer", ArrowLeftRight],
     ["Withdrawal", "/attendant/withdrawal", ArrowLeftRight],
+    ["My Transactions", "/attendant/transactions", ReceiptText],
     ["Customers", "/attendant/customers", Users],
 ];
 
@@ -72,9 +71,9 @@ export default function Sidebar({ open, onClose }) {
           BRAND
       ====================================================== */}
             <div className="brand">
-               
+
                 <div className="brand-info">
-                   <img src={logo} alt="logo" id="logo" />
+                    <img src={logo} alt="logo" id="logo" />
                 </div>
 
                 <button

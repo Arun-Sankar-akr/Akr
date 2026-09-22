@@ -432,6 +432,10 @@ export default function NewTransaction() {
        on the page.
        ===================================================== */
 
+    /* =====================================================
+   PREMIUM PRINT RECEIPT
+   ===================================================== */
+
     function printReceipt() {
         if (!cart.length) {
             return;
@@ -456,7 +460,8 @@ export default function NewTransaction() {
             "Attendant";
 
         const itemCount = cart.reduce(
-            (sum, item) => sum + item.quantity,
+            (sum, item) =>
+                sum + Number(item.quantity || 0),
             0
         );
 
@@ -479,188 +484,862 @@ export default function NewTransaction() {
             );
 
         const rowsHtml = cart
-            .map((item) => {
-                const rate = Number(item.sellingPrice) || 0;
-                const amount = rate * item.quantity;
+            .map((item, index) => {
+                const rate =
+                    Number(item.sellingPrice) || 0;
+
+                const quantity =
+                    Number(item.quantity) || 0;
+
+                const amount =
+                    rate * quantity;
 
                 return `
-                    <tr>
-                        <td class="name">${escapeHtml(item.name)}</td>
-                        <td class="num">${item.quantity}</td>
-                        <td class="num">Rs. ${rate.toLocaleString("en-IN")}</td>
-                        <td class="num">Rs. ${amount.toLocaleString("en-IN")}</td>
-                    </tr>
-                `;
+                <tr>
+                    <td class="item-number">
+                        ${String(index + 1).padStart(2, "0")}
+                    </td>
+
+                    <td class="item-name">
+                        ${escapeHtml(item.name)}
+                    </td>
+
+                    <td class="num">
+                        ${quantity}
+                    </td>
+
+                    <td class="num">
+                        ₹${rate.toLocaleString("en-IN")}
+                    </td>
+
+                    <td class="num amount">
+                        ₹${amount.toLocaleString("en-IN")}
+                    </td>
+                </tr>
+            `;
             })
             .join("");
 
         const receiptHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8" />
-                <title>Receipt</title>
-                <style>
-                    * {
-                        box-sizing: border-box;
-                    }
+        <!DOCTYPE html>
 
+        <html lang="en">
+
+        <head>
+
+            <meta charset="utf-8" />
+
+            <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1"
+            />
+
+            <title>AKR Communications - Sale Receipt</title>
+
+            <style>
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                html,
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    background: #ffffff;
+
+                    color: #172033;
+
+                    font-family:
+                        Inter,
+                        Arial,
+                        Helvetica,
+                        sans-serif;
+
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                .receipt-page {
+                    width: 100%;
+
+                    max-width: 820px;
+
+                    margin: 0 auto;
+
+                    padding: 36px 42px 45px;
+
+                    background: #ffffff;
+                }
+
+
+                /* =========================================
+                   TOP BRAND
+                   ========================================= */
+
+                .brand {
+                    display: flex;
+
+                    align-items: center;
+                    justify-content: space-between;
+
+                    gap: 25px;
+
+                    padding-bottom: 25px;
+
+                    border-bottom: 1px solid #e7eaf0;
+                }
+
+                .brand-left {
+                    display: flex;
+
+                    align-items: center;
+
+                    gap: 18px;
+                }
+
+                .brand-logo-wrap {
+                    width: 82px;
+                    height: 82px;
+
+                    display: flex;
+
+                    align-items: center;
+                    justify-content: center;
+
+                    padding: 8px;
+
+                    background: #ffffff;
+
+                    border: 1px solid #e8eaf0;
+
+                    border-radius: 18px;
+
+                    box-shadow:
+                        0 8px 20px
+                        rgba(15, 23, 42, 0.07);
+                }
+
+                .brand-logo {
+                    width: 100%;
+                    height: 100%;
+
+                    object-fit: contain;
+                }
+
+                .brand-name {
+                    margin: 0;
+
+                    color: #111827;
+
+                    font-size: 27px;
+
+                    line-height: 1.1;
+
+                    font-weight: 800;
+
+                    letter-spacing: -0.04em;
+                }
+
+                .brand-subtitle {
+                    margin-top: 6px;
+
+                    color: #697386;
+
+                    font-size: 11px;
+
+                    font-weight: 600;
+
+                    letter-spacing: 0.08em;
+
+                    text-transform: uppercase;
+                }
+
+
+                /* =========================================
+                   RECEIPT LABEL
+                   ========================================= */
+
+                .receipt-label {
+                    text-align: right;
+                }
+
+                .receipt-label span {
+                    display: block;
+
+                    color: #6366f1;
+
+                    font-size: 10px;
+
+                    font-weight: 800;
+
+                    letter-spacing: 0.15em;
+
+                    text-transform: uppercase;
+                }
+
+                .receipt-label strong {
+                    display: block;
+
+                    margin-top: 6px;
+
+                    color: #111827;
+
+                    font-size: 18px;
+
+                    font-weight: 800;
+                }
+
+
+                /* =========================================
+                   META
+                   ========================================= */
+
+                .receipt-meta {
+                    display: grid;
+
+                    grid-template-columns:
+                        repeat(3, minmax(0, 1fr));
+
+                    gap: 12px;
+
+                    margin-top: 22px;
+                }
+
+                .meta-card {
+                    padding: 13px 15px;
+
+                    background: #f8f9fc;
+
+                    border: 1px solid #edf0f4;
+
+                    border-radius: 12px;
+                }
+
+                .meta-label {
+                    display: block;
+
+                    color: #98a1b2;
+
+                    font-size: 9px;
+
+                    font-weight: 800;
+
+                    letter-spacing: 0.09em;
+
+                    text-transform: uppercase;
+                }
+
+                .meta-value {
+                    display: block;
+
+                    margin-top: 5px;
+
+                    color: #273142;
+
+                    font-size: 12px;
+
+                    font-weight: 700;
+                }
+
+
+                /* =========================================
+                   SECTION TITLE
+                   ========================================= */
+
+                .items-section {
+                    margin-top: 28px;
+                }
+
+                .section-heading {
+                    display: flex;
+
+                    align-items: center;
+                    justify-content: space-between;
+
+                    margin-bottom: 10px;
+                }
+
+                .section-heading strong {
+                    color: #172033;
+
+                    font-size: 12px;
+
+                    font-weight: 800;
+
+                    letter-spacing: 0.04em;
+
+                    text-transform: uppercase;
+                }
+
+                .section-heading span {
+                    color: #98a1b2;
+
+                    font-size: 10px;
+
+                    font-weight: 600;
+                }
+
+
+                /* =========================================
+                   TABLE
+                   ========================================= */
+
+                .items-table {
+                    width: 100%;
+
+                    border-collapse: separate;
+
+                    border-spacing: 0;
+
+                    overflow: hidden;
+
+                    border: 1px solid #e7eaf0;
+
+                    border-radius: 14px;
+                }
+
+                .items-table thead th {
+                    padding: 12px 13px;
+
+                    background: #f5f6fa;
+
+                    color: #697386;
+
+                    border-bottom: 1px solid #e5e8ee;
+
+                    font-size: 9px;
+
+                    font-weight: 800;
+
+                    letter-spacing: 0.07em;
+
+                    text-align: left;
+
+                    text-transform: uppercase;
+                }
+
+                .items-table thead th:first-child {
+                    width: 42px;
+
+                    text-align: center;
+                }
+
+                .items-table th.num {
+                    text-align: right;
+                }
+
+                .items-table tbody td {
+                    padding: 13px;
+
+                    border-bottom: 1px solid #edf0f4;
+
+                    color: #273142;
+
+                    font-size: 12px;
+
+                    font-weight: 500;
+                }
+
+                .items-table tbody tr:last-child td {
+                    border-bottom: none;
+                }
+
+                .item-number {
+                    color: #a0a7b4;
+
+                    text-align: center;
+
+                    font-size: 10px !important;
+
+                    font-weight: 700 !important;
+                }
+
+                .item-name {
+                    color: #172033 !important;
+
+                    font-weight: 700 !important;
+                }
+
+                .items-table td.num {
+                    text-align: right;
+
+                    white-space: nowrap;
+                }
+
+                .items-table td.amount {
+                    color: #172033;
+
+                    font-weight: 800;
+                }
+
+
+                /* =========================================
+                   SUMMARY
+                   ========================================= */
+
+                .summary-area {
+                    display: flex;
+
+                    justify-content: flex-end;
+
+                    margin-top: 18px;
+                }
+
+                .summary-box {
+                    width: 310px;
+
+                    padding: 17px;
+
+                    background: #f8f9fc;
+
+                    border: 1px solid #e8ebf1;
+
+                    border-radius: 15px;
+                }
+
+                .summary-row {
+                    display: flex;
+
+                    align-items: center;
+                    justify-content: space-between;
+
+                    padding: 6px 0;
+
+                    color: #697386;
+
+                    font-size: 11px;
+                }
+
+                .summary-row strong {
+                    color: #273142;
+
+                    font-weight: 700;
+                }
+
+                .summary-total {
+                    display: flex;
+
+                    align-items: center;
+                    justify-content: space-between;
+
+                    margin-top: 10px;
+
+                    padding-top: 14px;
+
+                    border-top: 1px solid #dfe3ea;
+                }
+
+                .summary-total span {
+                    color: #172033;
+
+                    font-size: 13px;
+
+                    font-weight: 800;
+                }
+
+                .summary-total strong {
+                    color: #6366f1;
+
+                    font-size: 21px;
+
+                    font-weight: 900;
+                }
+
+
+                /* =========================================
+                   PAYMENT STATUS
+                   ========================================= */
+
+                .payment-status {
+                    display: flex;
+
+                    align-items: center;
+
+                    justify-content: center;
+
+                    gap: 8px;
+
+                    margin-top: 20px;
+
+                    padding: 10px 14px;
+
+                    background: #f0fdf4;
+
+                    border: 1px solid #d7f3df;
+
+                    border-radius: 10px;
+
+                    color: #168044;
+
+                    font-size: 10px;
+
+                    font-weight: 800;
+
+                    letter-spacing: 0.05em;
+
+                    text-transform: uppercase;
+                }
+
+                .payment-dot {
+                    width: 7px;
+                    height: 7px;
+
+                    border-radius: 50%;
+
+                    background: #22c55e;
+                }
+
+
+                /* =========================================
+                   FOOTER
+                   ========================================= */
+
+                .receipt-footer {
+                    margin-top: 32px;
+
+                    padding-top: 20px;
+
+                    border-top: 1px dashed #d8dce4;
+
+                    text-align: center;
+                }
+
+                .footer-thanks {
+                    color: #172033;
+
+                    font-size: 13px;
+
+                    font-weight: 800;
+                }
+
+                .footer-sub {
+                    margin-top: 6px;
+
+                    color: #98a1b2;
+
+                    font-size: 10px;
+
+                    line-height: 1.6;
+                }
+
+                .footer-brand {
+                    margin-top: 13px;
+
+                    color: #6366f1;
+
+                    font-size: 9px;
+
+                    font-weight: 800;
+
+                    letter-spacing: 0.12em;
+
+                    text-transform: uppercase;
+                }
+
+
+                /* =========================================
+                   PRINT
+                   ========================================= */
+
+                @page {
+                    size: A4;
+                    margin: 12mm;
+                }
+
+                @media print {
+
+                    html,
                     body {
-                        margin: 0;
-                        padding: 24px;
-
-                        font-family: Arial, Helvetica, sans-serif;
-                        color: #111827;
-                    }
-
-                    .shop {
-                        text-align: center;
-                        margin-bottom: 14px;
-                    }
-
-                    .shop h1 {
-                        margin: 0;
-                        font-size: 18px;
-                    }
-
-                    .shop span {
-                        display: block;
-                        margin-top: 2px;
-                        font-size: 11px;
-                        color: #6b7280;
-                    }
-
-                    .meta {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 12px;
-
-                        font-size: 11px;
-                        color: #374151;
-                    }
-
-                    hr {
-                        border: none;
-                        border-top: 1px dashed #d1d5db;
-                        margin: 12px 0;
-                    }
-
-                    table {
                         width: 100%;
-                        border-collapse: collapse;
+
+                        margin: 0;
+
+                        padding: 0;
+
+                        background: #ffffff;
                     }
 
-                    th {
-                        text-align: left;
-                        font-size: 10px;
-                        letter-spacing: 0.05em;
-                        text-transform: uppercase;
-                        color: #6b7280;
+                    .receipt-page {
+                        max-width: none;
 
-                        padding-bottom: 6px;
+                        padding: 0;
+
+                        margin: 0;
                     }
 
-                    th.num,
-                    td.num {
-                        text-align: right;
+                    .items-table {
+                        page-break-inside: auto;
                     }
 
-                    td {
-                        font-size: 12px;
-                        padding: 5px 0;
-                        border-top: 1px solid #e5e7eb;
+                    .items-table tr {
+                        page-break-inside: avoid;
                     }
 
-                    .totals {
-                        margin-top: 12px;
+                    .summary-box {
+                        page-break-inside: avoid;
                     }
 
-                    .totals div {
-                        display: flex;
-                        justify-content: space-between;
-
-                        font-size: 12px;
-                        margin-bottom: 4px;
+                    .receipt-footer {
+                        page-break-inside: avoid;
                     }
+                }
 
-                    .grand {
-                        margin-top: 8px;
-                        padding-top: 8px;
-                        border-top: 1px solid #111827;
+            </style>
 
-                        font-size: 15px;
-                        font-weight: bold;
-                    }
+        </head>
 
-                    .footer {
-                        margin-top: 18px;
-                        text-align: center;
+        <body>
 
-                        font-size: 10px;
-                        color: #9ca3af;
-                    }
-                </style>
-            </head>
-            <body>
+            <main class="receipt-page">
 
-                <div class="shop">
-                    <h1>Akr Communications</h1>
-                    <span>Sale Receipt</span>
-                </div>
+                <!-- BRAND HEADER -->
 
-                <div class="meta">
-                    <span>${dateStr}, ${timeStr}</span>
-                    <span>Attendant: ${escapeHtml(attendantName)}</span>
-                </div>
+                <section class="brand">
 
-                <hr />
+                    <div class="brand-left">
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th class="num">Qty</th>
-                            <th class="num">Rate</th>
-                            <th class="num">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rowsHtml}
-                    </tbody>
-                </table>
+                        <div class="brand-logo-wrap">
 
-                <div class="totals">
-                    <div>
-                        <span>Items</span>
-                        <span>${itemCount}</span>
+                            <img
+                                class="brand-logo"
+                                src="${logos}"
+                                alt="AKR Communications"
+                            />
+
+                        </div>
+
+                        <div>
+
+                            <h1 class="brand-name">
+                                AKR Communications
+                            </h1>
+
+                            <div class="brand-subtitle">
+                                Digital Services &amp; Printing
+                            </div>
+
+                        </div>
+
                     </div>
-                    <div>
-                        <span>Payment</span>
-                        <span>${paymentLabel}</span>
+
+
+                    <div class="receipt-label">
+
+                        <span>Official</span>
+
+                        <strong>
+                            SALES RECEIPT
+                        </strong>
+
                     </div>
-                    <div class="grand">
-                        <span>Grand Total</span>
-                        <span>Rs. ${Number(total).toLocaleString("en-IN")}</span>
+
+                </section>
+
+
+                <!-- META -->
+
+                <section class="receipt-meta">
+
+                    <div class="meta-card">
+
+                        <span class="meta-label">
+                            Date
+                        </span>
+
+                        <span class="meta-value">
+                            ${dateStr}
+                        </span>
+
                     </div>
+
+
+                    <div class="meta-card">
+
+                        <span class="meta-label">
+                            Time
+                        </span>
+
+                        <span class="meta-value">
+                            ${timeStr}
+                        </span>
+
+                    </div>
+
+
+                    <div class="meta-card">
+
+                        <span class="meta-label">
+                            Attendant
+                        </span>
+
+                        <span class="meta-value">
+                            ${escapeHtml(attendantName)}
+                        </span>
+
+                    </div>
+
+                </section>
+
+
+                <!-- ITEMS -->
+
+                <section class="items-section">
+
+                    <div class="section-heading">
+
+                        <strong>
+                            Transaction Details
+                        </strong>
+
+                        <span>
+                            ${itemCount} item${itemCount !== 1 ? "s" : ""}
+                        </span>
+
+                    </div>
+
+
+                    <table class="items-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>#</th>
+
+                                <th>
+                                    Item / Service
+                                </th>
+
+                                <th class="num">
+                                    Qty
+                                </th>
+
+                                <th class="num">
+                                    Rate
+                                </th>
+
+                                <th class="num">
+                                    Amount
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            ${rowsHtml}
+
+                        </tbody>
+
+                    </table>
+
+                </section>
+
+
+                <!-- SUMMARY -->
+
+                <section class="summary-area">
+
+                    <div class="summary-box">
+
+                        <div class="summary-row">
+
+                            <span>
+                                Total Items
+                            </span>
+
+                            <strong>
+                                ${itemCount}
+                            </strong>
+
+                        </div>
+
+
+                        <div class="summary-row">
+
+                            <span>
+                                Payment Method
+                            </span>
+
+                            <strong>
+                                ${paymentLabel}
+                            </strong>
+
+                        </div>
+
+
+                        <div class="summary-total">
+
+                            <span>
+                                GRAND TOTAL
+                            </span>
+
+                            <strong>
+                                ₹${Number(total).toLocaleString("en-IN")}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- PAYMENT -->
+
+                <div class="payment-status">
+
+                    <span class="payment-dot"></span>
+
+                    Payment received · ${paymentLabel}
+
                 </div>
 
-                <div class="footer">
-                    Thank you for your visit!<br />
-                    Secure transaction &bull; Firebase protected
-                </div>
 
-            </body>
-            </html>
-        `;
+                <!-- FOOTER -->
 
-        const iframe = document.createElement("iframe");
+                <footer class="receipt-footer">
+
+                    <div class="footer-thanks">
+                        Thank you for choosing AKR Communications
+                    </div>
+
+                    <div class="footer-sub">
+                        We appreciate your business.<br />
+                        Please retain this receipt for your records.
+                    </div>
+
+                    <div class="footer-brand">
+                        AKR Communications
+                    </div>
+
+                </footer>
+
+            </main>
+
+        </body>
+
+        </html>
+    `;
+
+        const iframe =
+            document.createElement("iframe");
 
         iframe.style.position = "fixed";
         iframe.style.right = "0";
         iframe.style.bottom = "0";
+
         iframe.style.width = "0";
         iframe.style.height = "0";
+
         iframe.style.border = "0";
+
+        iframe.style.visibility = "hidden";
 
         document.body.appendChild(iframe);
 
@@ -668,21 +1347,40 @@ export default function NewTransaction() {
             iframe.contentWindow?.document ||
             iframe.contentDocument;
 
+        if (!iframeDoc) {
+            document.body.removeChild(iframe);
+            return;
+        }
+
         iframeDoc.open();
+
         iframeDoc.write(receiptHtml);
+
         iframeDoc.close();
 
+
         const cleanup = () => {
-            document.body.removeChild(iframe);
+            if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
         };
 
-        iframe.onload = () => {
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
 
-            // Fallback cleanup in case afterprint doesn't fire
-            // on this browser.
-            setTimeout(cleanup, 1000);
+        iframe.onload = () => {
+
+            setTimeout(() => {
+
+                iframe.contentWindow?.focus();
+
+                iframe.contentWindow?.print();
+
+                setTimeout(
+                    cleanup,
+                    1500
+                );
+
+            }, 250);
+
         };
     }
 
