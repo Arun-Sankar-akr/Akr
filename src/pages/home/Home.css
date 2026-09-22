@@ -1549,9 +1549,6 @@ body.akr-home-page {
 
     .section-heading h1 {
         margin-top: 13px;
-
-        font-size:
-            40px;
     }
 
     .section-heading p {
@@ -1693,7 +1690,7 @@ body.akr-home-page {
     }
 
     .section-heading h1 {
-        font-size: 36px;
+        font-size: 30px;
     }
 
     .gov-card {
@@ -3438,7 +3435,7 @@ body.akr-home-page {
         10px 0 9px;
 
     font-size:
-        clamp(36px, 4.5vw, 58px);
+        clamp(36px, 4.5vw, 48px);
 }
 
 .section-heading p {
@@ -3833,4 +3830,54 @@ body.akr-home-page {
         transition:
             none !important;
     }
+}
+
+/* Add this to the bottom of your existing Home.css */
+
+.cgpa-home-tool-section {
+  position: relative;
+  padding: 12px 0 70px;
+}
+
+.cgpa-home-tool-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 390px);
+  align-items: stretch;
+}
+
+@media (max-width: 700px) {
+  .cgpa-home-tool-section {
+    padding-bottom: 50px;
+  }
+
+  .cgpa-home-tool-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Add this to the bottom of your existing Home.css */
+
+.cgpa-home-tool-section {
+  position: relative;
+  padding: 12px 0 70px;
+}
+
+.cgpa-home-tool-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 390px);
+  align-items: stretch;
+}
+
+@media (max-width: 700px) {
+  .cgpa-home-tool-section {
+    padding-bottom: 50px;
+  }
+
+  .cgpa-home-tool-grid {
+    grid-template-columns: 1fr;
+  }
+}
+#student{
+    margin-top: 50px;
 }

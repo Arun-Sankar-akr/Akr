@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png"
 import "./Home.css";
+import CgpaPercentageCalculator from "./CgpaPercentageCalculator";
 
 import Aadhar from "../../assets/aadhar1.png"
 import Pan from "../../assets/pan.png"
@@ -660,6 +661,23 @@ const Home = () => {
                             ))}
                         </div>
                     </div>
+                    <section className="cgpa-home-tool-section" id="student">
+                        <div className="section-container">
+                            <div className="section-heading reveal-item">
+                                <div className="section-heading-left">
+                                    <h1>
+                                        CGPA
+                                        <span> Calculator</span>
+                                    </h1>
+                                </div>
+                            </div>
+
+                            <div className="cgpa-home-tool-grid">
+                                <CgpaPercentageCalculator />
+                            </div>
+                        </div>
+                    </section>
+
                     <div className="section-container" id="govt">
                         <div className="section-heading reveal-item">
                             <div className="section-heading-left">
