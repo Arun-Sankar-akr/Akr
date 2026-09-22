@@ -390,13 +390,13 @@ export default function AttendantDashboard() {
           tone="violet"
         />
 
-        <StatCard
+        {/* <StatCard
           icon={TrendingUp}
           label="Today's profit"
           value={formatCurrency(totals.profit)}
           note="Based on recorded service costs"
           tone="green"
-        />
+        /> */}
 
         <StatCard
           icon={ReceiptText}

@@ -32,10 +32,10 @@ import MonthlyAccounts from "../pages/admin/Accounts/MonthlyAccounts";
 import YearlyAccounts from "../pages/admin/Accounts/YearlyAccounts";
 import ProfitReport from "../pages/admin/Accounts/ProfitReport";
 
-// Services
-import Services from "../pages/admin/Services/Services";
-import AddService from "../pages/admin/Services/AddService";
-import EditService from "../pages/admin/Services/EditService";
+// // Services
+// import Services from "../pages/admin/Services/Services";
+// import AddService from "../pages/admin/Services/AddService";
+// import EditService from "../pages/admin/Services/EditService";
 
 // Expenses
 import Expenses from "../pages/admin/Expenses/Expenses";
@@ -81,6 +81,7 @@ import AttCash from "../pages/attendant/CashRegister";
 import AttMoney from "../pages/attendant/MoneyTransfer";
 import AttWithdrawal from "../pages/attendant/Withdrawal";
 import AttCustomers from "../pages/attendant/Customers";
+import EBBillPayments from "../pages/attendant/Ebbillpayments";
 
 
 export default function AppRoutes() {
@@ -171,7 +172,7 @@ export default function AppRoutes() {
                 SERVICES
             ================================================= */}
 
-                        <Route
+                        {/* <Route
                             path="/admin/services"
                             element={<Services />}
                         />
@@ -184,7 +185,7 @@ export default function AppRoutes() {
                         <Route
                             path="/admin/services/:id/edit"
                             element={<EditService />}
-                        />
+                        /> */}
 
 
                         {/* =================================================
@@ -361,6 +362,11 @@ export default function AppRoutes() {
                         <Route
                             path="/attendant/transactions"
                             element={<MyTransactions />}
+                        />
+
+                        <Route
+                            path="/attendant/eb"
+                            element={<EBBillPayments />}
                         />
 
                         <Route

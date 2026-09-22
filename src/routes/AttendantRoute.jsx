@@ -58,6 +58,7 @@ export default function AttendantRoute() {
 
     return <Navigate to="/login" replace />;
   }
+  
 
   // Optional account status check
   if (profile.active === false) {

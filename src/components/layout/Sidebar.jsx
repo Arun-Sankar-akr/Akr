@@ -27,10 +27,10 @@ const admin = [
     ["Transactions", "/admin/transactions", ReceiptText],
     ["Accounts", "/admin/accounts/daily", BarChart3],
     ["Expenses", "/admin/expenses", WalletCards],
-    ["Services", "/admin/services", CircleDollarSign],
+    // ["Services", "/admin/services", CircleDollarSign],
     ["Inventory", "/admin/inventory", Package],
-    ["Customers", "/admin/customers", Users],
-    ["Staff", "/admin/staff", UserRoundCog],
+    // ["Customers", "/admin/customers", Users],
+    // ["Staff", "/admin/staff", UserRoundCog],
     ["Cash Register", "/admin/cash", Banknote],
     ["Reports", "/admin/reports/sales", BarChart3],
     ["Audit Logs", "/admin/audit", FileClock],
@@ -38,8 +38,10 @@ const admin = [
 ];
 
 const attendant = [
+    ["Dashboard", "/attendant", LayoutDashboard],
     ["Cash Register", "/attendant/cash", Banknote],
     ["New Transaction", "/attendant/new-transaction", ReceiptText],
+    ["EB - BIll", "/attendant/eb", ArrowLeftRight],
     ["Money Transfer", "/attendant/money-transfer", ArrowLeftRight],
     ["Withdrawal", "/attendant/withdrawal", ArrowLeftRight],
     ["My Transactions", "/attendant/transactions", ReceiptText],

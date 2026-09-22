@@ -10,6 +10,7 @@ import {
   WalletCards,
   ArrowDownToLine,
   ArrowUpRight,
+  Zap,
   UserRound,
   CalendarDays,
   CreditCard,
@@ -29,6 +30,16 @@ export default function Transactions() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Date range defaults to today.
+  const getLocalDateInputValue = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+  };
+
+  const [fromDate, setFromDate] = useState(() => getLocalDateInputValue());
+  const [toDate, setToDate] = useState(() => getLocalDateInputValue());
 
   const [selectedTransaction, setSelectedTransaction] =
     useState(null);
@@ -52,6 +63,14 @@ export default function Transactions() {
       return "withdrawal";
     }
 
+    if (
+      type.includes("eb bill") ||
+      type.includes("ebbill") ||
+      type.includes("electricity")
+    ) {
+      return "ebBillPayment";
+    }
+
     return "transaction";
   };
 
@@ -64,6 +83,10 @@ export default function Transactions() {
 
     if (recordType === "withdrawal") {
       return "Withdrawal";
+    }
+
+    if (recordType === "ebBillPayment") {
+      return "EB Bill Payment";
     }
 
     return (
@@ -85,6 +108,10 @@ export default function Transactions() {
       return <ArrowDownToLine size={16} />;
     }
 
+    if (recordType === "ebBillPayment") {
+      return <Zap size={16} />;
+    }
+
     return <ReceiptText size={16} />;
   };
 
@@ -94,26 +121,36 @@ export default function Transactions() {
     if (recordType === "moneyTransfer") {
       return Number(
         item?.customerPays ??
-          item?.total ??
-          item?.amount ??
-          0
+        item?.total ??
+        item?.amount ??
+        0
       );
     }
 
     if (recordType === "withdrawal") {
       return Number(
         item?.customerPays ??
-          item?.total ??
-          item?.amount ??
-          0
+        item?.total ??
+        item?.amount ??
+        0
+      );
+    }
+
+    if (recordType === "ebBillPayment") {
+      return Number(
+        item?.customerPays ??
+        item?.total ??
+        item?.billAmount ??
+        item?.amount ??
+        0
       );
     }
 
     return Number(
       item?.total ??
-        item?.grandTotal ??
-        item?.amount ??
-        0
+      item?.grandTotal ??
+      item?.amount ??
+      0
     );
   };
 
@@ -122,20 +159,21 @@ export default function Transactions() {
 
     if (
       recordType === "moneyTransfer" ||
-      recordType === "withdrawal"
+      recordType === "withdrawal" ||
+      recordType === "ebBillPayment"
     ) {
       return Number(
         item?.serviceCharge ??
-          item?.profit ??
-          item?.grossProfit ??
-          0
+        item?.profit ??
+        item?.grossProfit ??
+        0
       );
     }
 
     return Number(
       item?.grossProfit ??
-        item?.profit ??
-        0
+      item?.profit ??
+      0
     );
   };
 
@@ -160,6 +198,7 @@ export default function Transactions() {
       item?.customerName ||
       item?.customer?.name ||
       item?.customer ||
+      item?.consumerName ||
       item?.name ||
       "Walk-in Customer"
     );
@@ -210,6 +249,19 @@ export default function Transactions() {
     return Number.isNaN(parsed.getTime())
       ? 0
       : parsed.getTime();
+  };
+
+  const getTransactionLocalDate = (item) => {
+    const timestamp = getDateValue(item);
+
+    if (!timestamp) return "";
+
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
   };
 
   const formatDate = (item) => {
@@ -281,10 +333,17 @@ export default function Transactions() {
           statusFilter === "all" ||
           status === statusFilter;
 
+        const transactionDate = getTransactionLocalDate(item);
+
+        const matchesDate =
+          (!fromDate || transactionDate >= fromDate) &&
+          (!toDate || transactionDate <= toDate);
+
         return (
           matchesSearch &&
           matchesType &&
-          matchesStatus
+          matchesStatus &&
+          matchesDate
         );
       }
     );
@@ -293,6 +352,8 @@ export default function Transactions() {
     search,
     typeFilter,
     statusFilter,
+    fromDate,
+    toDate,
   ]);
 
   const stats = useMemo(() => {
@@ -426,9 +487,13 @@ export default function Transactions() {
   };
 
   const clearFilters = () => {
+    const today = getLocalDateInputValue();
+
     setSearch("");
     setTypeFilter("all");
     setStatusFilter("all");
+    setFromDate(today);
+    setToDate(today);
   };
 
   return (
@@ -623,6 +688,10 @@ export default function Transactions() {
               <option value="withdrawal">
                 Withdrawal
               </option>
+
+              <option value="ebBillPayment">
+                EB Bill Payment
+              </option>
             </select>
 
             <ChevronDown size={15} />
@@ -663,17 +732,67 @@ export default function Transactions() {
             <ChevronDown size={15} />
           </div>
 
-          {(search ||
-            typeFilter !== "all" ||
-            statusFilter !== "all") && (
+          <div className="transaction-date-filter">
+            <div className="date-range-field">
+              <CalendarDays size={15} />
+              <div>
+                <span>From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  max={toDate || undefined}
+                  onChange={(event) => setFromDate(event.target.value)}
+                  aria-label="From date"
+                />
+              </div>
+            </div>
+
+            <span className="date-range-arrow">→</span>
+
+            <div className="date-range-field">
+              <CalendarDays size={15} />
+              <div>
+                <span>To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  min={fromDate || undefined}
+                  onChange={(event) => setToDate(event.target.value)}
+                  aria-label="To date"
+                />
+              </div>
+            </div>
+
             <button
               type="button"
-              className="clear-filters-btn"
-              onClick={clearFilters}
+              className="today-date-btn"
+              onClick={() => {
+                const today = getLocalDateInputValue();
+                setFromDate(today);
+                setToDate(today);
+              }}
+              disabled={
+                fromDate === getLocalDateInputValue() &&
+                toDate === getLocalDateInputValue()
+              }
             >
-              Clear filters
+              Today
             </button>
-          )}
+          </div>
+
+          {(search ||
+            typeFilter !== "all" ||
+            statusFilter !== "all" ||
+            fromDate !== getLocalDateInputValue() ||
+            toDate !== getLocalDateInputValue()) && (
+              <button
+                type="button"
+                className="clear-filters-btn"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </button>
+            )}
         </div>
 
         {/* RESULT INFO */}
@@ -761,15 +880,17 @@ export default function Transactions() {
 
               {(search ||
                 typeFilter !== "all" ||
-                statusFilter !== "all") && (
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={clearFilters}
-                >
-                  Clear filters
-                </button>
-              )}
+                statusFilter !== "all" ||
+                fromDate !== getLocalDateInputValue() ||
+                toDate !== getLocalDateInputValue()) && (
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={clearFilters}
+                  >
+                    Clear filters
+                  </button>
+                )}
             </div>
           )}
 
@@ -828,7 +949,7 @@ export default function Transactions() {
                                   #
                                   {String(
                                     item?.id ||
-                                      ""
+                                    ""
                                   ).slice(
                                     0,
                                     10
@@ -884,13 +1005,12 @@ export default function Transactions() {
 
                           <td>
                             <strong
-                              className={`profit-cell ${
-                                profit > 0
+                              className={`profit-cell ${profit > 0
                                   ? "positive"
                                   : profit < 0
-                                  ? "negative"
-                                  : "zero"
-                              }`}
+                                    ? "negative"
+                                    : "zero"
+                                }`}
                             >
                               {profit > 0
                                 ? "+"
@@ -1025,7 +1145,7 @@ export default function Transactions() {
             {/* PROFIT LIST */}
             <div className="profit-details-content">
               {profitTransactions.length ===
-              0 ? (
+                0 ? (
                 <div className="profit-empty">
                   <div className="state-icon">
                     <TrendingUp size={22} />
@@ -1052,7 +1172,7 @@ export default function Transactions() {
                       {profitTransactions.length}{" "}
                       record
                       {profitTransactions.length !==
-                      1
+                        1
                         ? "s"
                         : ""}
                     </span>
@@ -1095,7 +1215,7 @@ export default function Transactions() {
                                 <span>
                                   #{String(
                                     item?.id ||
-                                      ""
+                                    ""
                                   ).slice(
                                     0,
                                     10
@@ -1363,81 +1483,84 @@ export default function Transactions() {
             ) === "moneyTransfer" ||
               getRecordType(
                 selectedTransaction
-              ) === "withdrawal") && (
-              <div className="profit-source-box">
-                <div className="profit-source-icon">
-                  <TrendingUp size={18} />
-                </div>
+              ) === "withdrawal" ||
+              getRecordType(
+                selectedTransaction
+              ) === "ebBillPayment") && (
+                <div className="profit-source-box">
+                  <div className="profit-source-icon">
+                    <TrendingUp size={18} />
+                  </div>
 
-                <div>
-                  <strong>
-                    Profit source
-                  </strong>
-
-                  <p>
-                    This record generated profit
-                    from its service charge.
-                  </p>
-
-                  <div className="profit-source-values">
-                    <span>
-                      Service Charge
-                    </span>
-
+                  <div>
                     <strong>
-                      +
-                      {formatCurrency(
-                        Number(
-                          selectedTransaction?.serviceCharge ??
-                            0
-                        )
-                      )}
+                      Profit source
                     </strong>
+
+                    <p>
+                      This record generated profit
+                      from its service charge.
+                    </p>
+
+                    <div className="profit-source-values">
+                      <span>
+                        Service Charge
+                      </span>
+
+                      <strong>
+                        +
+                        {formatCurrency(
+                          Number(
+                            selectedTransaction?.serviceCharge ??
+                            0
+                          )
+                        )}
+                      </strong>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {getRecordType(
               selectedTransaction
             ) === "transaction" && (
-              <div className="profit-source-box">
-                <div className="profit-source-icon">
-                  <TrendingUp size={18} />
-                </div>
+                <div className="profit-source-box">
+                  <div className="profit-source-icon">
+                    <TrendingUp size={18} />
+                  </div>
 
-                <div>
-                  <strong>
-                    Profit source
-                  </strong>
-
-                  <p>
-                    This transaction's profit is
-                    taken from its stored gross
-                    profit / profit value.
-                  </p>
-
-                  <div className="profit-source-values">
-                    <span>
-                      Recorded Profit
-                    </span>
-
+                  <div>
                     <strong>
-                      {getProfit(
-                        selectedTransaction
-                      ) > 0
-                        ? "+"
-                        : ""}
-                      {formatCurrency(
-                        getProfit(
-                          selectedTransaction
-                        )
-                      )}
+                      Profit source
                     </strong>
+
+                    <p>
+                      This transaction's profit is
+                      taken from its stored gross
+                      profit / profit value.
+                    </p>
+
+                    <div className="profit-source-values">
+                      <span>
+                        Recorded Profit
+                      </span>
+
+                      <strong>
+                        {getProfit(
+                          selectedTransaction
+                        ) > 0
+                          ? "+"
+                          : ""}
+                        {formatCurrency(
+                          getProfit(
+                            selectedTransaction
+                          )
+                        )}
+                      </strong>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <div className="transaction-modal-footer">
               <button

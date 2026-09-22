@@ -25,8 +25,9 @@ export default function AdminRoute() {
     }
 
     if (role !== "admin") {
-        return <Navigate to="/attendant/dashboard" replace />;
+        return <Navigate to="/attendant/new-transaction" replace />;
     }
+    
 
     return <Outlet />;
 }

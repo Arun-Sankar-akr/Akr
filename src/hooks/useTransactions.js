@@ -34,6 +34,7 @@ export function useTransactions(limitCount = 100) {
       transactions: [],
       moneyTransfers: [],
       withdrawals: [],
+      ebBillPayments: [],
     };
 
     let active = true;
@@ -49,6 +50,7 @@ export function useTransactions(limitCount = 100) {
         ...collectionsData.transactions,
         ...collectionsData.moneyTransfers,
         ...collectionsData.withdrawals,
+        ...collectionsData.ebBillPayments,
       ];
 
       // -------------------------------------------------------
@@ -219,15 +221,15 @@ export function useTransactions(limitCount = 100) {
                 amount:
                   Number(
                     data.customerPays ??
-                      data.transferAmount ??
-                      0
+                    data.transferAmount ??
+                    0
                   ),
 
                 total:
                   Number(
                     data.customerPays ??
-                      data.transferAmount ??
-                      0
+                    data.transferAmount ??
+                    0
                   ),
 
                 // Transfer service charge as profit
@@ -319,15 +321,15 @@ export function useTransactions(limitCount = 100) {
                 amount:
                   Number(
                     data.customerPays ??
-                      data.withdrawalAmount ??
-                      0
+                    data.withdrawalAmount ??
+                    0
                   ),
 
                 total:
                   Number(
                     data.customerPays ??
-                      data.withdrawalAmount ??
-                      0
+                    data.withdrawalAmount ??
+                    0
                   ),
 
                 profit:
@@ -363,6 +365,110 @@ export function useTransactions(limitCount = 100) {
 
     unsubscribeFunctions.push(
       unsubscribeWithdrawals
+    );
+
+
+    // =========================================================
+    // EB BILL PAYMENTS
+    // =========================================================
+
+    let ebBillPaymentsQuery;
+
+    if (isAdmin) {
+      /*
+       * Admin can read all EB bill payments.
+       */
+      ebBillPaymentsQuery = query(
+        collection(db, "ebBillPayments")
+      );
+    } else {
+      /*
+       * Attendant can only read their own EB bill payments.
+       *
+       * This matches Firestore rules:
+       *
+       * resource.data.attendantId ==
+       * request.auth.uid
+       */
+      ebBillPaymentsQuery = query(
+        collection(db, "ebBillPayments"),
+        where(
+          "attendantId",
+          "==",
+          user.uid
+        )
+      );
+    }
+
+    const unsubscribeEbBillPayments =
+      onSnapshot(
+        ebBillPaymentsQuery,
+        (snapshot) => {
+          collectionsData.ebBillPayments =
+            snapshot.docs.map((document) => {
+              const data = document.data();
+
+              return {
+                id: document.id,
+
+                ...data,
+
+                // Common dashboard fields
+                recordType: "ebBillPayment",
+
+                type: "EB Bill Payment",
+
+                serviceName: "EB Bill Payment",
+
+                // Dashboard amount
+                amount:
+                  Number(
+                    data.customerPays ??
+                    data.billAmount ??
+                    0
+                  ),
+
+                total:
+                  Number(
+                    data.customerPays ??
+                    data.billAmount ??
+                    0
+                  ),
+
+                // Bill payment service charge as profit
+                profit:
+                  Number(
+                    data.serviceCharge ?? 0
+                  ),
+
+                grossProfit:
+                  Number(
+                    data.serviceCharge ?? 0
+                  ),
+
+                status:
+                  data.status ||
+                  "completed",
+              };
+            });
+
+          updateCombinedData();
+        },
+        (firebaseError) => {
+          console.error(
+            "EB Bill Payments Firestore error:",
+            firebaseError
+          );
+
+          if (active) {
+            setError(firebaseError);
+            setLoading(false);
+          }
+        }
+      );
+
+    unsubscribeFunctions.push(
+      unsubscribeEbBillPayments
     );
 
 

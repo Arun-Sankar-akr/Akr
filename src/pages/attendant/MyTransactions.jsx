@@ -16,6 +16,7 @@ import {
   WalletCards,
   ArrowLeftRight,
   Banknote,
+  Zap,
   RefreshCw,
   ChevronDown,
   CalendarDays,
@@ -151,6 +152,21 @@ const getPurpose = (transaction) => {
       shortLabel: "Withdrawal",
       type: "withdrawal",
       icon: Banknote,
+    };
+  }
+
+  // EB Bill Payment
+  if (
+    source === "ebBillPayment" ||
+    transaction?.transactionType === "eb_bill_payment" ||
+    transaction?.transactionType === "ebBillPayment" ||
+    String(transaction?.purpose || "").toLowerCase() === "eb bill payment"
+  ) {
+    return {
+      label: "EB Bill Payment",
+      shortLabel: "EB Bill",
+      type: "eb-bill",
+      icon: Zap,
     };
   }
 
@@ -303,6 +319,25 @@ const normalizeTransaction = (data, id, source) => {
     );
   }
 
+  if (source === "ebBillPayment") {
+    amount = Number(
+      data.billAmount ??
+      data.amount ??
+      0
+    );
+
+    serviceCharge = Number(
+      data.serviceCharge ??
+      0
+    );
+
+    customerPays = Number(
+      data.customerPays ??
+      data.total ??
+      amount + serviceCharge
+    );
+  }
+
   return {
     ...data,
 
@@ -316,12 +351,14 @@ const normalizeTransaction = (data, id, source) => {
     customerName:
       data.customerName ||
       data.name ||
+      data.consumerName ||
       "Unknown Customer",
 
     mobile:
       data.mobile ||
       data.phone ||
       data.phoneNumber ||
+      data.consumerNumber ||
       "—",
 
     paymentMethod: getPaymentMethod(data),
@@ -347,6 +384,7 @@ export default function MyTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [moneyTransfers, setMoneyTransfers] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
+  const [ebBillPayments, setEbBillPayments] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -382,6 +420,7 @@ export default function MyTransactions() {
       setTransactions([]);
       setMoneyTransfers([]);
       setWithdrawals([]);
+      setEbBillPayments([]);
       setLoading(false);
       return;
     }
@@ -392,12 +431,14 @@ export default function MyTransactions() {
     let transactionsLoaded = false;
     let transfersLoaded = false;
     let withdrawalsLoaded = false;
+    let ebBillPaymentsLoaded = false;
 
     const checkLoaded = () => {
       if (
         transactionsLoaded &&
         transfersLoaded &&
-        withdrawalsLoaded
+        withdrawalsLoaded &&
+        ebBillPaymentsLoaded
       ) {
         setLoading(false);
       }
@@ -518,10 +559,49 @@ export default function MyTransactions() {
     );
 
 
+    // -------------------------------
+    // EB Bill Payments
+    // -------------------------------
+
+    const ebBillPaymentsQuery = query(
+      collection(db, "ebBillPayments"),
+      where("attendantId", "==", user.uid)
+    );
+
+    const unsubscribeEbBillPayments = onSnapshot(
+      ebBillPaymentsQuery,
+      (snapshot) => {
+        const records = snapshot.docs.map((doc) =>
+          normalizeTransaction(
+            doc.data(),
+            doc.id,
+            "ebBillPayment"
+          )
+        );
+
+        setEbBillPayments(records);
+
+        ebBillPaymentsLoaded = true;
+        checkLoaded();
+      },
+      (err) => {
+        console.error("EB bill payment error:", err);
+
+        setError(
+          "Unable to load EB bill payments. Please check your Firestore rules."
+        );
+
+        ebBillPaymentsLoaded = true;
+        checkLoaded();
+      }
+    );
+
+
     return () => {
       unsubscribeTransactions();
       unsubscribeTransfers();
       unsubscribeWithdrawals();
+      unsubscribeEbBillPayments();
     };
   }, [user?.uid]);
 
@@ -535,6 +615,7 @@ export default function MyTransactions() {
       ...transactions,
       ...moneyTransfers,
       ...withdrawals,
+      ...ebBillPayments,
     ].sort(
       (a, b) =>
         getTimestamp(b.createdAt) -
@@ -544,6 +625,7 @@ export default function MyTransactions() {
     transactions,
     moneyTransfers,
     withdrawals,
+    ebBillPayments,
   ]);
 
 
@@ -1269,8 +1351,9 @@ export default function MyTransactions() {
             <h1>My Transactions</h1>
 
             <p>
-              View your services, money transfers and
-              withdrawals by date in one place.
+              View your services, money transfers,
+              withdrawals and EB bill payments by
+              date in one place.
             </p>
           </div>
 
@@ -1527,6 +1610,10 @@ export default function MyTransactions() {
                 Withdrawal
               </option>
 
+              <option value="eb-bill">
+                EB Bill Payment
+              </option>
+
               <option value="service">
                 Other Services
               </option>
@@ -1627,7 +1714,7 @@ export default function MyTransactions() {
                 typeFilter !== "all" ||
                 statusFilter !== "all"
                 ? "Try changing your search or filters."
-                : "Your completed services, transfers and withdrawals will appear here."}
+                : "Your completed services, transfers, withdrawals and EB bill payments will appear here."}
             </p>
 
             {(search ||
@@ -1706,7 +1793,10 @@ export default function MyTransactions() {
                                   : transaction.source ===
                                     "withdrawal"
                                     ? "Cash Withdrawal"
-                                    : "Service"}
+                                    : transaction.source ===
+                                      "ebBillPayment"
+                                      ? "EB Bill Payment"
+                                      : "Service"}
                               </span>
                             </div>
 
@@ -1964,7 +2054,10 @@ export default function MyTransactions() {
                       : selectedTransaction.source ===
                         "withdrawal"
                         ? "WITHDRAWAL AMOUNT"
-                        : "TRANSACTION AMOUNT"}
+                        : selectedTransaction.source ===
+                          "ebBillPayment"
+                          ? "BILL AMOUNT"
+                          : "TRANSACTION AMOUNT"}
                   </span>
 
                   <strong>

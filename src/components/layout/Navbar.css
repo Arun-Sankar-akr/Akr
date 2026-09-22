@@ -1,0 +1,220 @@
+/* ==========================================================
+   Shop Management Console — Navbar (compact premium)
+   Every rule is scoped under .smc-navbar so nothing here can
+   collide with — or be overridden by — other .icon-btn /
+   .top-link / .status-dot rules elsewhere in the app.
+   ========================================================== */
+
+.smc-navbar {
+  --smc-bg: rgba(255, 255, 255, 0.9);
+  --smc-border: rgba(15, 23, 42, 0.08);
+  --smc-text: #14161a;
+  --smc-muted: #7a7f87;
+  --smc-accent: #2f6f4f;
+  --smc-accent-soft: rgba(47, 111, 79, 0.12);
+  --smc-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 16px;
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--smc-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 20px 20px 0px 0px;
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--smc-border);
+  box-shadow: var(--smc-shadow);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.smc-navbar[data-theme="dark"],
+[data-theme="dark"] .smc-navbar {
+  --smc-bg: rgba(17, 19, 23, 0.9);
+  --smc-border: rgba(255, 255, 255, 0.08);
+  --smc-text: #f2f3f5;
+  --smc-muted: #9aa0a8;
+  --smc-accent: #4fae82;
+  --smc-accent-soft: rgba(79, 174, 130, 0.16);
+  --smc-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.smc-navbar * {
+  box-sizing: border-box;
+}
+
+/* ---------- left cluster ---------- */
+
+.smc-navbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.smc-navbar__menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--smc-text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.smc-navbar__menu-btn:hover {
+  background: var(--smc-accent-soft);
+}
+.smc-navbar__menu-btn:focus-visible {
+  outline: 2px solid var(--smc-accent);
+  outline-offset: 2px;
+}
+
+.smc-navbar__title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.smc-navbar__eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--smc-muted);
+  letter-spacing: 0.01em;
+}
+
+.smc-navbar__heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--smc-text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- right cluster ---------- */
+
+.smc-navbar__right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 14px;
+}
+
+.smc-navbar__link {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  margin: 0;
+  padding: 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6922e4 ;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.smc-navbar__link:hover {
+  color: var(--smc-text);
+  border-color: var(--smc-border);
+}
+
+.smc-navbar__icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.07);
+}
+
+.smc-navbar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--smc-text);
+  line-height: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+.smc-navbar__icon-btn:hover {
+  background: var(--smc-bg);
+  box-shadow: var(--smc-shadow);
+}
+.smc-navbar__icon-btn:active {
+  transform: scale(0.94);
+}
+.smc-navbar__icon-btn:focus-visible {
+  outline: 2px solid var(--smc-accent);
+  outline-offset: 2px;
+}
+
+.smc-navbar__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  background: var(--smc-accent-soft);
+  color: var(--smc-accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.smc-navbar__status-dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--smc-accent);
+  animation: smc-pulse 2.2s ease-out infinite;
+}
+
+@keyframes smc-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--smc-accent-soft); }
+  70%  { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smc-navbar__status-dot {
+    animation: none;
+  }
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 480px) {
+  .smc-navbar__eyebrow,
+  .smc-navbar__link {
+    display: none;
+  }
+  .smc-navbar {
+    padding: 0 12px;
+    gap: 10px;
+  }
+}
