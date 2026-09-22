@@ -1086,22 +1086,6 @@
     .cgpa-working strong {
         text-align: left;
     }
-
-    .cgpa-tool-card {
-        position: relative;
-        width: 340px;
-        height: 280px;
-        padding: 32px;
-        left: 7%;
-        border: 1px solid rgba(99, 91, 255, 0.13);
-        border-radius: 22px;
-        background: radial-gradient(circle at 100% 0%, rgba(99, 91, 255, 0.12), transparent 35%), linear-gradient(145deg, #ffffff, #f8f8ff);
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.07), 0 3px 10px rgba(15, 23, 42, 0.03);
-        text-align: left;
-        cursor: pointer;
-        overflow: hidden;
-        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-    }
 }
 
 
