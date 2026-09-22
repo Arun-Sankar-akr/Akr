@@ -2640,3 +2640,1197 @@ body.akr-home-page {
         background: #ffffff;
     }
 }
+
+/* =========================================================
+   AKR PREMIUM COMPACT CARD SYSTEM
+   Add this at the VERY END of Home(9).css
+========================================================= */
+
+:root {
+    --akr-card-radius: 20px;
+    --akr-card-border: rgba(31, 35, 60, 0.08);
+    --akr-card-shadow:
+        0 8px 30px rgba(31, 35, 60, 0.055);
+    --akr-card-shadow-hover:
+        0 20px 50px rgba(31, 35, 60, 0.11);
+}
+
+
+/* =========================================================
+   SECTION SPACING
+========================================================= */
+
+.services-section {
+    padding: 68px 0 65px;
+}
+
+#govt {
+    margin-top: 42px;
+}
+
+.tools-section {
+    padding: 65px 0 75px;
+}
+
+
+/* =========================================================
+   COMPACT SERVICE GRID
+========================================================= */
+
+.services-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 15px;
+}
+
+
+/* =========================================================
+   PREMIUM GOVERNMENT CARD
+========================================================= */
+
+.gov-card {
+    --card-color: var(--akr-primary);
+
+    position: relative;
+
+    min-height: 205px;
+
+    padding: 18px;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    isolation: isolate;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.98),
+            rgba(248,249,253,0.94)
+        );
+
+    border:
+        1px solid var(--akr-card-border);
+
+    border-radius:
+        var(--akr-card-radius);
+
+    box-shadow:
+        var(--akr-card-shadow);
+
+    opacity: 0;
+
+    transform:
+        translateY(18px);
+
+    transition:
+        opacity 0.55s ease,
+        transform 0.35s cubic-bezier(.2,.8,.2,1),
+        box-shadow 0.3s ease,
+        border-color 0.3s ease;
+}
+
+
+/* visible */
+
+.gov-card.is-visible {
+    opacity: 1;
+
+    transform:
+        translateY(0);
+}
+
+
+/* hover */
+
+.gov-card:hover {
+    transform:
+        translateY(-5px);
+
+    border-color:
+        color-mix(
+            in srgb,
+            var(--card-color) 20%,
+            transparent
+        );
+
+    box-shadow:
+        var(--akr-card-shadow-hover),
+        0 0 0 1px
+        color-mix(
+            in srgb,
+            var(--card-color) 5%,
+            transparent
+        );
+}
+
+
+/* =========================================================
+   TOP COLOR ACCENT
+========================================================= */
+
+.gov-card::before {
+    content: "";
+
+    position: absolute;
+
+    left: 18px;
+    right: 18px;
+    top: 0;
+
+    height: 3px;
+
+    border-radius:
+        0 0 8px 8px;
+
+
+    opacity: 0.8;
+}
+
+
+/* =========================================================
+   SOFT CARD GLOW
+========================================================= */
+
+.gov-card-glow {
+    position: absolute;
+
+    width: 170px;
+    height: 170px;
+
+    right: -95px;
+    top: -95px;
+
+    border-radius: 50%;
+
+    background:
+        var(--card-color);
+
+    opacity: 0.055;
+
+    filter: blur(3px);
+
+    transition:
+        transform 0.45s ease,
+        opacity 0.45s ease;
+}
+
+.gov-card:hover .gov-card-glow {
+    opacity: 0.12;
+
+    transform:
+        scale(1.35);
+}
+
+
+/* remove old dot */
+
+.gov-card::after {
+    width: 6px;
+    height: 6px;
+
+    right: 17px;
+    top: 17px;
+
+    opacity: 0.8;
+
+    box-shadow:
+        0 0 0 5px
+        color-mix(
+            in srgb,
+            var(--card-color) 8%,
+            transparent
+        );
+}
+
+
+/* =========================================================
+   CARD TOP
+========================================================= */
+
+.gov-card-top {
+    position: relative;
+
+    z-index: 3;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+}
+
+
+/* =========================================================
+   COMPACT ICON
+========================================================= */
+
+.gov-icon {
+    width: 47px;
+    height: 47px;
+
+    display: grid;
+
+    place-items: center;
+
+    flex-shrink: 0;
+
+    color:
+        var(--card-color);
+
+    background:
+        linear-gradient(
+            145deg,
+            color-mix(
+                in srgb,
+                var(--card-color) 12%,
+                white
+            ),
+            color-mix(
+                in srgb,
+                var(--card-color) 5%,
+                white
+            )
+        );
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--card-color) 11%,
+            transparent
+        );
+
+    border-radius:
+        14px;
+
+    box-shadow:
+        0 5px 14px
+        color-mix(
+            in srgb,
+            var(--card-color) 8%,
+            transparent
+        );
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.gov-card:hover .gov-icon {
+    transform:
+        translateY(-2px)
+        rotate(-3deg);
+
+    box-shadow:
+        0 8px 18px
+        color-mix(
+            in srgb,
+            var(--card-color) 14%,
+            transparent
+        );
+}
+
+
+/* =========================================================
+   OFFICIAL LOGOS
+========================================================= */
+
+.gov-icon.gov-icon-logo {
+    width: 47px;
+    height: 47px;
+
+    padding: 7px;
+
+    border-radius:
+        14px;
+
+    background:
+        rgba(255,255,255,0.96);
+
+    box-shadow:
+        0 5px 16px
+        rgba(25,30,55,0.08);
+}
+
+.gov-icon-logo img {
+    width: 31px;
+    height: 31px;
+
+    object-fit: contain;
+}
+
+
+/* =========================================================
+   TAG
+========================================================= */
+
+.gov-tag {
+    padding:
+        5px 8px;
+
+    border-radius:
+        7px;
+
+    font-size:
+        7px;
+
+    font-weight:
+        850;
+
+    letter-spacing:
+        0.09em;
+
+    color:
+        var(--card-color);
+
+    background:
+        color-mix(
+            in srgb,
+            var(--card-color) 7%,
+            white
+        );
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--card-color) 8%,
+            transparent
+        );
+}
+
+
+/* =========================================================
+   CARD CONTENT
+========================================================= */
+
+.gov-card-content {
+    position: relative;
+
+    z-index: 2;
+
+    margin-top:
+        auto;
+
+    padding-top:
+        17px;
+}
+
+.gov-small-title {
+    display: block;
+
+    margin-bottom:
+        5px;
+
+    color:
+        var(--card-color);
+
+    font-size:
+        8px;
+
+    font-weight:
+        850;
+
+    letter-spacing:
+        0.1em;
+
+    text-transform:
+        uppercase;
+}
+
+
+/* TITLE */
+
+.gov-card h3 {
+    margin:
+        0 0 6px;
+
+    font-size:
+        17px;
+
+    line-height:
+        1.16;
+
+    letter-spacing:
+        -0.025em;
+
+    font-weight:
+        800;
+
+    color:
+        var(--akr-text);
+}
+
+
+/* DESCRIPTION */
+
+.gov-card p {
+    max-width:
+        100%;
+
+    margin:
+        0;
+
+    color:
+        var(--akr-text-soft);
+
+    font-size:
+        10.5px;
+
+    line-height:
+        1.55;
+
+    display:
+        -webkit-box;
+
+    -webkit-line-clamp:
+        2;
+
+    -webkit-box-orient:
+        vertical;
+
+    overflow:
+        hidden;
+}
+
+
+/* =========================================================
+   CARD BOTTOM
+========================================================= */
+
+.gov-card-bottom {
+    position: relative;
+
+    z-index: 3;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    margin-top:
+        13px;
+
+    padding-top:
+        11px;
+
+    border-top:
+        1px solid
+        rgba(30,35,60,0.055);
+}
+
+
+/* OFFICIAL */
+
+.official-label {
+    gap:
+        6px;
+
+    font-size:
+        8px;
+
+    color:
+        var(--akr-text-muted);
+}
+
+.official-dot {
+    width:
+        5px;
+
+    height:
+        5px;
+
+    box-shadow:
+        0 0 0 3px
+        color-mix(
+            in srgb,
+            var(--card-color) 8%,
+            transparent
+        );
+}
+
+
+/* =========================================================
+   COMPACT ARROW
+========================================================= */
+
+.gov-arrow {
+    width:
+        29px;
+
+    height:
+        29px;
+
+    border-radius:
+        9px;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    background:
+        var(--akr-surface-soft);
+
+    border:
+        1px solid
+        var(--akr-border);
+
+    transition:
+        transform 0.25s ease,
+        background 0.25s ease,
+        color 0.25s ease;
+}
+
+.gov-arrow svg {
+    width:
+        15px;
+
+    height:
+        15px;
+}
+
+.gov-card:hover .gov-arrow {
+    color:
+        #fff;
+
+    background:
+        var(--card-color);
+
+    transform:
+        translate(2px,-2px);
+}
+
+
+/* =========================================================
+   DIGITAL TOOLS
+========================================================= */
+
+.tools-grid {
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0,1fr));
+
+    gap:
+        15px;
+}
+
+
+/* TOOL CARD */
+
+.tool-card {
+    --tool-color:
+        var(--akr-primary);
+
+    position:
+        relative;
+
+    min-height:
+        215px;
+
+    padding:
+        18px;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    overflow:
+        hidden;
+
+    background:
+        linear-gradient(
+            145deg,
+            #ffffff,
+            #f8f9fd
+        );
+
+    border:
+        1px solid
+        var(--akr-card-border);
+
+    border-radius:
+        var(--akr-card-radius);
+
+    box-shadow:
+        var(--akr-card-shadow);
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.tool-card:hover {
+    transform:
+        translateY(-5px);
+
+    box-shadow:
+        var(--akr-card-shadow-hover);
+}
+
+
+/* tool glow */
+
+.tool-card::before {
+    width:
+        130px;
+
+    height:
+        130px;
+
+    right:
+        -75px;
+
+    top:
+        -75px;
+
+    opacity:
+        0.055;
+}
+
+
+/* number */
+
+.tool-number {
+    right:
+        17px;
+
+    top:
+        15px;
+
+    font-size:
+        9px;
+
+    color:
+        rgba(21,23,42,0.2);
+}
+
+
+/* tool icon */
+
+.tool-icon {
+    width:
+        45px;
+
+    height:
+        45px;
+
+    border-radius:
+        13px;
+
+    box-shadow:
+        0 5px 15px
+        color-mix(
+            in srgb,
+            var(--tool-color) 8%,
+            transparent
+        );
+}
+
+.tool-icon svg {
+    width:
+        22px;
+
+    height:
+        22px;
+}
+
+
+/* tool content */
+
+.tool-content {
+    margin-top:
+        20px;
+}
+
+.tool-content h3 {
+    margin:
+        0 0 6px;
+
+    font-size:
+        16px;
+
+    line-height:
+        1.2;
+
+    letter-spacing:
+        -0.025em;
+}
+
+.tool-content p {
+    font-size:
+        10px;
+
+    line-height:
+        1.55;
+
+    display:
+        -webkit-box;
+
+    -webkit-line-clamp:
+        2;
+
+    -webkit-box-orient:
+        vertical;
+
+    overflow:
+        hidden;
+}
+
+
+/* tool bottom */
+
+.tool-link {
+    padding-top:
+        14px;
+
+    font-size:
+        9px;
+}
+
+.tool-arrow {
+    width:
+        29px;
+
+    height:
+        29px;
+
+    border-radius:
+        9px;
+}
+
+.tool-arrow svg {
+    width:
+        15px;
+
+    height:
+        15px;
+}
+
+
+/* =========================================================
+   SECTION HEADINGS - MORE COMPACT
+========================================================= */
+
+.section-heading {
+    margin-bottom:
+        27px;
+}
+
+.section-heading h1 {
+    margin:
+        10px 0 9px;
+
+    font-size:
+        clamp(36px, 4.5vw, 58px);
+}
+
+.section-heading p {
+    font-size:
+        13px;
+
+    line-height:
+        1.6;
+}
+
+
+/* DIGITAL TOOLS HEADER */
+
+.tools-header {
+    margin-bottom:
+        27px;
+}
+
+.tools-header h2 {
+    margin:
+        11px 0 8px;
+
+    font-size:
+        clamp(32px, 4vw, 49px);
+}
+
+.tools-header p {
+    font-size:
+        13px;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1050px) {
+
+    .services-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap:
+            14px;
+    }
+
+    .tools-grid {
+        grid-template-columns:
+            repeat(2, minmax(0,1fr));
+
+        gap:
+            14px;
+    }
+
+    .gov-card {
+        min-height:
+            200px;
+    }
+
+    .tool-card {
+        min-height:
+            205px;
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 620px) {
+
+    .services-section {
+        padding:
+            45px 0 48px;
+    }
+
+    #govt {
+        margin-top:
+            32px;
+    }
+
+    .section-heading {
+        margin-bottom:
+            21px;
+    }
+
+    .section-heading h1 {
+        font-size:
+            37px;
+    }
+
+    .services-grid {
+        grid-template-columns:
+            repeat(2, minmax(0,1fr));
+
+        gap:
+            10px;
+    }
+
+    .gov-card {
+        min-height:
+            190px;
+
+        padding:
+            14px;
+
+        border-radius:
+            16px;
+    }
+
+    .gov-card::before {
+        left:
+            14px;
+
+        right:
+            14px;
+    }
+
+    .gov-card::after {
+        right:
+            12px;
+
+        top:
+            12px;
+    }
+
+    .gov-icon,
+    .gov-icon.gov-icon-logo {
+        width:
+            40px;
+
+        height:
+            40px;
+
+        border-radius:
+            11px;
+    }
+
+    .gov-icon {
+        padding:
+            5px;
+    }
+
+    .gov-icon svg {
+        width:
+            20px;
+
+        height:
+            20px;
+    }
+
+    .gov-icon-logo img {
+        width:
+            29px;
+
+        height:
+            29px;
+    }
+
+    .gov-tag {
+        padding:
+            4px 6px;
+
+        font-size:
+            6px;
+    }
+
+    .gov-card-content {
+        padding-top:
+            12px;
+    }
+
+    .gov-small-title {
+        font-size:
+            7px;
+    }
+
+    .gov-card h3 {
+        font-size:
+            14px;
+
+        margin-bottom:
+            5px;
+    }
+
+    .gov-card p {
+        font-size:
+            8.5px;
+
+        line-height:
+            1.45;
+    }
+
+    .gov-card-bottom {
+        margin-top:
+            9px;
+
+        padding-top:
+            8px;
+    }
+
+    .official-label {
+        font-size:
+            7px;
+    }
+
+    .gov-arrow {
+        width:
+            26px;
+
+        height:
+            26px;
+
+        border-radius:
+            8px;
+    }
+
+    .gov-arrow svg {
+        width:
+            13px;
+
+        height:
+            13px;
+    }
+
+
+    /* TOOLS */
+
+    .tools-section {
+        padding:
+            48px 0 55px;
+    }
+
+    .tools-grid {
+        grid-template-columns:
+            repeat(2, minmax(0,1fr));
+
+        gap:
+            10px;
+    }
+
+    .tool-card {
+        min-height:
+            180px;
+
+        padding:
+            14px;
+
+        border-radius:
+            16px;
+    }
+
+    .tool-icon {
+        width:
+            40px;
+
+        height:
+            40px;
+
+        border-radius:
+            11px;
+    }
+
+    .tool-icon svg {
+        width:
+            19px;
+
+        height:
+            19px;
+    }
+
+    .tool-content {
+        margin-top:
+            15px;
+    }
+
+    .tool-content h3 {
+        font-size:
+            13px;
+
+        margin-bottom:
+            5px;
+    }
+
+    .tool-content p {
+        font-size:
+            8.5px;
+
+        line-height:
+            1.45;
+    }
+
+    .tool-link {
+        padding-top:
+            9px;
+
+        font-size:
+            7.5px;
+    }
+
+    .tool-arrow {
+        width:
+            25px;
+
+        height:
+            25px;
+    }
+
+    .tool-arrow svg {
+        width:
+            13px;
+
+        height:
+            13px;
+    }
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 390px) {
+
+    .section-container {
+        width:
+            calc(100% - 22px);
+    }
+
+    .services-grid,
+    .tools-grid {
+        gap:
+            8px;
+    }
+
+    .gov-card {
+        min-height:
+            178px;
+
+        padding:
+            12px;
+    }
+
+    .gov-card h3 {
+        font-size:
+            13px;
+    }
+
+    .gov-card p {
+        font-size:
+            8px;
+    }
+
+    .gov-small-title {
+        font-size:
+            6.5px;
+    }
+
+    .tool-card {
+        min-height:
+            170px;
+
+        padding:
+            12px;
+    }
+
+    .tool-content h3 {
+        font-size:
+            12px;
+    }
+
+    .tool-content p {
+        font-size:
+            8px;
+    }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .gov-card,
+    .tool-card,
+    .gov-icon,
+    .tool-icon,
+    .gov-arrow,
+    .tool-arrow {
+        transition:
+            none !important;
+    }
+}

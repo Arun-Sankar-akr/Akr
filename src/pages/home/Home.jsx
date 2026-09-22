@@ -8,10 +8,13 @@ import Pan from "../../assets/pan.png"
 import Tn from "../../assets/tn.png"
 import Tan from "../../assets/tangen.png"
 import Udyam from "../../assets/udyam.png"
+import Vi from "../../assets/vi.png"
 
 import ssc from "../../assets/ssc.png"
 import rrb from "../../assets/railway.png"
 import ibps from "../../assets/ibps.png"
+import tamilan from "../../assets/tn.png"
+import sbi from "../../assets/sbi.png"
 
 const Icon = ({ name, size = 24 }) => {
     const common = {
@@ -203,6 +206,42 @@ const governmentServices = [
         featured: true,
     },
     {
+        title: "Birth Certificate",
+        shortTitle: "Birth/Death",
+        description:
+            "Access the Birth/Death Certificate all over Tamil Nadu.",
+        icon: "card",
+        color: "rose",
+        tag: "CRSTN",
+        url: "https://www.crstn.org/birth_death_tn/BCert",
+        logo: Tn,
+        wide: true,
+    },
+    {
+        title: "EB Bill Payment",
+        shortTitle: "EB Bills",
+        description:
+            "Access the official Tamil Nadu electricity bill payment portal.",
+        icon: "electricity",
+        color: "cyan",
+        tag: "TNPDCL",
+        url: "https://www.tnebnet.org/qwp/qpay",
+        logo: Tan,
+        wide: true,
+    },
+    {
+        title: "Employement Regeistration / Renewal",
+        shortTitle: "EB Bills",
+        description:
+            "Access the official Tamil Nadu electricity bill payment portal.",
+        icon: "employment",
+        color: "cyan",
+        tag: "Employement",
+        url: "https://tnvelaivaaippu.gov.in/Empower/",
+        logo: Tn,
+        wide: true,
+    },
+    {
         title: "PAN Services",
         shortTitle: "PAN",
         description:
@@ -235,30 +274,8 @@ const governmentServices = [
         url: "https://www.tnpds.gov.in/",
         logo: Tn,
     },
-    {
-        title: "EB Bill Payment",
-        shortTitle: "EB Bills",
-        description:
-            "Access the official Tamil Nadu electricity bill payment portal.",
-        icon: "electricity",
-        color: "cyan",
-        tag: "TNPDCL",
-        url: "https://www.tnebnet.org/qwp/qpay",
-        logo: Tan,
-        wide: true,
-    },
-    {
-        title: "Birth Certificate",
-        shortTitle: "Birth/Death",
-        description:
-            "Access the Birth/Death Certificate all over Tamil Nadu.",
-        icon: "card",
-        color: "rose",
-        tag: "CRSTN",
-        url: "https://www.crstn.org/birth_death_tn/BCert",
-        logo: Tn,
-        wide: true,
-    },
+
+
     {
         title: "Udayam Registration",
         shortTitle: "Udayam",
@@ -271,16 +288,41 @@ const governmentServices = [
         logo: Udyam,
         wide: true,
     },
+
+    {
+        title: "Voter-ID Registration",
+        shortTitle: "Udayam",
+        description:
+            "The Election Commission of India is  administering Union and State election processes in India.",
+        icon: "card",
+        color: "indigo",
+        tag: "ECI",
+        url: " https://voters.eci.gov.in/",
+        logo: Vi,
+        wide: true,
+    },
+
+
+
 ];
 
 const digitalTools = [
     {
-        title: "Image Resizer",
+        title: "Image Resizer / Compressor",
         description:
             "Resize photos for forms, applications and online uploads.",
         icon: "resize",
         color: "cyan",
         url: "https://image.pi7.org/compressor",
+        number: "01",
+    },
+    {
+        title: "All Exams Image Resizer / Compressor",
+        description:
+            "Resize photos for forms, applications and online uploads.",
+        icon: "resize",
+        color: "cyan",
+        url: "https://resizer.exammint.in",
         number: "01",
     },
     {
@@ -366,12 +408,38 @@ const govtExams = [
         title: "Central Exams",
         shortTitle: "SSC",
         description:
-            "GST Inspector, Multitasking, Steno, Office Assistants, .",
+            "GST Inspector, Multitasking, Steno, Office Assistants.",
         icon: "card",
         color: "cyan",
         tag: "SSC",
         url: "https://ssc.gov.in/",
         logo: ssc,
+        wide: true,
+    },
+    {
+        title: "State Bank of India",
+        shortTitle: "Bank",
+        description:
+            "Clerical, Office Assitant, PO/SO, LOB.",
+        icon: "card",
+        color: "cyan",
+        tag: "Sbi",
+        url: "https://sbi.bank.in/web/careers/current-openings",
+        logo: sbi,
+        wide: true,
+    },
+
+
+    {
+        title: "Tamilan Guide",
+        shortTitle: "Govt",
+        description:
+            "Explore all govt job here .",
+        icon: "card",
+        color: "cyan",
+        tag: "Tamilan",
+        url: "https://tamilanguide.in/",
+        logo: tamilan,
         wide: true,
     },
 ];

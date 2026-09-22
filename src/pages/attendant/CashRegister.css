@@ -307,36 +307,26 @@
     display: grid;
 
     grid-template-columns:
-        repeat(4, minmax(0, 1fr));
+        repeat(3, minmax(0, 1fr));
 
     gap: 17px;
 }
 
 .cash-stat-card {
     position: relative;
-
     min-height: 158px;
-
+    display: flex;
     padding: 21px;
-
     overflow: hidden;
-
     border: 1px solid rgba(232, 235, 241, 0.95);
-
     border-radius: 20px;
-
-    background:
-        rgba(255, 255, 255, 0.91);
-
+    background: rgba(255, 255, 255, 0.91);
     box-shadow: var(--cr-shadow-1);
-
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-
-    transition:
-        transform 0.22s ease,
-        box-shadow 0.22s ease,
-        border-color 0.22s ease;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .cash-stat-card::after {
@@ -377,8 +367,6 @@
     justify-content: space-between;
 
     gap: 12px;
-
-    margin-bottom: 18px;
 
     color: var(--cr-text-2);
 
@@ -436,7 +424,7 @@
 
     color: var(--cr-text);
 
-    font-size: clamp(25px, 2vw, 32px);
+    font-size: 26px;
 
     line-height: 1;
 

@@ -384,8 +384,8 @@ export default function AttendantDashboard() {
           label="Today's sales"
           value={formatCurrency(totals.sales)}
           note={`${totals.transactions} transaction${totals.transactions === 1
-              ? ""
-              : "s"
+            ? ""
+            : "s"
             } today`}
           tone="violet"
         />

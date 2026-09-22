@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import Home from "../pages/home/Home"
+import Docs from "../pages/home/SendDocuments"
 
 // Auth
 import Login from "../pages/auth/Login";
@@ -91,6 +92,7 @@ export default function AppRoutes() {
       ===================================================== */}
 
             <Route path="/" element={<Home />} />
+            <Route path="/docs" element={<Docs />} />
 
 
             <Route path="/login" element={<Login />} />
