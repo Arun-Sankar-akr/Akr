@@ -27,7 +27,7 @@ import { db } from "../../services/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { formatCurrency } from "../../utils/currency";
 
-import "./EBBillPayments.css";
+import "./EbbillPayments.css";
 
 
 /* =========================================================
