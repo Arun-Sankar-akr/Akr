@@ -1353,7 +1353,7 @@ body.akr-home-page {
 @media (max-width: 1100px) {
     .services-grid {
         grid-template-columns:
-            repeat(3, minmax(0, 1fr));
+            repeat(4, minmax(0, 1fr));
     }
 
     .gov-card {
@@ -2678,7 +2678,7 @@ body.akr-home-page {
     display: grid;
 
     grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+        repeat(4, minmax(0, 1fr));
 
     gap: 15px;
 }

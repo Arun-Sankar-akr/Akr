@@ -10,6 +10,7 @@ import Tn from "../../assets/tn.png"
 import Tan from "../../assets/tangen.png"
 import Udyam from "../../assets/udyam.png"
 import Vi from "../../assets/vi.png"
+import land from "../../assets/land.png"
 
 import ssc from "../../assets/ssc.png"
 import rrb from "../../assets/railway.png"
@@ -202,7 +203,7 @@ const governmentServices = [
         icon: "aadhaar",
         color: "violet",
         tag: "UIDAI",
-        url: "https://uidai.gov.in/",
+        url: "https://myaadhaarbeta.uidai.gov.in/",
         logo: Aadhar,
         featured: true,
     },
@@ -242,6 +243,18 @@ const governmentServices = [
         logo: Tn,
         wide: true,
     },
+    {
+        title: "Land Records",
+        shortTitle: "Land",
+        description:
+            "Access Tamil Nadu land-record services through the official portal.",
+        icon: "land",
+        color: "indigo",
+        tag: "Land Max",
+        url: " https://www.landamax.com/services/patta-chitta",
+        logo: land,
+    },
+   
     {
         title: "PAN Services",
         shortTitle: "PAN",
