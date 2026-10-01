@@ -13,6 +13,7 @@ import {
   query,
   where,
   serverTimestamp,
+  arrayUnion,
 } from "firebase/firestore";
 
 import {
@@ -34,6 +35,10 @@ import {
   ChevronRight,
   Calculator,
   Eye,
+  Landmark,
+  Smartphone,
+  Receipt,
+  Trash2,
 } from "lucide-react";
 
 import { db } from "../../services/firebase";
@@ -93,6 +98,121 @@ const DENOMINATIONS = [
     label: "₹1",
   },
 ];
+
+
+// ============================================================
+// DIGITAL MONEY ACCOUNTS (banks / wallets)
+// ============================================================
+
+const DIGITAL_ACCOUNTS = [
+  { key: "SBI", label: "SBI", type: "bank" },
+  { key: "UCO", label: "UCO", type: "bank" },
+  { key: "PNB_T", label: "PNB-T", type: "bank" },
+  { key: "PNB_M", label: "PNB-M", type: "bank" },
+  { key: "RAJA_TEC", label: "RAJA TEC", type: "bank" },
+  { key: "PTM", label: "PTM", type: "wallet" },
+];
+
+function emptyDigital() {
+  return DIGITAL_ACCOUNTS.reduce((acc, item) => {
+    acc[item.key] = "";
+    return acc;
+  }, {});
+}
+
+function calculateDigitalTotal(digital) {
+  return DIGITAL_ACCOUNTS.reduce((total, item) => {
+    return total + (Number(digital?.[item.key]) || 0);
+  }, 0);
+}
+
+// Convert the typed (string) values into clean numbers for saving
+function cleanDigital(digital) {
+  return DIGITAL_ACCOUNTS.reduce((acc, item) => {
+    acc[item.key] = Math.max(0, Number(digital?.[item.key]) || 0);
+    return acc;
+  }, {});
+}
+
+function digitalToInputs(digital) {
+  return DIGITAL_ACCOUNTS.reduce((acc, item) => {
+    const value = Number(digital?.[item.key]) || 0;
+    acc[item.key] = value > 0 ? String(value) : "";
+    return acc;
+  }, {});
+}
+
+function getExpenseList(register) {
+  return Array.isArray(register?.expenses) ? register.expenses : [];
+}
+
+function calculateExpenseTotal(expenses) {
+  return (Array.isArray(expenses) ? expenses : []).reduce(
+    (total, item) => total + (Number(item?.amount) || 0),
+    0
+  );
+}
+
+function getCreditList(register) {
+  return Array.isArray(register?.credits) ? register.credits : [];
+}
+
+function calculateCreditTotal(credits) {
+  return (Array.isArray(credits) ? credits : []).reduce(
+    (total, item) => total + (Number(item?.amount) || 0),
+    0
+  );
+}
+
+// ------------------------------------------------------------
+// DAY TOTALS
+//
+//   Total Money  = Cash (drawer) + Digital Money
+//   Net Total    = Total Money - Expenses
+//
+// Cash = actual closing cash when closed, otherwise the
+// expected drawer cash.
+// ------------------------------------------------------------
+
+function getDayTotals(register) {
+  if (!register) {
+    return {
+      cash: 0,
+      digital: 0,
+      expenses: 0,
+      credits: 0,
+      totalMoney: 0,
+      net: 0,
+    };
+  }
+
+  const expected = Number(
+    register.expectedCash ??
+    (Number(register.openingCash || 0) +
+      Number(register.cashAdded || 0) -
+      Number(register.cashRemoved || 0) +
+      Number(register.cashSales || 0))
+  );
+
+  const cash =
+    register.status === "closed"
+      ? Number(register.closingCash ?? expected)
+      : expected;
+
+  const digital = calculateDigitalTotal(register.digitalBalances);
+  const expenses = calculateExpenseTotal(register.expenses);
+  const credits = calculateCreditTotal(register.credits);
+  const totalMoney = cash + digital;
+
+  return {
+    cash,
+    digital,
+    expenses,
+    credits,
+    totalMoney,
+    net: totalMoney - expenses,
+  };
+}
 
 // ============================================================
 // HELPERS
@@ -285,6 +405,49 @@ export default function CashRegister() {
 
   const [selectedHistoryRegister, setSelectedHistoryRegister] =
     useState(null);
+
+  // Digital money (banks / wallets)
+  const [openingDigital, setOpeningDigital] =
+    useState(emptyDigital());
+
+  const [closingDigital, setClosingDigital] =
+    useState(emptyDigital());
+
+  const [digitalDraft, setDigitalDraft] =
+    useState(emptyDigital());
+
+  const [savingDigital, setSavingDigital] =
+    useState(false);
+
+  // Expenses
+  const [expenseReason, setExpenseReason] =
+    useState("");
+
+  const [expenseAmount, setExpenseAmount] =
+    useState("");
+
+  const [savingExpense, setSavingExpense] =
+    useState(false);
+
+  // Credit (reason / person + amount)
+  const [creditReason, setCreditReason] =
+    useState("");
+
+  const [creditAmount, setCreditAmount] =
+    useState("");
+
+  const [savingCredit, setSavingCredit] =
+    useState(false);
+
+  // Credit entered while opening the register
+  const [openingCredits, setOpeningCredits] =
+    useState([]);
+
+  const [openingCreditReason, setOpeningCreditReason] =
+    useState("");
+
+  const [openingCreditAmount, setOpeningCreditAmount] =
+    useState("");
 
   // ----------------------------------------------------------
   // FIRESTORE LISTENER
@@ -552,6 +715,76 @@ export default function CashRegister() {
     );
 
   // ----------------------------------------------------------
+  // DIGITAL MONEY + EXPENSES + DAY TOTAL
+  // ----------------------------------------------------------
+
+  const dayTotals =
+    useMemo(
+      () => getDayTotals(currentRegister),
+      [currentRegister]
+    );
+
+  const currentExpenses =
+    useMemo(
+      () =>
+        [...getExpenseList(currentRegister)].sort(
+          (a, b) =>
+            Number(b?.createdAtMs || 0) -
+            Number(a?.createdAtMs || 0)
+        ),
+      [currentRegister]
+    );
+
+  const currentCredits =
+    useMemo(
+      () =>
+        [...getCreditList(currentRegister)].sort(
+          (a, b) =>
+            Number(b?.createdAtMs || 0) -
+            Number(a?.createdAtMs || 0)
+        ),
+      [currentRegister]
+    );
+
+  const currentDigitalKey =
+    JSON.stringify(
+      currentRegister?.digitalBalances || {}
+    );
+
+  // Keep the editable draft in sync with the saved values
+  useEffect(() => {
+    setDigitalDraft(
+      digitalToInputs(
+        currentRegister?.digitalBalances
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRegister?.id, currentDigitalKey]);
+
+  const digitalDraftTotal =
+    calculateDigitalTotal(digitalDraft);
+
+  const digitalDraftChanged =
+    digitalDraftTotal !==
+    dayTotals.digital ||
+    DIGITAL_ACCOUNTS.some(
+      (item) =>
+        (Number(digitalDraft[item.key]) || 0) !==
+        (Number(
+          currentRegister?.digitalBalances?.[item.key]
+        ) || 0)
+    );
+
+  const openingDigitalTotal =
+    calculateDigitalTotal(openingDigital);
+
+  const closingDigitalTotal =
+    calculateDigitalTotal(closingDigital);
+
+  const openingCreditTotal =
+    calculateCreditTotal(openingCredits);
+
+  // ----------------------------------------------------------
   // HISTORY FILTER
   // ----------------------------------------------------------
 
@@ -655,6 +888,47 @@ export default function CashRegister() {
   // OPEN REGISTER
   // ----------------------------------------------------------
 
+  const handleAddOpeningCredit = () => {
+    const reason = openingCreditReason.trim();
+    const amount = Number(openingCreditAmount);
+
+    if (!reason) {
+      alert("Please enter the reason / person name.");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid credit amount.");
+      return;
+    }
+
+    setOpeningCredits((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`,
+        reason,
+        amount,
+        createdAtMs: Date.now(),
+        addedBy:
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant",
+      },
+    ]);
+
+    setOpeningCreditReason("");
+    setOpeningCreditAmount("");
+  };
+
+  const handleRemoveOpeningCredit = (creditId) => {
+    setOpeningCredits((prev) =>
+      prev.filter((item) => item.id !== creditId)
+    );
+  };
+
   const handleOpenRegister =
     async () => {
       if (!user?.uid) {
@@ -669,9 +943,14 @@ export default function CashRegister() {
           openingDenominations
         );
 
-      if (total <= 0) {
+      const digitalTotal =
+        calculateDigitalTotal(
+          openingDigital
+        );
+
+      if (total <= 0 && digitalTotal <= 0) {
         alert(
-          "Please enter at least one note or coin."
+          "Please enter at least one note or coin, or a digital money amount."
         );
         return;
       }
@@ -723,6 +1002,19 @@ export default function CashRegister() {
               ...openingDenominations,
             },
 
+            digitalBalances:
+              cleanDigital(openingDigital),
+
+            openingDigital:
+              cleanDigital(openingDigital),
+
+            closingDigital:
+              {},
+
+            expenses: [],
+
+            credits: openingCredits,
+
             cashAdded: 0,
 
             cashRemoved: 0,
@@ -756,6 +1048,14 @@ export default function CashRegister() {
           emptyDenominations()
         );
 
+        setOpeningDigital(
+          emptyDigital()
+        );
+
+        setOpeningCredits([]);
+        setOpeningCreditReason("");
+        setOpeningCreditAmount("");
+
         setShowOpenModal(false);
       } catch (firebaseError) {
         console.error(
@@ -787,9 +1087,12 @@ export default function CashRegister() {
           closingDenominations
         );
 
-      if (closingCash <= 0) {
+      if (
+        closingCash <= 0 &&
+        calculateDigitalTotal(closingDigital) <= 0
+      ) {
         alert(
-          "Please enter the closing cash denominations."
+          "Please enter the closing cash denominations or digital money."
         );
         return;
       }
@@ -847,6 +1150,12 @@ export default function CashRegister() {
             expectedCash:
               registerExpected,
 
+            digitalBalances:
+              cleanDigital(closingDigital),
+
+            closingDigital:
+              cleanDigital(closingDigital),
+
             difference,
 
             status:
@@ -864,6 +1173,10 @@ export default function CashRegister() {
           emptyDenominations()
         );
 
+        setClosingDigital(
+          emptyDigital()
+        );
+
         setShowCloseModal(false);
       } catch (firebaseError) {
         console.error(
@@ -877,6 +1190,298 @@ export default function CashRegister() {
         );
       } finally {
         setSaving(false);
+      }
+    };
+
+  // ----------------------------------------------------------
+  // OPEN CLOSE-MODAL (pre-fills digital money with current values)
+  // ----------------------------------------------------------
+
+  const openCloseModal = () => {
+    setClosingDigital(
+      digitalToInputs(
+        openRegister?.digitalBalances
+      )
+    );
+
+    setShowCloseModal(true);
+  };
+
+  // ----------------------------------------------------------
+  // DIGITAL MONEY (update during the day)
+  // ----------------------------------------------------------
+
+  const handleSaveDigital =
+    async () => {
+      if (!openRegister) return;
+
+      setSavingDigital(true);
+
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            digitalBalances:
+              cleanDigital(digitalDraft),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+      } catch (firebaseError) {
+        console.error(
+          "Digital money save error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to save digital money."
+        );
+      } finally {
+        setSavingDigital(false);
+      }
+    };
+
+  // ----------------------------------------------------------
+  // EXPENSES
+  // ----------------------------------------------------------
+
+  const handleAddExpense =
+    async () => {
+      if (!openRegister) return;
+
+      const reason =
+        expenseReason.trim();
+
+      const amount =
+        Number(expenseAmount);
+
+      if (!reason) {
+        alert(
+          "Please enter the expense reason."
+        );
+        return;
+      }
+
+      if (!amount || amount <= 0) {
+        alert(
+          "Please enter a valid expense amount."
+        );
+        return;
+      }
+
+      setSavingExpense(true);
+
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            expenses: arrayUnion({
+              id: `${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`,
+              reason,
+              amount,
+              createdAtMs: Date.now(),
+              addedBy:
+                profile?.name ||
+                user?.displayName ||
+                user?.email ||
+                "Attendant",
+            }),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+
+        setExpenseReason("");
+        setExpenseAmount("");
+      } catch (firebaseError) {
+        console.error(
+          "Add expense error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to add expense."
+        );
+      } finally {
+        setSavingExpense(false);
+      }
+    };
+
+  const handleRemoveExpense =
+    async (expenseId) => {
+      if (!openRegister) return;
+
+      if (
+        !window.confirm(
+          "Remove this expense?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            expenses:
+              getExpenseList(
+                openRegister
+              ).filter(
+                (item) =>
+                  item.id !== expenseId
+              ),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+      } catch (firebaseError) {
+        console.error(
+          "Remove expense error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to remove expense."
+        );
+      }
+    };
+
+  // ----------------------------------------------------------
+  // CREDIT
+  // ----------------------------------------------------------
+
+  const handleAddCredit =
+    async () => {
+      if (!openRegister) return;
+
+      const reason =
+        creditReason.trim();
+
+      const amount =
+        Number(creditAmount);
+
+      if (!reason) {
+        alert(
+          "Please enter the reason / person name."
+        );
+        return;
+      }
+
+      if (!amount || amount <= 0) {
+        alert(
+          "Please enter a valid credit amount."
+        );
+        return;
+      }
+
+      setSavingCredit(true);
+
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            credits: arrayUnion({
+              id: `${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`,
+              reason,
+              amount,
+              createdAtMs: Date.now(),
+              addedBy:
+                profile?.name ||
+                user?.displayName ||
+                user?.email ||
+                "Attendant",
+            }),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+
+        setCreditReason("");
+        setCreditAmount("");
+      } catch (firebaseError) {
+        console.error(
+          "Add credit error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to add credit."
+        );
+      } finally {
+        setSavingCredit(false);
+      }
+    };
+
+  const handleRemoveCredit =
+    async (creditId) => {
+      if (!openRegister) return;
+
+      if (
+        !window.confirm(
+          "Remove this credit entry?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            credits:
+              getCreditList(
+                openRegister
+              ).filter(
+                (item) =>
+                  item.id !== creditId
+              ),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+      } catch (firebaseError) {
+        console.error(
+          "Remove credit error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to remove credit."
+        );
       }
     };
 
@@ -906,6 +1511,16 @@ export default function CashRegister() {
       "Expected Cash",
       "Closing Cash",
       "Difference",
+      ...DIGITAL_ACCOUNTS.map(
+        (account) => account.label
+      ),
+      "Digital Total",
+      "Total Money",
+      "Expenses",
+      "Expense Details",
+      "Credit",
+      "Credit Details",
+      "Net Total",
     ];
 
     const rows =
@@ -921,6 +1536,31 @@ export default function CashRegister() {
           item.expectedCash || 0,
           item.closingCash || 0,
           item.difference || 0,
+          ...DIGITAL_ACCOUNTS.map(
+            (account) =>
+              Number(
+                item.digitalBalances?.[
+                account.key
+                ]
+              ) || 0
+          ),
+          getDayTotals(item).digital,
+          getDayTotals(item).totalMoney,
+          getDayTotals(item).expenses,
+          getExpenseList(item)
+            .map(
+              (expense) =>
+                `${expense.reason}: ${expense.amount}`
+            )
+            .join(" | "),
+          getDayTotals(item).credits,
+          getCreditList(item)
+            .map(
+              (credit) =>
+                `${credit.reason}: ${credit.amount}`
+            )
+            .join(" | "),
+          getDayTotals(item).net,
         ]
       );
 
@@ -1110,6 +1750,172 @@ export default function CashRegister() {
     </div>
   );
 
+  // ----------------------------------------------------------
+  // DIGITAL MONEY EDITOR
+  // ----------------------------------------------------------
+
+  const renderDigitalEditor = (
+    values,
+    setter,
+    disabled = false
+  ) => (
+    <div className="cash-digital-list">
+      {DIGITAL_ACCOUNTS.map((item) => (
+        <label
+          className={`cash-digital-row ${disabled ? "disabled" : ""}`}
+          key={item.key}
+        >
+          <div className="cash-digital-main">
+            <div
+              className={`cash-digital-symbol ${item.type}`}
+            >
+              {item.type === "wallet" ? (
+                <Smartphone size={16} />
+              ) : (
+                <Landmark size={16} />
+              )}
+            </div>
+
+            <div>
+              <strong>{item.label}</strong>
+              <span>
+                {item.type === "wallet"
+                  ? "WALLET"
+                  : "BANK"}
+              </span>
+            </div>
+          </div>
+
+          <div className="cash-digital-input">
+            <b>₹</b>
+
+            <input
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              placeholder="0"
+              value={values?.[item.key] ?? ""}
+              disabled={disabled}
+              onChange={(event) =>
+                setter({
+                  ...values,
+                  [item.key]:
+                    event.target.value,
+                })
+              }
+              aria-label={`${item.label} amount`}
+            />
+          </div>
+        </label>
+      ))}
+    </div>
+  );
+
+  const renderExpenseRows = (
+    list,
+    removable = false
+  ) =>
+    list.length === 0 ? (
+      <div className="cash-expense-empty">
+        <Receipt size={16} />
+        No expenses added yet
+      </div>
+    ) : (
+      <div className="cash-expense-list">
+        {list.map((item) => (
+          <div
+            className="cash-expense-item"
+            key={item.id || `${item.reason}-${item.createdAtMs}`}
+          >
+            <div className="cash-expense-text">
+              <strong>{item.reason}</strong>
+              <span>
+                {item.createdAtMs
+                  ? formatDateTime(
+                    item.createdAtMs
+                  )
+                  : ""}
+              </span>
+            </div>
+
+            <div className="cash-expense-amount">
+              −{formatCurrency(
+                Number(item.amount) || 0
+              )}
+            </div>
+
+            {removable && (
+              <button
+                type="button"
+                className="cash-expense-remove"
+                onClick={() =>
+                  handleRemoveExpense(
+                    item.id
+                  )
+                }
+                aria-label="Remove expense"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+
+  const renderCreditRows = (
+    list,
+    removable = false
+  ) =>
+    list.length === 0 ? (
+      <div className="cash-expense-empty">
+        <Receipt size={16} />
+        No credit added yet
+      </div>
+    ) : (
+      <div className="cash-expense-list">
+        {list.map((item) => (
+          <div
+            className="cash-expense-item"
+            key={item.id || `${item.reason}-${item.createdAtMs}`}
+          >
+            <div className="cash-expense-text">
+              <strong>{item.reason}</strong>
+              <span>
+                {item.createdAtMs
+                  ? formatDateTime(
+                    item.createdAtMs
+                  )
+                  : ""}
+              </span>
+            </div>
+
+            <div className="cash-credit-amount">
+              {formatCurrency(
+                Number(item.amount) || 0
+              )}
+            </div>
+
+            {removable && (
+              <button
+                type="button"
+                className="cash-expense-remove"
+                onClick={() =>
+                  handleRemoveCredit(
+                    item.id
+                  )
+                }
+                aria-label="Remove credit"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+
   const openingModalTotal =
     calculateDenominationTotal(
       openingDenominations
@@ -1161,9 +1967,7 @@ export default function CashRegister() {
             <button
               className="cash-primary-btn close"
               onClick={() =>
-                setShowCloseModal(
-                  true
-                )
+                openCloseModal()
               }
             >
               <LockKeyhole
@@ -1384,8 +2188,8 @@ export default function CashRegister() {
 
             <div
               className={`cash-status-pill ${openRegister
-                  ? "open"
-                  : "closed"
+                ? "open"
+                : "closed"
                 }`}
             >
               <span />
@@ -1525,9 +2329,7 @@ export default function CashRegister() {
             <button
               className="cash-action-btn danger"
               onClick={() =>
-                setShowCloseModal(
-                  true
-                )
+                openCloseModal()
               }
             >
               <LockKeyhole
@@ -1556,6 +2358,355 @@ export default function CashRegister() {
         </div>
 
       </section>
+
+      {/* ====================================================
+          DIGITAL MONEY + EXPENSES + DAY TOTAL
+      ==================================================== */}
+
+      {currentRegister && (
+        <section className="cash-money-section">
+
+          <div className="cash-money-grid">
+
+            {/* DIGITAL MONEY */}
+
+            <div className="cash-panel">
+
+              <div className="cash-panel-head">
+                <div className="cash-panel-icon blue">
+                  <Landmark size={16} />
+                </div>
+
+                <div>
+                  <div className="cash-section-label">
+                    DIGITAL MONEY
+                  </div>
+                  <h3>Bank &amp; wallet balances</h3>
+                </div>
+
+                <div className="cash-panel-total">
+                  {formatCurrency(
+                    openRegister
+                      ? digitalDraftTotal
+                      : dayTotals.digital
+                  )}
+                </div>
+              </div>
+
+              {renderDigitalEditor(
+                digitalDraft,
+                setDigitalDraft,
+                !openRegister
+              )}
+
+              {openRegister && (
+                <button
+                  type="button"
+                  className="cash-panel-btn"
+                  onClick={handleSaveDigital}
+                  disabled={
+                    savingDigital ||
+                    !digitalDraftChanged
+                  }
+                >
+                  {savingDigital ? (
+                    <>
+                      <RefreshCw
+                        size={14}
+                        className="spin"
+                      />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={14} />
+                      Save Digital Money
+                    </>
+                  )}
+                </button>
+              )}
+
+            </div>
+
+            {/* EXPENSES + CREDIT (stacked) */}
+
+            <div className="cash-panel-stack">
+
+              {/* EXPENSES */}
+
+              <div className="cash-panel">
+
+                <div className="cash-panel-head">
+                  <div className="cash-panel-icon red">
+                    <Receipt size={16} />
+                  </div>
+
+                  <div>
+                    <div className="cash-section-label">
+                      EXPENSES
+                    </div>
+                    <h3>Today's expenses</h3>
+                  </div>
+
+                  <div className="cash-panel-total red">
+                    {formatCurrency(
+                      dayTotals.expenses
+                    )}
+                  </div>
+                </div>
+
+                {openRegister && (
+                  <div className="cash-expense-form">
+                    <input
+                      type="text"
+                      className="cash-expense-reason"
+                      placeholder="Reason (e.g. Tea, Paper, Electricity)"
+                      value={expenseReason}
+                      onChange={(event) =>
+                        setExpenseReason(
+                          event.target.value
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleAddExpense();
+                        }
+                      }}
+                      maxLength={80}
+                    />
+
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Amount"
+                        value={expenseAmount}
+                        onChange={(event) =>
+                          setExpenseAmount(
+                            event.target.value
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleAddExpense();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="cash-expense-add"
+                      onClick={handleAddExpense}
+                      disabled={savingExpense}
+                    >
+                      {savingExpense ? (
+                        <RefreshCw
+                          size={14}
+                          className="spin"
+                        />
+                      ) : (
+                        <Plus size={14} />
+                      )}
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                {renderExpenseRows(
+                  currentExpenses,
+                  Boolean(openRegister)
+                )}
+
+              </div>
+
+              {/* CREDIT */}
+
+              <div className="cash-panel">
+
+                <div className="cash-panel-head">
+                  <div className="cash-panel-icon green">
+                    <WalletCards size={16} />
+                  </div>
+
+                  <div>
+                    <div className="cash-section-label">
+                      CREDIT
+                    </div>
+                    <h3>Today's credit</h3>
+                  </div>
+
+                  <div className="cash-panel-total green">
+                    {formatCurrency(
+                      dayTotals.credits
+                    )}
+                  </div>
+                </div>
+
+                {openRegister && (
+                  <div className="cash-expense-form">
+                    <input
+                      type="text"
+                      className="cash-expense-reason"
+                      placeholder="Reason / Person"
+                      value={creditReason}
+                      onChange={(event) =>
+                        setCreditReason(
+                          event.target.value
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleAddCredit();
+                        }
+                      }}
+                      maxLength={80}
+                    />
+
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Amount"
+                        value={creditAmount}
+                        onChange={(event) =>
+                          setCreditAmount(
+                            event.target.value
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleAddCredit();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="cash-expense-add"
+                      onClick={handleAddCredit}
+                      disabled={savingCredit}
+                    >
+                      {savingCredit ? (
+                        <RefreshCw
+                          size={14}
+                          className="spin"
+                        />
+                      ) : (
+                        <Plus size={14} />
+                      )}
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                {renderCreditRows(
+                  currentCredits,
+                  Boolean(openRegister)
+                )}
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* DAY TOTAL */}
+
+          <div className="cash-day-total">
+
+            <div className="cash-day-total-head">
+              <div>
+                <div className="cash-section-label light">
+                  TOTAL AMOUNT OF THE DAY
+                </div>
+                <strong>
+                  {formatCurrency(
+                    dayTotals.net
+                  )}
+                </strong>
+                <span>
+                  {formatDate(
+                    currentRegister.dateKey
+                  )}
+                  {" • "}
+                  {openRegister
+                    ? "Live (register open)"
+                    : "Final (register closed)"}
+                </span>
+              </div>
+
+              <div className="cash-day-total-icon">
+                <CircleDollarSign size={22} />
+              </div>
+            </div>
+
+            <div className="cash-day-total-lines">
+              <div>
+                <span>
+                  Cash{" "}
+                  {currentRegister.status === "closed"
+                    ? "(counted)"
+                    : "(expected)"}
+                </span>
+                <strong>
+                  {formatCurrency(dayTotals.cash)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Digital money</span>
+                <strong>
+                  {formatCurrency(
+                    openRegister
+                      ? digitalDraftTotal
+                      : dayTotals.digital
+                  )}
+                </strong>
+              </div>
+
+              <div className="sum">
+                <span>Total money</span>
+                <strong>
+                  {formatCurrency(
+                    dayTotals.cash +
+                    (openRegister
+                      ? digitalDraftTotal
+                      : dayTotals.digital)
+                  )}
+                </strong>
+              </div>
+
+              <div className="minus">
+                <span>Expenses</span>
+                <strong>
+                  −{formatCurrency(
+                    dayTotals.expenses
+                  )}
+                </strong>
+              </div>
+
+              <div className="credit">
+                <span>Total credit of the day</span>
+                <strong>
+                  {formatCurrency(
+                    dayTotals.credits
+                  )}
+                </strong>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+      )}
 
       {/* ====================================================
           HISTORY
@@ -1740,6 +2891,18 @@ export default function CashRegister() {
                     Difference
                   </th>
 
+                  <th>
+                    Digital
+                  </th>
+
+                  <th>
+                    Expenses
+                  </th>
+
+                  <th>
+                    Day Total
+                  </th>
+
                   <th className="cash-history-view-heading">
                     View
                   </th>
@@ -1755,6 +2918,9 @@ export default function CashRegister() {
                         item.difference ||
                         0
                       );
+
+                    const itemTotals =
+                      getDayTotals(item);
 
                     return (
                       <tr
@@ -1849,12 +3015,12 @@ export default function CashRegister() {
                             "closed" ? (
                             <span
                               className={`cash-difference ${itemDifference >
+                                0
+                                ? "positive"
+                                : itemDifference <
                                   0
-                                  ? "positive"
-                                  : itemDifference <
-                                    0
-                                    ? "negative"
-                                    : "zero"
+                                  ? "negative"
+                                  : "zero"
                                 }`}
                             >
                               {itemDifference >
@@ -1869,6 +3035,26 @@ export default function CashRegister() {
                           ) : (
                             "—"
                           )}
+                        </td>
+
+                        <td>
+                          {formatCurrency(
+                            itemTotals.digital
+                          )}
+                        </td>
+
+                        <td>
+                          {itemTotals.expenses > 0
+                            ? `−${formatCurrency(itemTotals.expenses)}`
+                            : formatCurrency(0)}
+                        </td>
+
+                        <td>
+                          <strong>
+                            {formatCurrency(
+                              itemTotals.net
+                            )}
+                          </strong>
                         </td>
 
                         <td className="cash-history-view-cell">
@@ -1964,6 +3150,139 @@ export default function CashRegister() {
               setOpeningDenominations
             )}
 
+            <div className="cash-modal-block">
+              <div className="cash-modal-block-head">
+                <div>
+                  <span className="cash-section-label">
+                    DIGITAL MONEY
+                  </span>
+                  <p>
+                    Enter the balance in each bank / wallet.
+                  </p>
+                </div>
+
+                <strong>
+                  {formatCurrency(
+                    openingDigitalTotal
+                  )}
+                </strong>
+              </div>
+
+              {renderDigitalEditor(
+                openingDigital,
+                setOpeningDigital
+              )}
+            </div>
+
+            <div className="cash-modal-block">
+              <div className="cash-modal-block-head">
+                <div>
+                  <span className="cash-section-label">
+                    CREDIT
+                  </span>
+                  <p>
+                    Add the reason / person and amount.
+                  </p>
+                </div>
+
+                <strong>
+                  {formatCurrency(
+                    openingCreditTotal
+                  )}
+                </strong>
+              </div>
+
+              <div className="cash-expense-form">
+                <input
+                  type="text"
+                  className="cash-expense-reason"
+                  placeholder="Reason / Person"
+                  value={openingCreditReason}
+                  onChange={(event) =>
+                    setOpeningCreditReason(
+                      event.target.value
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleAddOpeningCredit();
+                    }
+                  }}
+                  maxLength={80}
+                />
+
+                <div className="cash-expense-money">
+                  <b>₹</b>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder="Amount"
+                    value={openingCreditAmount}
+                    onChange={(event) =>
+                      setOpeningCreditAmount(
+                        event.target.value
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        handleAddOpeningCredit();
+                      }
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="cash-expense-add"
+                  onClick={handleAddOpeningCredit}
+                >
+                  <Plus size={14} />
+                  Add
+                </button>
+              </div>
+
+              {openingCredits.length === 0 ? (
+                <div className="cash-expense-empty">
+                  <Receipt size={16} />
+                  No credit added yet
+                </div>
+              ) : (
+                <div className="cash-expense-list">
+                  {openingCredits.map((item) => (
+                    <div
+                      className="cash-expense-item"
+                      key={item.id}
+                    >
+                      <div className="cash-expense-text">
+                        <strong>{item.reason}</strong>
+                      </div>
+
+                      <div className="cash-credit-amount">
+                        {formatCurrency(
+                          Number(item.amount) || 0
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="cash-expense-remove"
+                        onClick={() =>
+                          handleRemoveOpeningCredit(
+                            item.id
+                          )
+                        }
+                        aria-label="Remove credit"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="cash-modal-total">
 
               <div>
@@ -1982,6 +3301,31 @@ export default function CashRegister() {
                 size={18}
               />
 
+            </div>
+
+            <div className="cash-modal-grand">
+              <div>
+                <span>Cash</span>
+                <strong>{formatCurrency(openingModalTotal)}</strong>
+              </div>
+              <div>
+                <span>Digital</span>
+                <strong>{formatCurrency(openingDigitalTotal)}</strong>
+              </div>
+              <div>
+                <span>Credit</span>
+                <strong>{formatCurrency(openingCreditTotal)}</strong>
+              </div>
+              <div className="sum">
+                <span>Total</span>
+                <strong>
+                  {formatCurrency(
+                    openingModalTotal +
+                    openingDigitalTotal +
+                    openingCreditTotal
+                  )}
+                </strong>
+              </div>
             </div>
 
             <div className="cash-modal-actions">
@@ -2005,7 +3349,8 @@ export default function CashRegister() {
                 }
                 disabled={
                   saving ||
-                  openingModalTotal <=
+                  openingModalTotal +
+                  openingDigitalTotal <=
                   0
                 }
               >
@@ -2119,6 +3464,90 @@ export default function CashRegister() {
                 setClosingDenominations
               )}
 
+              <div className="cash-modal-block">
+                <div className="cash-modal-block-head">
+                  <div>
+                    <span className="cash-section-label">
+                      DIGITAL MONEY
+                    </span>
+                    <p>
+                      Final balance in each bank / wallet.
+                    </p>
+                  </div>
+
+                  <strong>
+                    {formatCurrency(
+                      closingDigitalTotal
+                    )}
+                  </strong>
+                </div>
+
+                {renderDigitalEditor(
+                  closingDigital,
+                  setClosingDigital
+                )}
+              </div>
+
+              <div className="cash-modal-block">
+                <div className="cash-modal-block-head">
+                  <div>
+                    <span className="cash-section-label">
+                      EXPENSES
+                    </span>
+                    <p>
+                      Added during the day.
+                    </p>
+                  </div>
+
+                  <strong className="red">
+                    {formatCurrency(
+                      calculateExpenseTotal(
+                        openRegister.expenses
+                      )
+                    )}
+                  </strong>
+                </div>
+
+                {renderExpenseRows(
+                  [...getExpenseList(openRegister)].sort(
+                    (a, b) =>
+                      Number(b?.createdAtMs || 0) -
+                      Number(a?.createdAtMs || 0)
+                  ),
+                  false
+                )}
+              </div>
+
+              <div className="cash-modal-block">
+                <div className="cash-modal-block-head">
+                  <div>
+                    <span className="cash-section-label">
+                      CREDIT
+                    </span>
+                    <p>
+                      Added during the day.
+                    </p>
+                  </div>
+
+                  <strong>
+                    {formatCurrency(
+                      calculateCreditTotal(
+                        openRegister.credits
+                      )
+                    )}
+                  </strong>
+                </div>
+
+                {renderCreditRows(
+                  [...getCreditList(openRegister)].sort(
+                    (a, b) =>
+                      Number(b?.createdAtMs || 0) -
+                      Number(a?.createdAtMs || 0)
+                  ),
+                  false
+                )}
+              </div>
+
               <div className="cash-close-preview">
 
                 <div>
@@ -2174,6 +3603,49 @@ export default function CashRegister() {
 
               </div>
 
+              <div className="cash-modal-grand close">
+                <div>
+                  <span>Counted cash</span>
+                  <strong>{formatCurrency(closingModalTotal)}</strong>
+                </div>
+                <div>
+                  <span>Digital</span>
+                  <strong>{formatCurrency(closingDigitalTotal)}</strong>
+                </div>
+                <div>
+                  <span>Expenses</span>
+                  <strong>
+                    −{formatCurrency(
+                      calculateExpenseTotal(
+                        openRegister.expenses
+                      )
+                    )}
+                  </strong>
+                </div>
+                <div>
+                  <span>Credit (to collect)</span>
+                  <strong>
+                    {formatCurrency(
+                      calculateCreditTotal(
+                        openRegister.credits
+                      )
+                    )}
+                  </strong>
+                </div>
+                <div className="sum">
+                  <span>Total of the day</span>
+                  <strong>
+                    {formatCurrency(
+                      closingModalTotal +
+                      closingDigitalTotal -
+                      calculateExpenseTotal(
+                        openRegister.expenses
+                      )
+                    )}
+                  </strong>
+                </div>
+              </div>
+
               <div className="cash-modal-actions">
 
                 <button
@@ -2195,7 +3667,8 @@ export default function CashRegister() {
                   }
                   disabled={
                     saving ||
-                    closingModalTotal <=
+                    closingModalTotal +
+                    closingDigitalTotal <=
                     0
                   }
                 >
@@ -2376,6 +3849,121 @@ export default function CashRegister() {
                     <span>Closing denomination details will appear after the register is closed.</span>
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div className="cash-history-extra-grid">
+
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker">DIGITAL</span>
+                    <h3>Digital Money</h3>
+                    <p>Bank and wallet balances for this session.</p>
+                  </div>
+                  <div className="cash-breakdown-total">
+                    {formatCurrency(getDayTotals(selectedHistoryRegister).digital)}
+                  </div>
+                </div>
+
+                <div className="cash-history-denomination-list">
+                  {DIGITAL_ACCOUNTS.map((item) => {
+                    const amount = Number(
+                      selectedHistoryRegister.digitalBalances?.[item.key] || 0
+                    );
+                    return (
+                      <div
+                        className={`cash-history-denomination ${amount > 0 ? "has-value" : ""}`}
+                        key={`digital-${item.key}`}
+                      >
+                        <div className="cash-history-denomination-left">
+                          <div className={`cash-history-denomination-icon ${item.type === "wallet" ? "coin" : "note"}`}>
+                            {item.type === "wallet" ? <Smartphone size={14} /> : <Landmark size={14} />}
+                          </div>
+                          <div>
+                            <strong>{item.label}</strong>
+                            <span>{item.type === "wallet" ? "WALLET" : "BANK"}</span>
+                          </div>
+                        </div>
+                        <div className="cash-history-denomination-right">
+                          <strong>{formatCurrency(amount)}</strong>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker close">EXPENSES</span>
+                    <h3>Expenses</h3>
+                    <p>Reasons and amounts spent in this session.</p>
+                  </div>
+                  <div className="cash-breakdown-total close">
+                    {formatCurrency(getDayTotals(selectedHistoryRegister).expenses)}
+                  </div>
+                </div>
+
+                <div className="cash-history-expense-body">
+                  {renderExpenseRows(
+                    [...getExpenseList(selectedHistoryRegister)].sort(
+                      (a, b) =>
+                        Number(b?.createdAtMs || 0) -
+                        Number(a?.createdAtMs || 0)
+                    ),
+                    false
+                  )}
+                </div>
+              </div>
+
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker">CREDIT</span>
+                    <h3>Credit</h3>
+                    <p>Reasons / people and amounts on credit in this session.</p>
+                  </div>
+                  <div className="cash-breakdown-total">
+                    {formatCurrency(getDayTotals(selectedHistoryRegister).credits)}
+                  </div>
+                </div>
+
+                <div className="cash-history-expense-body">
+                  {renderCreditRows(
+                    [...getCreditList(selectedHistoryRegister)].sort(
+                      (a, b) =>
+                        Number(b?.createdAtMs || 0) -
+                        Number(a?.createdAtMs || 0)
+                    ),
+                    false
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            <div className="cash-history-daytotal">
+              <div>
+                <span>Cash</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).cash)}</strong>
+              </div>
+              <div>
+                <span>Digital</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).digital)}</strong>
+              </div>
+              <div>
+                <span>Expenses</span>
+                <strong>−{formatCurrency(getDayTotals(selectedHistoryRegister).expenses)}</strong>
+              </div>
+              <div>
+                <span>Credit</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).credits)}</strong>
+              </div>
+              <div className="sum">
+                <span>Day Total</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).net)}</strong>
               </div>
             </div>
 
