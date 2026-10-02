@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import logos from "../../assets/logo.png"
@@ -16,11 +16,13 @@ import {
     Printer,
     X,
     Store,
+    Minus,
+    Plus,
+    Trash2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import ServiceSelector from "../../components/billing/ServiceSelector";
-import Cart from "../../components/billing/Cart";
 import PaymentSelector from "../../components/billing/PaymentSelector";
 import BillSummary from "../../components/billing/BillSummary";
 
@@ -91,6 +93,105 @@ const defaultServices = [
         active: true,
     },
 ];
+
+/* =========================================================
+   CART ROW — quantity can be typed manually
+   ========================================================= */
+
+function CartRow({ item, onQty, onSetQty, onRemove }) {
+    const [draft, setDraft] = useState(String(item.quantity));
+
+    // keep the box in sync when +/- buttons change the quantity
+    useEffect(() => {
+        setDraft(String(item.quantity));
+    }, [item.quantity]);
+
+    const rate = Number(item.sellingPrice) || 0;
+
+    function handleChange(event) {
+        const digits = event.target.value
+            .replace(/\D/g, "")
+            .slice(0, 5);
+
+        setDraft(digits);
+
+        const value = parseInt(digits, 10);
+
+        if (value > 0) {
+            onSetQty(item.id, value);
+        }
+    }
+
+    function handleBlur() {
+        // empty or 0 → go back to the last valid quantity
+        setDraft(String(item.quantity));
+    }
+
+    return (
+        <div className="cart-row">
+
+            <div className="cart-row-top">
+
+                <div className="cart-row-info">
+                    <strong>{item.name}</strong>
+                    <span>
+                        ₹{rate.toLocaleString("en-IN")} / {item.unit || "unit"}
+                    </span>
+                </div>
+
+                <button
+                    type="button"
+                    className="cart-row-remove"
+                    aria-label={`Remove ${item.name}`}
+                    onClick={() => onRemove(item.id)}
+                >
+                    <Trash2 size={18} />
+                </button>
+
+            </div>
+
+            <div className="cart-row-bottom">
+
+                <div className="cart-qty">
+
+                    <button
+                        type="button"
+                        aria-label="Decrease quantity"
+                        onClick={() => onQty(item.id, -1)}
+                    >
+                        <Minus size={16} />
+                    </button>
+
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        aria-label="Quantity"
+                        value={draft}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        onFocus={(event) => event.target.select()}
+                    />
+
+                    <button
+                        type="button"
+                        aria-label="Increase quantity"
+                        onClick={() => onQty(item.id, 1)}
+                    >
+                        <Plus size={16} />
+                    </button>
+
+                </div>
+
+                <strong className="cart-row-total">
+                    ₹{(rate * item.quantity).toLocaleString("en-IN")}
+                </strong>
+
+            </div>
+
+        </div>
+    );
+}
 
 /* =========================================================
    PAGE
@@ -188,6 +289,9 @@ export default function NewTransaction() {
     const [showBillPreview, setShowBillPreview] =
         useState(false);
 
+    const [customerName, setCustomerName] =
+        useState("");
+
     /* =====================================================
        ADD SERVICE
        ===================================================== */
@@ -245,6 +349,22 @@ export default function NewTransaction() {
                     (item) =>
                         item.quantity > 0
                 )
+        );
+    }
+
+    /* =====================================================
+       SET QUANTITY (typed manually)
+       ===================================================== */
+
+    function setQty(id, value) {
+        const quantity = Math.max(1, Math.floor(Number(value) || 0));
+
+        setCart((current) =>
+            current.map((item) =>
+                item.id === id
+                    ? { ...item, quantity }
+                    : item
+            )
         );
     }
 
@@ -391,6 +511,7 @@ export default function NewTransaction() {
             );
 
             setCart([]);
+            setCustomerName("");
             setShowBillPreview(false);
         } catch (error) {
             console.error(
@@ -458,6 +579,10 @@ export default function NewTransaction() {
             profile?.name ||
             user?.displayName ||
             "Attendant";
+
+        const customerLabel =
+            customerName.trim() ||
+            "Walk-in Customer";
 
         const itemCount = cart.reduce(
             (sum, item) =>
@@ -551,7 +676,7 @@ export default function NewTransaction() {
                 body {
                     background: #ffffff;
 
-                    color: #172033;
+                    color: #05080f;
 
                     font-family:
                         Inter,
@@ -570,7 +695,7 @@ export default function NewTransaction() {
 
                     margin: 0 auto;
 
-                    padding: 36px 42px 45px;
+                    padding: 30px 36px 40px;
 
                     background: #ffffff;
                 }
@@ -590,7 +715,7 @@ export default function NewTransaction() {
 
                     padding-bottom: 25px;
 
-                    border-bottom: 1px solid #e7eaf0;
+                    border-bottom: 1px solid #9aa3b2;
                 }
 
                 .brand-left {
@@ -614,7 +739,7 @@ export default function NewTransaction() {
 
                     background: #ffffff;
 
-                    border: 1px solid #e8eaf0;
+                    border: 1px solid #9aa3b2;
 
                     border-radius: 18px;
 
@@ -633,9 +758,9 @@ export default function NewTransaction() {
                 .brand-name {
                     margin: 0;
 
-                    color: #111827;
+                    color: #000000;
 
-                    font-size: 27px;
+                    font-size: 35px;
 
                     line-height: 1.1;
 
@@ -647,9 +772,9 @@ export default function NewTransaction() {
                 .brand-subtitle {
                     margin-top: 6px;
 
-                    color: #697386;
+                    color: #2f3a4d;
 
-                    font-size: 11px;
+                    font-size: 14px;
 
                     font-weight: 600;
 
@@ -670,9 +795,9 @@ export default function NewTransaction() {
                 .receipt-label span {
                     display: block;
 
-                    color: #6366f1;
+                    color: #312e81;
 
-                    font-size: 10px;
+                    font-size: 13px;
 
                     font-weight: 800;
 
@@ -686,9 +811,9 @@ export default function NewTransaction() {
 
                     margin-top: 6px;
 
-                    color: #111827;
+                    color: #000000;
 
-                    font-size: 18px;
+                    font-size: 23px;
 
                     font-weight: 800;
                 }
@@ -709,12 +834,20 @@ export default function NewTransaction() {
                     margin-top: 22px;
                 }
 
+                .customer-card {
+                    grid-column: 1 / -1;
+                }
+
+                .customer-card .meta-value {
+                    font-size: 22px;
+                }
+
                 .meta-card {
                     padding: 13px 15px;
 
-                    background: #f8f9fc;
+                    background: #eceff5;
 
-                    border: 1px solid #edf0f4;
+                    border: 1px solid #b7bfcc;
 
                     border-radius: 12px;
                 }
@@ -722,9 +855,9 @@ export default function NewTransaction() {
                 .meta-label {
                     display: block;
 
-                    color: #98a1b2;
+                    color: #475569;
 
-                    font-size: 9px;
+                    font-size: 12px;
 
                     font-weight: 800;
 
@@ -738,9 +871,9 @@ export default function NewTransaction() {
 
                     margin-top: 5px;
 
-                    color: #273142;
+                    color: #0b1220;
 
-                    font-size: 12px;
+                    font-size: 16px;
 
                     font-weight: 700;
                 }
@@ -764,9 +897,9 @@ export default function NewTransaction() {
                 }
 
                 .section-heading strong {
-                    color: #172033;
+                    color: #05080f;
 
-                    font-size: 12px;
+                    font-size: 16px;
 
                     font-weight: 800;
 
@@ -776,9 +909,9 @@ export default function NewTransaction() {
                 }
 
                 .section-heading span {
-                    color: #98a1b2;
+                    color: #475569;
 
-                    font-size: 10px;
+                    font-size: 13px;
 
                     font-weight: 600;
                 }
@@ -797,7 +930,7 @@ export default function NewTransaction() {
 
                     overflow: hidden;
 
-                    border: 1px solid #e7eaf0;
+                    border: 1px solid #9aa3b2;
 
                     border-radius: 14px;
                 }
@@ -805,13 +938,13 @@ export default function NewTransaction() {
                 .items-table thead th {
                     padding: 12px 13px;
 
-                    background: #f5f6fa;
+                    background: #dfe4ee;
 
-                    color: #697386;
+                    color: #2f3a4d;
 
-                    border-bottom: 1px solid #e5e8ee;
+                    border-bottom: 1px solid #8b95a7;
 
-                    font-size: 9px;
+                    font-size: 12px;
 
                     font-weight: 800;
 
@@ -823,7 +956,7 @@ export default function NewTransaction() {
                 }
 
                 .items-table thead th:first-child {
-                    width: 42px;
+                    width: 52px;
 
                     text-align: center;
                 }
@@ -835,11 +968,11 @@ export default function NewTransaction() {
                 .items-table tbody td {
                     padding: 13px;
 
-                    border-bottom: 1px solid #edf0f4;
+                    border-bottom: 1px solid #b7bfcc;
 
-                    color: #273142;
+                    color: #0b1220;
 
-                    font-size: 12px;
+                    font-size: 16px;
 
                     font-weight: 500;
                 }
@@ -849,17 +982,17 @@ export default function NewTransaction() {
                 }
 
                 .item-number {
-                    color: #a0a7b4;
+                    color: #475569;
 
                     text-align: center;
 
-                    font-size: 10px !important;
+                    font-size: 13px !important;
 
                     font-weight: 700 !important;
                 }
 
                 .item-name {
-                    color: #172033 !important;
+                    color: #05080f !important;
 
                     font-weight: 700 !important;
                 }
@@ -871,7 +1004,7 @@ export default function NewTransaction() {
                 }
 
                 .items-table td.amount {
-                    color: #172033;
+                    color: #05080f;
 
                     font-weight: 800;
                 }
@@ -890,13 +1023,13 @@ export default function NewTransaction() {
                 }
 
                 .summary-box {
-                    width: 310px;
+                    width: 390px;
 
                     padding: 17px;
 
-                    background: #f8f9fc;
+                    background: #eceff5;
 
-                    border: 1px solid #e8ebf1;
+                    border: 1px solid #9aa3b2;
 
                     border-radius: 15px;
                 }
@@ -909,13 +1042,13 @@ export default function NewTransaction() {
 
                     padding: 6px 0;
 
-                    color: #697386;
+                    color: #2f3a4d;
 
-                    font-size: 11px;
+                    font-size: 14px;
                 }
 
                 .summary-row strong {
-                    color: #273142;
+                    color: #0b1220;
 
                     font-weight: 700;
                 }
@@ -930,21 +1063,21 @@ export default function NewTransaction() {
 
                     padding-top: 14px;
 
-                    border-top: 1px solid #dfe3ea;
+                    border-top: 1px solid #8b95a7;
                 }
 
                 .summary-total span {
-                    color: #172033;
+                    color: #05080f;
 
-                    font-size: 13px;
+                    font-size: 17px;
 
                     font-weight: 800;
                 }
 
                 .summary-total strong {
-                    color: #6366f1;
+                    color: #312e81;
 
-                    font-size: 21px;
+                    font-size: 27px;
 
                     font-weight: 900;
                 }
@@ -967,15 +1100,15 @@ export default function NewTransaction() {
 
                     padding: 10px 14px;
 
-                    background: #f0fdf4;
+                    background: #dcf5e4;
 
-                    border: 1px solid #d7f3df;
+                    border: 1px solid #7fc79a;
 
                     border-radius: 10px;
 
-                    color: #168044;
+                    color: #0b5a2c;
 
-                    font-size: 10px;
+                    font-size: 13px;
 
                     font-weight: 800;
 
@@ -1003,15 +1136,15 @@ export default function NewTransaction() {
 
                     padding-top: 20px;
 
-                    border-top: 1px dashed #d8dce4;
+                    border-top: 1px dashed #6b7587;
 
                     text-align: center;
                 }
 
                 .footer-thanks {
-                    color: #172033;
+                    color: #05080f;
 
-                    font-size: 13px;
+                    font-size: 17px;
 
                     font-weight: 800;
                 }
@@ -1019,9 +1152,9 @@ export default function NewTransaction() {
                 .footer-sub {
                     margin-top: 6px;
 
-                    color: #98a1b2;
+                    color: #475569;
 
-                    font-size: 10px;
+                    font-size: 13px;
 
                     line-height: 1.6;
                 }
@@ -1029,9 +1162,9 @@ export default function NewTransaction() {
                 .footer-brand {
                     margin-top: 13px;
 
-                    color: #6366f1;
+                    color: #312e81;
 
-                    font-size: 9px;
+                    font-size: 12px;
 
                     font-weight: 800;
 
@@ -1143,6 +1276,19 @@ export default function NewTransaction() {
                 <!-- META -->
 
                 <section class="receipt-meta">
+
+                    <div class="meta-card customer-card">
+
+                        <span class="meta-label">
+                            Customer Name
+                        </span>
+
+                        <span class="meta-value">
+                            ${escapeHtml(customerLabel)}
+                        </span>
+
+                    </div>
+
 
                     <div class="meta-card">
 
@@ -1717,13 +1863,15 @@ export default function NewTransaction() {
 
                     <div className="checkout-cart">
 
-                        <Cart
-                            items={cart}
-                            onQty={qty}
-                            onRemove={
-                                removeItem
-                            }
-                        />
+                        {cart.map((item) => (
+                            <CartRow
+                                key={item.id}
+                                item={item}
+                                onQty={qty}
+                                onSetQty={setQty}
+                                onRemove={removeItem}
+                            />
+                        ))}
 
                     </div>
 
@@ -1748,6 +1896,38 @@ export default function NewTransaction() {
                             value={payment}
                             onChange={
                                 setPayment
+                            }
+                        />
+
+                    </div>
+
+
+                    {/* CUSTOMER */}
+
+                    <div className="checkout-customer">
+
+                        <div className="checkout-section-title">
+
+                            <span>
+                                Customer name
+                            </span>
+
+                            <small>
+                                Shown on the bill
+                            </small>
+
+                        </div>
+
+                        <input
+                            type="text"
+                            className="customer-input"
+                            placeholder="Enter customer name"
+                            value={customerName}
+                            maxLength={60}
+                            onChange={(event) =>
+                                setCustomerName(
+                                    event.target.value
+                                )
                             }
                         />
 
@@ -1855,6 +2035,15 @@ export default function NewTransaction() {
                                     Sale Receipt
                                 </span>
 
+                            </div>
+
+
+                            <div className="receipt-customer">
+                                <span>Customer Name</span>
+                                <strong>
+                                    {customerName.trim() ||
+                                        "Walk-in Customer"}
+                                </strong>
                             </div>
 
 

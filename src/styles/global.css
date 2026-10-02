@@ -538,7 +538,7 @@ td b {
 .cart-row {
     display: grid;
     grid-template-columns: 1fr auto auto auto;
-    gap: 8px;
+    gap: 15px;
     align-items: center;
     padding: 11px 0;
     border-bottom: 1px solid var(--border)
@@ -546,7 +546,7 @@ td b {
 
 .cart-row b {
     display: block;
-    font-size: 10px
+    font-size: 13px
 }
 
 .cart-row span {
