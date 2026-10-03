@@ -1730,7 +1730,7 @@
 }
 
 .cart-qty button {
-    width: 35px;
+    width: 20px;
     height: 35px;
     display: flex;
     align-items: center;
@@ -1748,7 +1748,7 @@
 }
 
 .cart-qty input {
-    width: 20px;
+    width: 35px;
     height: 20px;
     box-sizing: border-box;
     padding: 0 4px;

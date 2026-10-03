@@ -20,6 +20,11 @@ import {
   RefreshCw,
   ChevronDown,
   CalendarDays,
+  Plus,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  Save,
 } from "lucide-react";
 
 import {
@@ -27,6 +32,11 @@ import {
   onSnapshot,
   query,
   where,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc as firestoreDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 import { onAuthStateChanged } from "firebase/auth";
@@ -378,6 +388,66 @@ const normalizeTransaction = (data, id, source) => {
 // Component
 // --------------------------------------------------
 
+// --------------------------------------------------
+// CRUD configuration
+// --------------------------------------------------
+
+// normalized `source` -> Firestore collection name
+const SOURCE_COLLECTION = {
+  transactions: "transactions",
+  moneyTransfer: "moneyTransfers",
+  withdrawal: "withdrawals",
+  ebBillPayment: "ebBillPayments",
+};
+
+const TRANSACTION_KINDS = [
+  {
+    value: "transactions",
+    label: "Service",
+    amountLabel: "Amount",
+    icon: Receipt,
+  },
+  {
+    value: "moneyTransfer",
+    label: "Money Transfer",
+    amountLabel: "Transfer amount",
+    icon: ArrowLeftRight,
+  },
+  {
+    value: "withdrawal",
+    label: "Withdrawal",
+    amountLabel: "Withdrawal amount",
+    icon: Banknote,
+  },
+  {
+    value: "ebBillPayment",
+    label: "EB Bill",
+    amountLabel: "Bill amount",
+    icon: Zap,
+  },
+];
+
+const PAYMENT_METHODS = ["Cash", "UPI", "Card", "Bank Transfer"];
+
+const STATUS_OPTIONS = [
+  "completed",
+  "pending",
+  "processing",
+  "cancelled",
+];
+
+const emptyTransactionForm = () => ({
+  source: "transactions",
+  customerName: "",
+  mobile: "",
+  serviceName: "",
+  amount: "",
+  serviceCharge: "",
+  paymentMethod: "Cash",
+  status: "completed",
+});
+
+
 export default function MyTransactions() {
   const [user, setUser] = useState(null);
 
@@ -397,6 +467,18 @@ export default function MyTransactions() {
 
   const [selectedTransaction, setSelectedTransaction] =
     useState(null);
+
+  // CRUD state
+  const [formMode, setFormMode] = useState(null); // "create" | "edit" | null
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [form, setForm] = useState(emptyTransactionForm);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const [toast, setToast] = useState(null);
 
   // --------------------------------------------------
   // Authentication
@@ -1325,6 +1407,255 @@ export default function MyTransactions() {
   };
 
   // --------------------------------------------------
+  // CRUD: create / update / delete
+  // --------------------------------------------------
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (!toast) return undefined;
+
+    const timer = setTimeout(() => setToast(null), 3500);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const updateFormField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const openCreateForm = () => {
+    setEditingTransaction(null);
+    setForm(emptyTransactionForm());
+    setFormError("");
+    setFormMode("create");
+  };
+
+  const openEditForm = (transaction) => {
+    if (!transaction) return;
+
+    setEditingTransaction(transaction);
+
+    setForm({
+      source: transaction.source,
+      customerName:
+        transaction.customerName === "Unknown Customer"
+          ? ""
+          : String(transaction.customerName || ""),
+      mobile:
+        transaction.mobile === "—"
+          ? ""
+          : String(transaction.mobile || ""),
+      serviceName:
+        transaction.source === "transactions"
+          ? getPurpose(transaction).label
+          : "",
+      amount: String(transaction.amount ?? ""),
+      serviceCharge: transaction.serviceCharge
+        ? String(transaction.serviceCharge)
+        : "",
+      paymentMethod: transaction.paymentMethod || "Cash",
+      status: transaction.status || "completed",
+    });
+
+    setFormError("");
+    setSelectedTransaction(null);
+    setFormMode("edit");
+  };
+
+  const closeForm = () => {
+    if (saving) return;
+
+    setFormMode(null);
+    setEditingTransaction(null);
+    setFormError("");
+  };
+
+  // A service bill with several line items keeps its items,
+  // so its amount is read-only here.
+  const editingHasMultipleItems =
+    formMode === "edit" &&
+    editingTransaction?.source === "transactions" &&
+    Array.isArray(editingTransaction?.items) &&
+    editingTransaction.items.length > 1;
+
+  const formAmount = editingHasMultipleItems
+    ? Number(editingTransaction?.amount || 0)
+    : Number(form.amount || 0);
+
+  const formCharge = Number(form.serviceCharge || 0);
+
+  const formCustomerPays =
+    (Number.isFinite(formAmount) ? formAmount : 0) +
+    (Number.isFinite(formCharge) ? formCharge : 0);
+
+  const handleSaveTransaction = async (event) => {
+    event.preventDefault();
+
+    if (saving) return;
+
+    if (!user?.uid) {
+      setFormError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    const isEdit = formMode === "edit" && Boolean(editingTransaction);
+    const source = isEdit ? editingTransaction.source : form.source;
+    const collectionName = SOURCE_COLLECTION[source];
+    const serviceName = form.serviceName.trim();
+
+    const amount = editingHasMultipleItems
+      ? Number(editingTransaction.amount || 0)
+      : Number(form.amount);
+
+    const serviceCharge = Number(form.serviceCharge || 0);
+
+    if (source === "transactions" && !serviceName) {
+      setFormError("Please enter the service name.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setFormError("Please enter a valid amount greater than 0.");
+      return;
+    }
+
+    if (!Number.isFinite(serviceCharge) || serviceCharge < 0) {
+      setFormError("Service charge cannot be negative.");
+      return;
+    }
+
+    const payload = {
+      customerName: form.customerName.trim() || "Walk-in Customer",
+      mobile: form.mobile.trim(),
+      paymentMethod: form.paymentMethod,
+      status: form.status,
+      amount,
+      serviceCharge,
+      customerPays: amount + serviceCharge,
+    };
+
+    if (source === "transactions") {
+      payload.serviceName = serviceName;
+
+      if (!isEdit) {
+        payload.items = [
+          {
+            serviceName,
+            quantity: 1,
+            unitPrice: amount,
+          },
+        ];
+      } else if (
+        !editingHasMultipleItems &&
+        Array.isArray(editingTransaction.items) &&
+        editingTransaction.items.length === 1
+      ) {
+        const [first] = editingTransaction.items;
+        const quantity =
+          Number(first?.quantity) > 0 ? Number(first.quantity) : 1;
+
+        payload.items = [
+          {
+            ...first,
+            serviceName,
+            quantity,
+            unitPrice: amount / quantity,
+          },
+        ];
+      }
+    }
+
+    if (source === "moneyTransfer") {
+      payload.transferAmount = amount;
+      if (!isEdit) payload.transactionType = "money_transfer";
+    }
+
+    if (source === "withdrawal") {
+      payload.withdrawalAmount = amount;
+      if (!isEdit) payload.transactionType = "withdrawal";
+    }
+
+    if (source === "ebBillPayment") {
+      payload.billAmount = amount;
+      if (!isEdit) payload.transactionType = "eb_bill_payment";
+    }
+
+    setSaving(true);
+    setFormError("");
+
+    try {
+      if (isEdit) {
+        await updateDoc(
+          firestoreDoc(db, collectionName, editingTransaction.id),
+          {
+            ...payload,
+            updatedAt: serverTimestamp(),
+          }
+        );
+
+        showToast("Transaction updated successfully.");
+      } else {
+        await addDoc(collection(db, collectionName), {
+          ...payload,
+          attendantId: user.uid,
+          attendantName:
+            user.displayName || user.email || "Attendant",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        showToast("Transaction added successfully.");
+      }
+
+      setFormMode(null);
+      setEditingTransaction(null);
+    } catch (err) {
+      console.error("Save transaction error:", err);
+
+      setFormError(
+        err?.message || "Unable to save the transaction. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!deleteTarget || deleting) return;
+
+    setDeleting(true);
+
+    try {
+      await deleteDoc(
+        firestoreDoc(
+          db,
+          SOURCE_COLLECTION[deleteTarget.source],
+          deleteTarget.id
+        )
+      );
+
+      if (selectedTransaction?.id === deleteTarget.id) {
+        setSelectedTransaction(null);
+      }
+
+      setDeleteTarget(null);
+      showToast("Transaction deleted.");
+    } catch (err) {
+      console.error("Delete transaction error:", err);
+
+      showToast(
+        err?.message || "Unable to delete the transaction.",
+        "error"
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // --------------------------------------------------
   // Render
   // --------------------------------------------------
 
@@ -1359,14 +1690,25 @@ export default function MyTransactions() {
 
         </div>
 
-        <button
-          className="transactions-export-btn"
-          onClick={exportCSV}
-          disabled={!filteredTransactions.length}
-        >
-          <Download size={17} />
-          Export CSV
-        </button>
+        <div className="transactions-header-actions">
+          <button
+            type="button"
+            className="transactions-add-btn"
+            onClick={openCreateForm}
+          >
+            <Plus size={17} />
+            New Transaction
+          </button>
+
+          <button
+            className="transactions-export-btn"
+            onClick={exportCSV}
+            disabled={!filteredTransactions.length}
+          >
+            <Download size={17} />
+            Export CSV
+          </button>
+        </div>
 
       </div>
 
@@ -1960,6 +2302,26 @@ export default function MyTransactions() {
                             >
                               <Printer size={17} />
                             </button>
+
+                            <button
+                              className="edit-transaction-btn"
+                              onClick={() =>
+                                openEditForm(transaction)
+                              }
+                              title="Edit transaction"
+                            >
+                              <Pencil size={17} />
+                            </button>
+
+                            <button
+                              className="delete-transaction-btn"
+                              onClick={() =>
+                                setDeleteTarget(transaction)
+                              }
+                              title="Delete transaction"
+                            >
+                              <Trash2 size={17} />
+                            </button>
                           </div>
 
                         </td>
@@ -2169,6 +2531,40 @@ export default function MyTransactions() {
               <div className="transaction-modal-footer">
 
                 <button
+                  type="button"
+                  className="footer-danger"
+                  onClick={() => {
+                    setDeleteTarget(selectedTransaction);
+                    setSelectedTransaction(null);
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    openEditForm(selectedTransaction)
+                  }
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    printTransactionReceipt(selectedTransaction)
+                  }
+                >
+                  <Printer size={14} />
+                  Print
+                </button>
+
+                <button
+                  type="button"
+                  className="footer-primary"
                   onClick={() =>
                     setSelectedTransaction(null)
                   }
@@ -2183,6 +2579,347 @@ export default function MyTransactions() {
           </div>
         );
       })()}
+
+
+      {/* ---------------------------------------------
+          Add / Edit Modal
+      ---------------------------------------------- */}
+
+      {formMode && (() => {
+        const activeSource =
+          formMode === "edit"
+            ? editingTransaction?.source
+            : form.source;
+
+        const activeKind =
+          TRANSACTION_KINDS.find(
+            (kind) => kind.value === activeSource
+          ) || TRANSACTION_KINDS[0];
+
+        const paymentOptions = PAYMENT_METHODS.includes(
+          form.paymentMethod
+        )
+          ? PAYMENT_METHODS
+          : [...PAYMENT_METHODS, form.paymentMethod];
+
+        return (
+          <div
+            className="transaction-modal-backdrop"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) closeForm();
+            }}
+          >
+            <form
+              className="transaction-modal tx-form-modal"
+              onSubmit={handleSaveTransaction}
+              noValidate
+            >
+              <div className="transaction-modal-header">
+                <div className="transaction-modal-title">
+                  <div className="modal-purpose-icon tx-form-icon">
+                    {formMode === "edit" ? (
+                      <Pencil size={21} />
+                    ) : (
+                      <Plus size={21} />
+                    )}
+                  </div>
+
+                  <div>
+                    <span>
+                      {formMode === "edit"
+                        ? "EDIT TRANSACTION"
+                        : "NEW TRANSACTION"}
+                    </span>
+
+                    <h2>
+                      {formMode === "edit"
+                        ? activeKind.label
+                        : "Add a transaction"}
+                    </h2>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="transaction-modal-close"
+                  onClick={closeForm}
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div className="transaction-modal-body">
+
+                {/* Type */}
+
+                <div className="tx-form-label">Type</div>
+
+                <div className="tx-kind-picker">
+                  {TRANSACTION_KINDS.map((kind) => {
+                    const KindIcon = kind.icon;
+
+                    return (
+                      <button
+                        type="button"
+                        key={kind.value}
+                        className={`tx-kind-btn ${activeSource === kind.value ? "active" : ""
+                          }`}
+                        disabled={formMode === "edit"}
+                        onClick={() =>
+                          updateFormField("source", kind.value)
+                        }
+                      >
+                        <KindIcon size={15} />
+                        {kind.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="tx-form-grid">
+
+                  <label className="tx-field">
+                    <span>Customer name</span>
+                    <input
+                      type="text"
+                      placeholder="Walk-in Customer"
+                      value={form.customerName}
+                      onChange={(e) =>
+                        updateFormField("customerName", e.target.value)
+                      }
+                    />
+                  </label>
+
+                  <label className="tx-field">
+                    <span>Mobile</span>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="Optional"
+                      value={form.mobile}
+                      onChange={(e) =>
+                        updateFormField("mobile", e.target.value)
+                      }
+                    />
+                  </label>
+
+                  {activeSource === "transactions" && (
+                    <label className="tx-field full">
+                      <span>Service name</span>
+                      <input
+                        type="text"
+                        placeholder="e.g. Xerox, Color Print, Scan"
+                        value={form.serviceName}
+                        onChange={(e) =>
+                          updateFormField("serviceName", e.target.value)
+                        }
+                      />
+                    </label>
+                  )}
+
+                  <label className="tx-field">
+                    <span>{activeKind.amountLabel} (₹)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={
+                        editingHasMultipleItems
+                          ? String(formAmount)
+                          : form.amount
+                      }
+                      disabled={editingHasMultipleItems}
+                      onChange={(e) =>
+                        updateFormField("amount", e.target.value)
+                      }
+                    />
+                  </label>
+
+                  <label className="tx-field">
+                    <span>Service charge (₹)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={form.serviceCharge}
+                      onChange={(e) =>
+                        updateFormField("serviceCharge", e.target.value)
+                      }
+                    />
+                  </label>
+
+                  <label className="tx-field">
+                    <span>Payment method</span>
+                    <select
+                      value={form.paymentMethod}
+                      onChange={(e) =>
+                        updateFormField("paymentMethod", e.target.value)
+                      }
+                    >
+                      {paymentOptions.map((method) => (
+                        <option key={method} value={method}>
+                          {method}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="tx-field">
+                    <span>Status</span>
+                    <select
+                      value={form.status}
+                      onChange={(e) =>
+                        updateFormField("status", e.target.value)
+                      }
+                    >
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status.charAt(0).toUpperCase() +
+                            status.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                </div>
+
+                {editingHasMultipleItems && (
+                  <div className="tx-form-note">
+                    This bill has multiple items, so the amount is
+                    locked. Other details can still be edited.
+                  </div>
+                )}
+
+                <div className="tx-form-total">
+                  <span>Customer pays</span>
+                  <strong>{formatCurrency(formCustomerPays)}</strong>
+                </div>
+
+                {formError && (
+                  <div className="tx-form-error" role="alert">
+                    <AlertTriangle size={15} />
+                    {formError}
+                  </div>
+                )}
+
+              </div>
+
+              <div className="transaction-modal-footer">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="footer-primary"
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <RefreshCw size={14} className="tx-spin" />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  {saving
+                    ? "Saving..."
+                    : formMode === "edit"
+                      ? "Save Changes"
+                      : "Add Transaction"}
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+      })()}
+
+
+      {/* ---------------------------------------------
+          Delete Confirmation
+      ---------------------------------------------- */}
+
+      {deleteTarget && (
+        <div
+          className="transaction-modal-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !deleting) {
+              setDeleteTarget(null);
+            }
+          }}
+        >
+          <div className="transaction-modal tx-confirm-modal">
+            <div className="tx-confirm-body">
+              <div className="tx-confirm-icon">
+                <Trash2 size={24} />
+              </div>
+
+              <h3>Delete this transaction?</h3>
+
+              <p>
+                <strong>{getPurpose(deleteTarget).label}</strong>
+                {" • "}
+                {deleteTarget.customerName}
+                {" • "}
+                {formatCurrency(deleteTarget.customerPays)}
+              </p>
+
+              <small>
+                This permanently removes the record and cannot be
+                undone.
+              </small>
+            </div>
+
+            <div className="transaction-modal-footer">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="footer-danger-solid"
+                onClick={handleDeleteTransaction}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <RefreshCw size={14} className="tx-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ---------------------------------------------
+          Toast
+      ---------------------------------------------- */}
+
+      {toast && (
+        <div
+          className={`tx-toast ${toast.type}`}
+          role="status"
+        >
+          {toast.type === "error" ? (
+            <AlertTriangle size={16} />
+          ) : (
+            <CheckCircle2 size={16} />
+          )}
+          {toast.message}
+        </div>
+      )}
 
     </div>
   );

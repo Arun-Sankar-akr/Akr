@@ -82,20 +82,11 @@ const DENOMINATIONS = [
     type: "note",
     label: "₹10",
   },
-  {
-    value: 5,
-    type: "coin",
-    label: "₹5",
-  },
-  {
-    value: 2,
-    type: "coin",
-    label: "₹2",
-  },
+  // All coins are entered as ONE total amount (in rupees).
   {
     value: 1,
     type: "coin",
-    label: "₹1",
+    label: "Coins",
   },
 ];
 
@@ -269,6 +260,47 @@ function calculateDenominationTotal(
   );
 }
 
+// Coins are one total rupee amount. Older records stored separate
+// ₹5 / ₹2 / ₹1 counts, so fold those into one amount when reading.
+function getDenominationCount(denominations, item) {
+  if (item.type === "coin") {
+    return (
+      (Number(denominations?.[1]) || 0) +
+      2 * (Number(denominations?.[2]) || 0) +
+      5 * (Number(denominations?.[5]) || 0)
+    );
+  }
+
+  return Number(denominations?.[item.value]) || 0;
+}
+
+// Opening total = opening cash + opening digital + credits.
+// Credits are read live, so a deleted credit drops out of the total.
+function getOpeningTotal(register) {
+  if (!register) return 0;
+
+  const openingDigital =
+    register.openingDigital &&
+      Object.keys(register.openingDigital).length > 0
+      ? register.openingDigital
+      : register.digitalBalances;
+
+  return (
+    Number(register.openingCash || 0) +
+    calculateDigitalTotal(openingDigital) +
+    calculateCreditTotal(register.credits)
+  );
+}
+
+// Closing total = counted cash + digital + credits (closed registers only).
+function getClosingTotal(register) {
+  if (!register || register.status !== "closed") return null;
+
+  const totals = getDayTotals(register);
+
+  return totals.cash + totals.digital + totals.credits;
+}
+
 function getTimestampValue(value) {
   if (!value) return 0;
 
@@ -415,9 +447,6 @@ export default function CashRegister() {
 
   const [digitalDraft, setDigitalDraft] =
     useState(emptyDigital());
-
-  const [savingDigital, setSavingDigital] =
-    useState(false);
 
   // Expenses
   const [expenseReason, setExpenseReason] =
@@ -651,6 +680,9 @@ export default function CashRegister() {
       0
     );
 
+  const openingTotal =
+    getOpeningTotal(currentRegister);
+
   const cashSales =
     Number(
       currentRegister?.cashSales ??
@@ -763,17 +795,6 @@ export default function CashRegister() {
 
   const digitalDraftTotal =
     calculateDigitalTotal(digitalDraft);
-
-  const digitalDraftChanged =
-    digitalDraftTotal !==
-    dayTotals.digital ||
-    DIGITAL_ACCOUNTS.some(
-      (item) =>
-        (Number(digitalDraft[item.key]) || 0) !==
-        (Number(
-          currentRegister?.digitalBalances?.[item.key]
-        ) || 0)
-    );
 
   const openingDigitalTotal =
     calculateDigitalTotal(openingDigital);
@@ -1208,46 +1229,6 @@ export default function CashRegister() {
   };
 
   // ----------------------------------------------------------
-  // DIGITAL MONEY (update during the day)
-  // ----------------------------------------------------------
-
-  const handleSaveDigital =
-    async () => {
-      if (!openRegister) return;
-
-      setSavingDigital(true);
-
-      try {
-        await updateDoc(
-          doc(
-            db,
-            "cashRegisters",
-            openRegister.id
-          ),
-          {
-            digitalBalances:
-              cleanDigital(digitalDraft),
-
-            updatedAt:
-              serverTimestamp(),
-          }
-        );
-      } catch (firebaseError) {
-        console.error(
-          "Digital money save error:",
-          firebaseError
-        );
-
-        alert(
-          firebaseError.message ||
-          "Unable to save digital money."
-        );
-      } finally {
-        setSavingDigital(false);
-      }
-    };
-
-  // ----------------------------------------------------------
   // EXPENSES
   // ----------------------------------------------------------
 
@@ -1675,7 +1656,7 @@ export default function CashRegister() {
                     {item.type ===
                       "note"
                       ? "NOTE"
-                      : "COIN"}
+                      : "COIN TOTAL (₹)"}
                   </span>
                 </div>
               </div>
@@ -2088,12 +2069,12 @@ export default function CashRegister() {
 
           <strong>
             {formatCurrency(
-              openingCash
+              openingTotal
             )}
           </strong>
 
           <small>
-            Today's opening balance
+            Cash + digital + credit
           </small>
         </div>
 
@@ -2393,39 +2374,12 @@ export default function CashRegister() {
                 </div>
               </div>
 
+              {/* Read-only: balances are set when opening / closing the register */}
               {renderDigitalEditor(
                 digitalDraft,
                 setDigitalDraft,
-                !openRegister
+                true
               )}
-
-              {openRegister && (
-                <button
-                  type="button"
-                  className="cash-panel-btn"
-                  onClick={handleSaveDigital}
-                  disabled={
-                    savingDigital ||
-                    !digitalDraftChanged
-                  }
-                >
-                  {savingDigital ? (
-                    <>
-                      <RefreshCw
-                        size={14}
-                        className="spin"
-                      />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={14} />
-                      Save Digital Money
-                    </>
-                  )}
-                </button>
-              )}
-
             </div>
 
             {/* EXPENSES + CREDIT (stacked) */}
@@ -2856,224 +2810,78 @@ export default function CashRegister() {
 
               <thead>
                 <tr>
-                  <th>
-                    Date
-                  </th>
-
-                  {role ===
-                    "admin" && (
-                      <th>
-                        Attendant
-                      </th>
-                    )}
-
-                  <th>
-                    Status
-                  </th>
-
-                  <th>
-                    Opening
-                  </th>
-
-                  <th>
-                    Cash Sales
-                  </th>
-
-                  <th>
-                    Expected
-                  </th>
-
-                  <th>
-                    Closing
-                  </th>
-
-                  <th>
-                    Difference
-                  </th>
-
-                  <th>
-                    Digital
-                  </th>
-
-                  <th>
-                    Expenses
-                  </th>
-
-                  <th>
-                    Day Total
-                  </th>
-
-                  <th className="cash-history-view-heading">
-                    View
-                  </th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Opening Total</th>
+                  <th>Closing Total</th>
+                  <th>Difference</th>
                 </tr>
               </thead>
 
               <tbody>
 
-                {filteredRegisters.map(
-                  (item) => {
-                    const itemDifference =
-                      Number(
-                        item.difference ||
-                        0
-                      );
+                {filteredRegisters.map((item) => {
+                  const itemDifference = Number(item.difference || 0);
+                  const itemClosingTotal = getClosingTotal(item);
 
-                    const itemTotals =
-                      getDayTotals(item);
-
-                    return (
-                      <tr
-                        key={
-                          item.id
+                  return (
+                    <tr
+                      key={item.id}
+                      className="cash-row-clickable"
+                      tabIndex={0}
+                      onClick={() => setSelectedHistoryRegister(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          setSelectedHistoryRegister(item);
                         }
-                      >
+                      }}
+                    >
 
-                        <td>
-                          <strong>
-                            {formatDate(
-                              item.dateKey
-                            )}
-                          </strong>
+                      <td>
+                        <span className={`cash-table-status ${item.status}`}>
+                          <i />
+                          {item.status}
+                        </span>
+                      </td>
 
-                          <small>
-                            {formatDateTime(
-                              item.openedAt
-                            )}
-                          </small>
-                        </td>
+                      <td>
+                        <strong>{formatDate(item.dateKey)}</strong>
+                        <small>{formatDateTime(item.openedAt)}</small>
+                      </td>
 
-                        {role ===
-                          "admin" && (
-                            <td>
-                              <div className="cash-person">
+                      <td>
+                        <strong>{formatCurrency(getOpeningTotal(item))}</strong>
+                      </td>
 
-                                <span>
-                                  {String(
-                                    item.attendantName ||
-                                    "Unknown"
-                                  )
-                                    .charAt(
-                                      0
-                                    )
-                                    .toUpperCase()}
-                                </span>
+                      <td>
+                        {itemClosingTotal === null ? (
+                          "—"
+                        ) : (
+                          <strong>{formatCurrency(itemClosingTotal)}</strong>
+                        )}
+                      </td>
 
-                                <strong>
-                                  {
-                                    item.attendantName
-                                  }
-                                </strong>
-
-                              </div>
-                            </td>
-                          )}
-
-                        <td>
+                      <td>
+                        {item.status === "closed" ? (
                           <span
-                            className={`cash-table-status ${item.status}`}
-                          >
-                            <i />
-
-                            {item.status}
-                          </span>
-                        </td>
-
-                        <td>
-                          {formatCurrency(
-                            item.openingCash ||
-                            0
-                          )}
-                        </td>
-
-                        <td>
-                          {formatCurrency(
-                            item.cashSales ||
-                            0
-                          )}
-                        </td>
-
-                        <td>
-                          {formatCurrency(
-                            item.expectedCash ||
-                            0
-                          )}
-                        </td>
-
-                        <td>
-                          {item.status ===
-                            "closed"
-                            ? formatCurrency(
-                              item.closingCash ||
-                              0
-                            )
-                            : "—"}
-                        </td>
-
-                        <td>
-                          {item.status ===
-                            "closed" ? (
-                            <span
-                              className={`cash-difference ${itemDifference >
-                                0
+                            className={`cash-difference ${itemDifference > 0
                                 ? "positive"
-                                : itemDifference <
-                                  0
+                                : itemDifference < 0
                                   ? "negative"
                                   : "zero"
-                                }`}
-                            >
-                              {itemDifference >
-                                0
-                                ? "+"
-                                : ""}
-
-                              {formatCurrency(
-                                itemDifference
-                              )}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-
-                        <td>
-                          {formatCurrency(
-                            itemTotals.digital
-                          )}
-                        </td>
-
-                        <td>
-                          {itemTotals.expenses > 0
-                            ? `−${formatCurrency(itemTotals.expenses)}`
-                            : formatCurrency(0)}
-                        </td>
-
-                        <td>
-                          <strong>
-                            {formatCurrency(
-                              itemTotals.net
-                            )}
-                          </strong>
-                        </td>
-
-                        <td className="cash-history-view-cell">
-                          <button
-                            type="button"
-                            className="cash-view-btn"
-                            onClick={() =>
-                              setSelectedHistoryRegister(item)
-                            }
+                              }`}
                           >
-                            <Eye size={14} />
-                            View
-                          </button>
-                        </td>
+                            {itemDifference > 0 ? "+" : ""}
+                            {formatCurrency(itemDifference)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
 
-                      </tr>
-                    );
-                  }
-                )}
+                    </tr>
+                  );
+                })}
 
               </tbody>
 
@@ -3764,7 +3572,7 @@ export default function CashRegister() {
                   <div>
                     <span className="cash-breakdown-kicker">OPEN</span>
                     <h3>Opening Cash Breakdown</h3>
-                    <p>Exactly how many ₹500, ₹200, ₹100 etc. were added.</p>
+                    <p>Notes by count, coins as one total amount.</p>
                   </div>
                   <div className="cash-breakdown-total">
                     {formatCurrency(Number(selectedHistoryRegister.openingCash || 0))}
@@ -3773,9 +3581,7 @@ export default function CashRegister() {
 
                 <div className="cash-history-denomination-list">
                   {DENOMINATIONS.map((item) => {
-                    const pcs = Number(
-                      selectedHistoryRegister.openingDenominations?.[item.value] || 0
-                    );
+                    const pcs = getDenominationCount(selectedHistoryRegister.openingDenominations, item);
                     return (
                       <div
                         className={`cash-history-denomination ${pcs > 0 ? "has-value" : ""}`}
@@ -3791,7 +3597,7 @@ export default function CashRegister() {
                           </div>
                         </div>
                         <div className="cash-history-denomination-right">
-                          <strong>{pcs} pcs</strong>
+                          <strong>{item.type === "coin" ? "Total" : `${pcs} pcs`}</strong>
                           <span>{formatCurrency(pcs * item.value)}</span>
                         </div>
                       </div>
@@ -3805,7 +3611,7 @@ export default function CashRegister() {
                   <div>
                     <span className="cash-breakdown-kicker close">CLOSE</span>
                     <h3>Closing Cash Breakdown</h3>
-                    <p>Exactly how many notes and coins were counted at close.</p>
+                    <p>Notes by count, coins as one total amount.</p>
                   </div>
                   <div className="cash-breakdown-total close">
                     {selectedHistoryRegister.status === "closed"
@@ -3817,9 +3623,7 @@ export default function CashRegister() {
                 {selectedHistoryRegister.status === "closed" ? (
                   <div className="cash-history-denomination-list">
                     {DENOMINATIONS.map((item) => {
-                      const pcs = Number(
-                        selectedHistoryRegister.closingDenominations?.[item.value] || 0
-                      );
+                      const pcs = getDenominationCount(selectedHistoryRegister.closingDenominations, item);
                       return (
                         <div
                           className={`cash-history-denomination ${pcs > 0 ? "has-value" : ""}`}
@@ -3835,7 +3639,7 @@ export default function CashRegister() {
                             </div>
                           </div>
                           <div className="cash-history-denomination-right">
-                            <strong>{pcs} pcs</strong>
+                            <strong>{item.type === "coin" ? "Total" : `${pcs} pcs`}</strong>
                             <span>{formatCurrency(pcs * item.value)}</span>
                           </div>
                         </div>
