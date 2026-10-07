@@ -276,19 +276,51 @@ function getDenominationCount(denominations, item) {
 
 // Opening total = opening cash + opening digital + credits.
 // Credits are read live, so a deleted credit drops out of the total.
+// Opening / closing snapshots of digital money and credit (loan).
+// Older records that have no snapshot fall back to the live values.
+function getOpeningDigital(register) {
+  if (!register) return {};
+
+  return register.openingDigital &&
+    Object.keys(register.openingDigital).length > 0
+    ? register.openingDigital
+    : register.digitalBalances || {};
+}
+
+function getClosingDigital(register) {
+  if (!register || register.status !== "closed") return null;
+
+  return register.closingDigital &&
+    Object.keys(register.closingDigital).length > 0
+    ? register.closingDigital
+    : register.digitalBalances || {};
+}
+
+function getOpeningCredits(register) {
+  if (Array.isArray(register?.openingCredits)) {
+    return register.openingCredits;
+  }
+
+  return getCreditList(register);
+}
+
+function getClosingCredits(register) {
+  if (!register || register.status !== "closed") return null;
+
+  if (Array.isArray(register.closingCredits)) {
+    return register.closingCredits;
+  }
+
+  return getCreditList(register);
+}
+
 function getOpeningTotal(register) {
   if (!register) return 0;
 
-  const openingDigital =
-    register.openingDigital &&
-      Object.keys(register.openingDigital).length > 0
-      ? register.openingDigital
-      : register.digitalBalances;
-
   return (
     Number(register.openingCash || 0) +
-    calculateDigitalTotal(openingDigital) +
-    calculateCreditTotal(register.credits)
+    calculateDigitalTotal(getOpeningDigital(register)) +
+    calculateCreditTotal(getOpeningCredits(register))
   );
 }
 
@@ -299,6 +331,16 @@ function getClosingTotal(register) {
   const totals = getDayTotals(register);
 
   return totals.cash + totals.digital + totals.credits;
+}
+
+// Overall difference = closing total - opening total
+// (cash + digital money + credit at close, minus the same at open).
+function getOverallDifference(register) {
+  const closingTotal = getClosingTotal(register);
+
+  if (closingTotal === null) return 0;
+
+  return closingTotal - getOpeningTotal(register);
 }
 
 function getTimestampValue(value) {
@@ -476,6 +518,16 @@ export default function CashRegister() {
     useState("");
 
   const [openingCreditAmount, setOpeningCreditAmount] =
+    useState("");
+
+  // Credit (loan) re-entered while closing the register
+  const [closingCredits, setClosingCredits] =
+    useState([]);
+
+  const [closingCreditReason, setClosingCreditReason] =
+    useState("");
+
+  const [closingCreditAmount, setClosingCreditAmount] =
     useState("");
 
   // ----------------------------------------------------------
@@ -736,15 +788,21 @@ export default function CashRegister() {
       )
       : storedExpectedCash;
 
+  // Overall register balance includes drawer cash, digital balances,
+  // and recorded credits/loans for a like-for-like opening/closing view.
+  const currentOverallTotal =
+    currentRegister?.status === "closed"
+      ? Number(getClosingTotal(currentRegister) || 0)
+      : currentCash +
+        calculateDigitalTotal(currentRegister?.digitalBalances) +
+        calculateCreditTotal(getCreditList(currentRegister));
+
   // ----------------------------------------------------------
   // DIFFERENCE
   // ----------------------------------------------------------
 
   const difference =
-    Number(
-      currentRegister?.difference ??
-      0
-    );
+    getOverallDifference(currentRegister);
 
   // ----------------------------------------------------------
   // DIGITAL MONEY + EXPENSES + DAY TOTAL
@@ -804,6 +862,9 @@ export default function CashRegister() {
 
   const openingCreditTotal =
     calculateCreditTotal(openingCredits);
+
+  const closingCreditTotal =
+    calculateCreditTotal(closingCredits);
 
   // ----------------------------------------------------------
   // HISTORY FILTER
@@ -950,6 +1011,47 @@ export default function CashRegister() {
     );
   };
 
+  const handleAddClosingCredit = () => {
+    const reason = closingCreditReason.trim();
+    const amount = Number(closingCreditAmount);
+
+    if (!reason) {
+      alert("Please enter the reason / person name.");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid credit amount.");
+      return;
+    }
+
+    setClosingCredits((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`,
+        reason,
+        amount,
+        createdAtMs: Date.now(),
+        addedBy:
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant",
+      },
+    ]);
+
+    setClosingCreditReason("");
+    setClosingCreditAmount("");
+  };
+
+  const handleRemoveClosingCredit = (creditId) => {
+    setClosingCredits((prev) =>
+      prev.filter((item) => item.id !== creditId)
+    );
+  };
+
   const handleOpenRegister =
     async () => {
       if (!user?.uid) {
@@ -1035,6 +1137,9 @@ export default function CashRegister() {
             expenses: [],
 
             credits: openingCredits,
+
+            // Snapshot of the credit (loan) entered at opening
+            openingCredits: openingCredits,
 
             cashAdded: 0,
 
@@ -1151,9 +1256,17 @@ export default function CashRegister() {
             )
           );
 
-        const difference =
+        // Cash-only difference (counted vs expected drawer cash)
+        const cashDifference =
           closingCash -
           registerExpected;
+
+        // Overall difference = closing total - opening total
+        const difference =
+          closingCash +
+          calculateDigitalTotal(closingDigital) +
+          calculateCreditTotal(closingCredits) -
+          getOpeningTotal(openRegister);
 
         await updateDoc(
           registerRef,
@@ -1177,7 +1290,14 @@ export default function CashRegister() {
             closingDigital:
               cleanDigital(closingDigital),
 
+            // Credit (loan) re-entered at closing. `credits` is
+            // kept in sync so day totals use the final list.
+            closingCredits: closingCredits,
+            credits: closingCredits,
+
             difference,
+
+            cashDifference,
 
             status:
               "closed",
@@ -1198,6 +1318,10 @@ export default function CashRegister() {
           emptyDigital()
         );
 
+        setClosingCredits([]);
+        setClosingCreditReason("");
+        setClosingCreditAmount("");
+
         setShowCloseModal(false);
       } catch (firebaseError) {
         console.error(
@@ -1215,15 +1339,18 @@ export default function CashRegister() {
     };
 
   // ----------------------------------------------------------
-  // OPEN CLOSE-MODAL (pre-fills digital money with current values)
+  // OPEN CLOSE-MODAL (digital money starts blank)
   // ----------------------------------------------------------
 
   const openCloseModal = () => {
-    setClosingDigital(
-      digitalToInputs(
-        openRegister?.digitalBalances
-      )
-    );
+    // Digital money starts blank so the final balances are re-entered
+    setClosingDigital(emptyDigital());
+
+    // Start from the credit already on the register; the
+    // attendant can re-enter / edit it before closing.
+    setClosingCredits(getCreditList(openRegister));
+    setClosingCreditReason("");
+    setClosingCreditAmount("");
 
     setShowCloseModal(true);
   };
@@ -1449,6 +1576,16 @@ export default function CashRegister() {
                   item.id !== creditId
               ),
 
+            ...(Array.isArray(openRegister.openingCredits)
+              ? {
+                openingCredits:
+                  openRegister.openingCredits.filter(
+                    (item) =>
+                      item.id !== creditId
+                  ),
+              }
+              : {}),
+
             updatedAt:
               serverTimestamp(),
           }
@@ -1491,7 +1628,7 @@ export default function CashRegister() {
       "Cash Removed",
       "Expected Cash",
       "Closing Cash",
-      "Difference",
+      "Overall Difference",
       ...DIGITAL_ACCOUNTS.map(
         (account) => account.label
       ),
@@ -1516,7 +1653,7 @@ export default function CashRegister() {
           item.cashRemoved || 0,
           item.expectedCash || 0,
           item.closingCash || 0,
-          item.difference || 0,
+          getOverallDifference(item),
           ...DIGITAL_ACCOUNTS.map(
             (account) =>
               Number(
@@ -1897,6 +2034,109 @@ export default function CashRegister() {
       </div>
     );
 
+  // History detail: opening / closing digital money card
+  const renderHistoryDigitalCard = (kind, title, digital) => (
+    <div className="cash-history-breakdown-card">
+      <div className="cash-history-breakdown-head">
+        <div>
+          <span
+            className={`cash-breakdown-kicker ${kind === "CLOSE" ? "close" : ""}`}
+          >
+            {kind}
+          </span>
+          <h3>{title}</h3>
+          <p>Bank and wallet balances.</p>
+        </div>
+        <div
+          className={`cash-breakdown-total ${kind === "CLOSE" ? "close" : ""}`}
+        >
+          {digital ? formatCurrency(calculateDigitalTotal(digital)) : "—"}
+        </div>
+      </div>
+
+      {digital ? (
+        <div className="cash-history-denomination-list">
+          {DIGITAL_ACCOUNTS.map((item) => {
+            const amount = Number(digital?.[item.key] || 0);
+
+            return (
+              <div
+                className={`cash-history-denomination ${amount > 0 ? "has-value" : ""}`}
+                key={`${kind}-digital-${item.key}`}
+              >
+                <div className="cash-history-denomination-left">
+                  <div
+                    className={`cash-history-denomination-icon ${item.type === "wallet" ? "coin" : "note"}`}
+                  >
+                    {item.type === "wallet" ? (
+                      <Smartphone size={14} />
+                    ) : (
+                      <Landmark size={14} />
+                    )}
+                  </div>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.type === "wallet" ? "WALLET" : "BANK"}</span>
+                  </div>
+                </div>
+                <div className="cash-history-denomination-right">
+                  <strong>{formatCurrency(amount)}</strong>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="cash-history-not-closed">
+          <LockKeyhole size={18} />
+          <strong>Register is still open</strong>
+          <span>Closing digital money will appear after the register is closed.</span>
+        </div>
+      )}
+    </div>
+  );
+
+  // History detail: opening / closing credit (loan) card
+  const renderHistoryCreditCard = (kind, title, list) => (
+    <div className="cash-history-breakdown-card">
+      <div className="cash-history-breakdown-head">
+        <div>
+          <span
+            className={`cash-breakdown-kicker ${kind === "CLOSE" ? "close" : ""}`}
+          >
+            {kind}
+          </span>
+          <h3>{title}</h3>
+          <p>Reasons / people and amounts on credit.</p>
+        </div>
+        <div
+          className={`cash-breakdown-total ${kind === "CLOSE" ? "close" : ""}`}
+        >
+          {list ? formatCurrency(calculateCreditTotal(list)) : "—"}
+        </div>
+      </div>
+
+      {list ? (
+        <div className="cash-history-expense-body">
+          {renderCreditRows(
+            [...list].sort(
+              (a, b) =>
+                Number(b?.createdAtMs || 0) -
+                Number(a?.createdAtMs || 0)
+            ),
+            false
+          )}
+        </div>
+      ) : (
+        <div className="cash-history-not-closed">
+          <LockKeyhole size={18} />
+          <strong>Register is still open</strong>
+          <span>Closing credit will appear after the register is closed.</span>
+        </div>
+      )}
+    </div>
+  );
+
   const openingModalTotal =
     calculateDenominationTotal(
       openingDenominations
@@ -1906,6 +2146,13 @@ export default function CashRegister() {
     calculateDenominationTotal(
       closingDenominations
     );
+
+  // Closing total - opening total, shown live in the close popup
+  const closeOverallDifference =
+    closingModalTotal +
+    closingDigitalTotal +
+    closingCreditTotal -
+    getOpeningTotal(openRegister);
 
   // ==========================================================
   // RENDER
@@ -2057,7 +2304,7 @@ export default function CashRegister() {
         <div className="cash-stat-card">
           <div className="cash-stat-top">
             <span>
-              Opening Cash
+              Opening Overall Total
             </span>
 
             <div className="cash-stat-icon blue">
@@ -2111,8 +2358,8 @@ export default function CashRegister() {
             <span>
               {currentRegister?.status ===
                 "closed"
-                ? "Closing Cash"
-                : "Expected Cash"}
+                ? "Closing Overall Total"
+                : "Current Overall Total"}
             </span>
 
             <div className="cash-stat-icon orange">
@@ -2124,15 +2371,15 @@ export default function CashRegister() {
 
           <strong>
             {formatCurrency(
-              currentCash
+              currentOverallTotal
             )}
           </strong>
 
           <small>
             {currentRegister?.status ===
               "closed"
-              ? "Actual counted drawer cash"
-              : "Expected drawer balance"}
+              ? "Cash + digital balances + credits"
+              : "Expected cash + digital balances + credits"}
           </small>
         </div>
 
@@ -2156,13 +2403,13 @@ export default function CashRegister() {
               <span>
                 {currentRegister?.status ===
                   "closed"
-                  ? "Actual closing cash"
-                  : "Expected drawer cash"}
+                  ? "Closing overall total"
+                  : "Current overall total"}
               </span>
 
               <strong>
                 {formatCurrency(
-                  currentCash
+                  currentOverallTotal
                 )}
               </strong>
             </div>
@@ -2263,7 +2510,7 @@ export default function CashRegister() {
                   }
                 >
                   <span>
-                    Difference
+                    Overall difference
                   </span>
 
                   <strong>
@@ -2814,14 +3061,14 @@ export default function CashRegister() {
                   <th>Date</th>
                   <th>Opening Total</th>
                   <th>Closing Total</th>
-                  <th>Difference</th>
+                  <th>Overall Difference</th>
                 </tr>
               </thead>
 
               <tbody>
 
                 {filteredRegisters.map((item) => {
-                  const itemDifference = Number(item.difference || 0);
+                  const itemDifference = getOverallDifference(item);
                   const itemClosingTotal = getClosingTotal(item);
 
                   return (
@@ -2986,7 +3233,7 @@ export default function CashRegister() {
               <div className="cash-modal-block-head">
                 <div>
                   <span className="cash-section-label">
-                    CREDIT
+                    CREDIT (LOAN)
                   </span>
                   <p>
                     Add the reason / person and amount.
@@ -3330,29 +3577,108 @@ export default function CashRegister() {
                 <div className="cash-modal-block-head">
                   <div>
                     <span className="cash-section-label">
-                      CREDIT
+                      CREDIT (LOAN)
                     </span>
                     <p>
-                      Added during the day.
+                      Re-enter the final credit / loan list.
                     </p>
                   </div>
 
                   <strong>
                     {formatCurrency(
-                      calculateCreditTotal(
-                        openRegister.credits
-                      )
+                      closingCreditTotal
                     )}
                   </strong>
                 </div>
 
-                {renderCreditRows(
-                  [...getCreditList(openRegister)].sort(
-                    (a, b) =>
-                      Number(b?.createdAtMs || 0) -
-                      Number(a?.createdAtMs || 0)
-                  ),
-                  false
+                <div className="cash-expense-form">
+                  <input
+                    type="text"
+                    className="cash-expense-reason"
+                    placeholder="Reason / Person"
+                    value={closingCreditReason}
+                    onChange={(event) =>
+                      setClosingCreditReason(
+                        event.target.value
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        handleAddClosingCredit();
+                      }
+                    }}
+                    maxLength={80}
+                  />
+
+                  <div className="cash-expense-money">
+                    <b>₹</b>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      placeholder="Amount"
+                      value={closingCreditAmount}
+                      onChange={(event) =>
+                        setClosingCreditAmount(
+                          event.target.value
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleAddClosingCredit();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="cash-expense-add"
+                    onClick={handleAddClosingCredit}
+                  >
+                    <Plus size={14} />
+                    Add
+                  </button>
+                </div>
+
+                {closingCredits.length === 0 ? (
+                  <div className="cash-expense-empty">
+                    <Receipt size={16} />
+                    No credit added yet
+                  </div>
+                ) : (
+                  <div className="cash-expense-list">
+                    {[...closingCredits].map((item) => (
+                      <div
+                        className="cash-expense-item"
+                        key={item.id}
+                      >
+                        <div className="cash-expense-text">
+                          <strong>{item.reason}</strong>
+                        </div>
+
+                        <div className="cash-credit-amount">
+                          {formatCurrency(
+                            Number(item.amount) || 0
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="cash-expense-remove"
+                          onClick={() =>
+                            handleRemoveClosingCredit(
+                              item.id
+                            )
+                          }
+                          aria-label="Remove credit"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -3372,39 +3698,23 @@ export default function CashRegister() {
 
                 <div
                   className={
-                    closingModalTotal -
-                      expectedCashForClose(
-                        openRegister
-                      ) >
-                      0
+                    closeOverallDifference > 0
                       ? "positive"
-                      : closingModalTotal -
-                        expectedCashForClose(
-                          openRegister
-                        ) <
-                        0
+                      : closeOverallDifference < 0
                         ? "negative"
                         : "zero"
                   }
                 >
                   <span>
-                    Difference
+                    Overall difference
                   </span>
 
                   <strong>
-                    {closingModalTotal -
-                      expectedCashForClose(
-                        openRegister
-                      ) >
-                      0
+                    {closeOverallDifference > 0
                       ? "+"
                       : ""}
-
                     {formatCurrency(
-                      closingModalTotal -
-                      expectedCashForClose(
-                        openRegister
-                      )
+                      closeOverallDifference
                     )}
                   </strong>
                 </div>
@@ -3431,12 +3741,10 @@ export default function CashRegister() {
                   </strong>
                 </div>
                 <div>
-                  <span>Credit (to collect)</span>
+                  <span>Credit (Loan)</span>
                   <strong>
                     {formatCurrency(
-                      calculateCreditTotal(
-                        openRegister.credits
-                      )
+                      closingCreditTotal
                     )}
                   </strong>
                 </div>
@@ -3566,12 +3874,17 @@ export default function CashRegister() {
               </div>
             </div>
 
+            <div className="cash-history-section-title">
+              <WalletCards size={14} />
+              Cash in Hand
+            </div>
+
             <div className="cash-history-breakdown-grid">
               <div className="cash-history-breakdown-card">
                 <div className="cash-history-breakdown-head">
                   <div>
                     <span className="cash-breakdown-kicker">OPEN</span>
-                    <h3>Opening Cash Breakdown</h3>
+                    <h3>Opening Cash in Hand</h3>
                     <p>Notes by count, coins as one total amount.</p>
                   </div>
                   <div className="cash-breakdown-total">
@@ -3610,7 +3923,7 @@ export default function CashRegister() {
                 <div className="cash-history-breakdown-head">
                   <div>
                     <span className="cash-breakdown-kicker close">CLOSE</span>
-                    <h3>Closing Cash Breakdown</h3>
+                    <h3>Closing Cash in Hand</h3>
                     <p>Notes by count, coins as one total amount.</p>
                   </div>
                   <div className="cash-breakdown-total close">
@@ -3656,49 +3969,52 @@ export default function CashRegister() {
               </div>
             </div>
 
-            <div className="cash-history-extra-grid">
+            <div className="cash-history-section-title">
+              <Landmark size={14} />
+              Digital Money
+            </div>
 
-              <div className="cash-history-breakdown-card">
-                <div className="cash-history-breakdown-head">
-                  <div>
-                    <span className="cash-breakdown-kicker">DIGITAL</span>
-                    <h3>Digital Money</h3>
-                    <p>Bank and wallet balances for this session.</p>
-                  </div>
-                  <div className="cash-breakdown-total">
-                    {formatCurrency(getDayTotals(selectedHistoryRegister).digital)}
-                  </div>
-                </div>
+            <div className="cash-history-extra-grid cash-history-pair-grid">
+              {renderHistoryDigitalCard(
+                "OPEN",
+                "Opening Digital Money",
+                getOpeningDigital(selectedHistoryRegister)
+              )}
+              {renderHistoryDigitalCard(
+                "CLOSE",
+                "Closing Digital Money",
+                getClosingDigital(selectedHistoryRegister)
+              )}
+            </div>
 
-                <div className="cash-history-denomination-list">
-                  {DIGITAL_ACCOUNTS.map((item) => {
-                    const amount = Number(
-                      selectedHistoryRegister.digitalBalances?.[item.key] || 0
-                    );
-                    return (
-                      <div
-                        className={`cash-history-denomination ${amount > 0 ? "has-value" : ""}`}
-                        key={`digital-${item.key}`}
-                      >
-                        <div className="cash-history-denomination-left">
-                          <div className={`cash-history-denomination-icon ${item.type === "wallet" ? "coin" : "note"}`}>
-                            {item.type === "wallet" ? <Smartphone size={14} /> : <Landmark size={14} />}
-                          </div>
-                          <div>
-                            <strong>{item.label}</strong>
-                            <span>{item.type === "wallet" ? "WALLET" : "BANK"}</span>
-                          </div>
-                        </div>
-                        <div className="cash-history-denomination-right">
-                          <strong>{formatCurrency(amount)}</strong>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="cash-history-section-title">
+              <Receipt size={14} />
+              Credit (Loan)
+            </div>
 
-              <div className="cash-history-breakdown-card">
+            <div className="cash-history-extra-grid cash-history-pair-grid">
+              {renderHistoryCreditCard(
+                "OPEN",
+                "Opening Credit (Loan)",
+                getOpeningCredits(selectedHistoryRegister)
+              )}
+              {renderHistoryCreditCard(
+                "CLOSE",
+                "Closing Credit (Loan)",
+                getClosingCredits(selectedHistoryRegister)
+              )}
+            </div>
+
+            <div className="cash-history-section-title">
+              <Receipt size={14} />
+              Expenses
+            </div>
+
+            <div className="cash-history-extra-grid cash-history-pair-grid">
+              <div
+                className="cash-history-breakdown-card"
+                style={{ gridColumn: "1 / -1" }}
+              >
                 <div className="cash-history-breakdown-head">
                   <div>
                     <span className="cash-breakdown-kicker close">EXPENSES</span>
@@ -3721,31 +4037,6 @@ export default function CashRegister() {
                   )}
                 </div>
               </div>
-
-              <div className="cash-history-breakdown-card">
-                <div className="cash-history-breakdown-head">
-                  <div>
-                    <span className="cash-breakdown-kicker">CREDIT</span>
-                    <h3>Credit</h3>
-                    <p>Reasons / people and amounts on credit in this session.</p>
-                  </div>
-                  <div className="cash-breakdown-total">
-                    {formatCurrency(getDayTotals(selectedHistoryRegister).credits)}
-                  </div>
-                </div>
-
-                <div className="cash-history-expense-body">
-                  {renderCreditRows(
-                    [...getCreditList(selectedHistoryRegister)].sort(
-                      (a, b) =>
-                        Number(b?.createdAtMs || 0) -
-                        Number(a?.createdAtMs || 0)
-                    ),
-                    false
-                  )}
-                </div>
-              </div>
-
             </div>
 
             <div className="cash-history-daytotal">
@@ -3781,16 +4072,22 @@ export default function CashRegister() {
                 <strong>{formatCurrency(Number(selectedHistoryRegister.cashRemoved || 0))}</strong>
               </div>
               <div>
-                <span>Difference</span>
+                <span>Overall Difference</span>
                 <strong className={
-                  Number(selectedHistoryRegister.difference || 0) > 0
+                  getOverallDifference(selectedHistoryRegister) > 0
                     ? "positive"
-                    : Number(selectedHistoryRegister.difference || 0) < 0
+                    : getOverallDifference(selectedHistoryRegister) < 0
                       ? "negative"
                       : "zero"
                 }>
-                  {Number(selectedHistoryRegister.difference || 0) > 0 ? "+" : ""}
-                  {formatCurrency(Number(selectedHistoryRegister.difference || 0))}
+                  {selectedHistoryRegister.status !== "closed"
+                    ? "—"
+                    : (
+                      <>
+                        {getOverallDifference(selectedHistoryRegister) > 0 ? "+" : ""}
+                        {formatCurrency(getOverallDifference(selectedHistoryRegister))}
+                      </>
+                    )}
                 </strong>
               </div>
               <button
