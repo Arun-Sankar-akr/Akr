@@ -3881,3 +3881,300 @@ body.akr-home-page {
 #student{
     margin-top: 50px;
 }
+
+
+/* =========================================================
+   THEME TOGGLE BUTTON (both themes)
+========================================================= */
+
+.theme-toggle {
+    width: 43px;
+    height: 43px;
+
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    padding: 0;
+
+    color: var(--akr-text);
+    background: var(--akr-surface);
+
+    border: 1px solid var(--akr-border);
+    border-radius: 13px;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.theme-toggle:hover {
+    color: var(--akr-primary);
+    border-color: var(--akr-border-strong);
+    transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--akr-primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 820px) {
+    .theme-toggle {
+        margin-left: auto;
+    }
+
+    .mobile-menu-button {
+        margin-left: 0;
+    }
+}
+
+
+/* =========================================================
+   DARK MODE  —  BLACK + GOLD
+   Works whether data-theme="dark" sits on .akr-home itself
+   or on any ancestor (html / body / app wrapper).
+========================================================= */
+
+/* ---------- tokens ---------- */
+
+.akr-home[data-theme="dark"],
+[data-theme="dark"] .akr-home {
+    --akr-bg: #050505;
+    --akr-white: #0f0f0f;
+    --akr-surface: #0f0f0f;
+    --akr-surface-soft: #181714;
+
+    --akr-text: #f6f0df;
+    --akr-text-soft: #c4bba3;
+    --akr-text-muted: #9b937d;
+
+    --akr-primary: #d4af37;
+    --akr-primary-dark: #b8932a;
+    --akr-primary-soft: rgba(212, 175, 55, 0.14);
+
+    /* every accent collapses into a gold family */
+    --akr-indigo: #e6c35c;
+    --akr-cyan: #c9a227;
+    --akr-orange: #f0cf72;
+    --akr-rose: #b8862f;
+
+    --akr-border: rgba(212, 175, 55, 0.16);
+    --akr-border-strong: rgba(212, 175, 55, 0.34);
+
+    --akr-shadow-sm: 0 8px 25px rgba(0, 0, 0, 0.55);
+    --akr-shadow-md: 0 18px 45px rgba(0, 0, 0, 0.65);
+    --akr-shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.75);
+
+    --akr-card-border: rgba(212, 175, 55, 0.18);
+    --akr-card-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    --akr-card-shadow-hover:
+        0 20px 50px rgba(0, 0, 0, 0.75),
+        0 0 30px rgba(212, 175, 55, 0.08);
+
+    color-scheme: dark;
+
+    background:
+        radial-gradient(circle at 5% 10%,
+            rgba(212, 175, 55, 0.09),
+            transparent 26%),
+        radial-gradient(circle at 95% 35%,
+            rgba(212, 175, 55, 0.06),
+            transparent 26%),
+        var(--akr-bg);
+}
+
+body.akr-home-page.akr-home-dark {
+    background: #050505;
+}
+
+/* ---------- background art ---------- */
+
+[data-theme="dark"] .art-ring {
+    border-color: rgba(212, 175, 55, 0.14);
+}
+
+[data-theme="dark"] .art-orb-one {
+    box-shadow:
+        0 0 0 9px rgba(212, 175, 55, 0.08),
+        0 0 35px rgba(212, 175, 55, 0.45);
+}
+
+[data-theme="dark"] .art-orb-two {
+    box-shadow:
+        0 0 0 9px rgba(240, 207, 114, 0.07),
+        0 0 35px rgba(240, 207, 114, 0.4);
+}
+
+[data-theme="dark"] .art-grid {
+    opacity: 0.2;
+
+    background-image:
+        linear-gradient(rgba(212, 175, 55, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212, 175, 55, 0.1) 1px, transparent 1px);
+}
+
+/* ---------- navbar ---------- */
+
+[data-theme="dark"] .akr-navbar {
+    background: rgba(10, 10, 10, 0.84);
+    border-color: rgba(212, 175, 55, 0.22);
+
+    box-shadow:
+        0 10px 35px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(212, 175, 55, 0.08);
+}
+
+[data-theme="dark"] .akr-nav-links>a:not(.mobile-login)::after {
+    background: var(--akr-primary);
+}
+
+[data-theme="dark"] .navbar-login {
+    color: #0a0a0a;
+    background: linear-gradient(135deg, #e6c35c, #c9a227);
+}
+
+[data-theme="dark"] .navbar-login:hover {
+    background: linear-gradient(135deg, #f2d675, #d4af37);
+    box-shadow: 0 10px 24px rgba(212, 175, 55, 0.28);
+}
+
+[data-theme="dark"] .login-icon {
+    color: #e6c35c;
+    background: #0a0a0a;
+}
+
+[data-theme="dark"] .mobile-menu-button {
+    color: var(--akr-text);
+    background: #111;
+    border-color: var(--akr-border-strong);
+}
+
+@media (max-width: 820px) {
+    [data-theme="dark"] .akr-nav-links {
+        background: rgba(10, 10, 10, 0.97);
+    }
+
+    [data-theme="dark"] .mobile-login {
+        color: #0a0a0a !important;
+        background: linear-gradient(135deg, #e6c35c, #c9a227);
+    }
+
+    [data-theme="dark"] .mobile-login:hover {
+        background: #f2d675 !important;
+    }
+}
+
+/* ---------- headings / badges ---------- */
+
+[data-theme="dark"] .heading-mini-card,
+[data-theme="dark"] .tools-badge {
+    background: #0f0f0f;
+}
+
+[data-theme="dark"] .tools-eyebrow .eyebrow-icon {
+    background: rgba(212, 175, 55, 0.14);
+}
+
+/* ---------- service / exam cards ---------- */
+
+[data-theme="dark"] .gov-card {
+    background: linear-gradient(145deg, #141311, #0a0a0a);
+}
+
+[data-theme="dark"] .gov-icon:not(.gov-icon-logo) {
+    background: linear-gradient(145deg,
+            color-mix(in srgb, var(--card-color) 22%, #0b0b0b),
+            color-mix(in srgb, var(--card-color) 8%, #0b0b0b));
+
+    border-color: color-mix(in srgb, var(--card-color) 32%, transparent);
+}
+
+[data-theme="dark"] .gov-card:hover .gov-icon:not(.gov-icon-logo) {
+    background: linear-gradient(145deg,
+            color-mix(in srgb, var(--card-color) 30%, #0b0b0b),
+            color-mix(in srgb, var(--card-color) 12%, #0b0b0b));
+}
+
+/* official logos keep a light tile so dark artwork stays readable */
+[data-theme="dark"] .gov-icon.gov-icon-logo {
+    background: #f8f4e6;
+    border-color: rgba(212, 175, 55, 0.55);
+    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .gov-tag {
+    background: color-mix(in srgb, var(--card-color) 14%, #0b0b0b);
+    border-color: color-mix(in srgb, var(--card-color) 30%, transparent);
+}
+
+[data-theme="dark"] .gov-card-bottom {
+    border-top-color: rgba(212, 175, 55, 0.12);
+}
+
+[data-theme="dark"] .gov-card:hover .gov-arrow,
+[data-theme="dark"] .tool-card:hover .tool-arrow {
+    color: #0a0a0a;
+}
+
+/* ---------- digital tools ---------- */
+
+[data-theme="dark"] .tools-section {
+    background: linear-gradient(180deg,
+            rgba(212, 175, 55, 0),
+            rgba(212, 175, 55, 0.045) 14%,
+            rgba(212, 175, 55, 0.045) 86%,
+            rgba(212, 175, 55, 0));
+}
+
+[data-theme="dark"] .tool-card {
+    background: linear-gradient(145deg, #141311, #0a0a0a);
+}
+
+[data-theme="dark"] .tool-icon {
+    background: color-mix(in srgb, var(--tool-color) 18%, #0b0b0b);
+}
+
+[data-theme="dark"] .tool-card:hover .tool-icon {
+    background: color-mix(in srgb, var(--tool-color) 26%, #0b0b0b);
+}
+
+[data-theme="dark"] .tool-number {
+    color: rgba(212, 175, 55, 0.4);
+}
+
+/* ---------- footer ---------- */
+
+[data-theme="dark"] .akr-footer {
+    background:
+        radial-gradient(circle at 8% 5%,
+            rgba(212, 175, 55, 0.09),
+            transparent 30%),
+        radial-gradient(circle at 90% 20%,
+            rgba(212, 175, 55, 0.05),
+            transparent 28%),
+        var(--akr-bg);
+}
+
+[data-theme="dark"] .akr-footer::before {
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(212, 175, 55, 0.4),
+            transparent);
+}
+
+[data-theme="dark"] .footer-socials a:hover {
+    color: #0a0a0a;
+}
+
+[data-theme="dark"] .copyright-separator {
+    color: var(--akr-text-muted);
+}
+
+[data-theme="dark"] .developer-credit a:hover {
+    color: #f2d675;
+}

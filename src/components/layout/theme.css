@@ -1,0 +1,111 @@
+/* =========================================================
+   THEME TOKENS — LIGHT + BLACK & GOLD DARK
+   Theme is switched by <html data-theme="light|dark">
+   Use these variables in any page/component to get theming for free.
+   ========================================================= */
+
+:root,
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg: #f4f7fb;
+    --shell-bg: #ffffff;
+    --surface: #ffffff;
+    --surface-glass: rgba(255, 255, 255, 0.72);
+    --surface-hover: rgba(105, 86, 232, 0.055);
+
+    --text: #172033;
+    --text-soft: #667085;
+    --muted: #8b95a7;
+    --icon: #929bad;
+
+    --border: rgba(224, 228, 238, 0.8);
+    --border-strong: rgba(255, 255, 255, 0.9);
+
+    --accent: #6956e8;
+    --accent-strong: #5845d2;
+    --accent-soft: rgba(105, 86, 232, 0.09);
+    --accent-border: rgba(105, 86, 232, 0.12);
+    --accent-on: #ffffff;
+    --accent-grad: linear-gradient(145deg, #7664f0, #6956e8);
+    --accent-glow: rgba(105, 86, 232, 0.25);
+
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.07);
+    --success: #10b981;
+
+    --main-shadow: 0 0 12px 10px #eff0f1;
+    --sidebar-shadow: 10px 0 35px rgba(42, 50, 70, 0.06),
+        inset -1px 0 0 rgba(255, 255, 255, 0.8);
+
+    --blob-1: rgba(105, 86, 232, 0.10);
+    --blob-2: rgba(71, 139, 235, 0.07);
+    --page-wash: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.18),
+            rgba(244, 247, 251, 0.35));
+
+    --scroll-thumb: #d9dee7;
+    --scroll-thumb-hover: #b9c1cf;
+
+    --logo-filter: none;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #050505;
+    --shell-bg: #000000;
+    --surface: #0e0e0f;
+    --surface-glass: rgba(18, 17, 14, 0.78);
+    --surface-hover: rgba(212, 175, 55, 0.07);
+
+    --text: #f4ecd6;
+    --text-soft: #b8ad92;
+    --muted: #7d7561;
+    --icon: #8a8068;
+
+    --border: rgba(212, 175, 55, 0.16);
+    --border-strong: rgba(212, 175, 55, 0.22);
+
+    --accent: #d4af37;
+    --accent-strong: #e8c75a;
+    --accent-soft: rgba(212, 175, 55, 0.10);
+    --accent-border: rgba(212, 175, 55, 0.28);
+    --accent-on: #15110a;
+    --accent-grad: linear-gradient(145deg, #ecd06a, #b8912a);
+    --accent-glow: rgba(212, 175, 55, 0.28);
+
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255, 107, 107, 0.09);
+    --success: #34d399;
+
+    --main-shadow: 0 0 0 1px rgba(212, 175, 55, 0.14),
+        0 24px 60px rgba(0, 0, 0, 0.7);
+    --sidebar-shadow: 10px 0 40px rgba(0, 0, 0, 0.6),
+        inset -1px 0 0 rgba(212, 175, 55, 0.12);
+
+    --blob-1: rgba(212, 175, 55, 0.10);
+    --blob-2: rgba(160, 120, 30, 0.08);
+    --page-wash: linear-gradient(180deg,
+            rgba(212, 175, 55, 0.03),
+            rgba(0, 0, 0, 0));
+
+    --scroll-thumb: #3a3321;
+    --scroll-thumb-hover: #5c5031;
+
+    /* If your logo.png is dark-on-transparent, change this to
+       brightness(0) invert(1) sepia(.4) saturate(3) hue-rotate(5deg) etc. */
+    --logo-filter: none;
+}
+
+/* Smooth theme switch (skipped for reduced-motion users) */
+@media (prefers-reduced-motion: no-preference) {
+
+    .app-shell,
+    .app-shell .main,
+    .app-shell .sidebar,
+    .app-shell .page {
+        transition: background-color 0.25s ease, color 0.25s ease,
+            border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+}

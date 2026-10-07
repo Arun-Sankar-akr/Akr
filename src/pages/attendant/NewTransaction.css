@@ -1780,3 +1780,171 @@
 .checkout-payment button {
     font-size: 15px;
 }
+
+/* =========================================================
+   DARK MODE — BLACK & GOLD (auto-generated from the light styles)
+   Activated by <html data-theme="dark">
+   ========================================================= */
+
+:root[data-theme="dark"] {
+    --nt-bg: #11100e;
+    --nt-surface: #11100e;
+    --nt-border: rgba(212, 175, 55, 0.12);
+    --nt-text: #f6f4ef;
+    --nt-text-dim: #f6f4ef;
+    --nt-text-faint: #f6f4ef;
+    --nt-primary: #dab24e;
+    --nt-primary-soft: #220f0f;
+    --nt-blue: #dab24e;
+    --nt-blue-soft: rgba(19, 18, 15, 0.964);
+    --nt-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+    --nt-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme="dark"] .service-count span {
+    color: #e6cc89;
+}
+
+:root[data-theme="dark"] .service-helper {
+    background: #11100e;
+}
+
+:root[data-theme="dark"] .checkout-summary {
+    background: #2c2a24;
+}
+
+:root[data-theme="dark"] .bill-modal {
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme="dark"] .bill-modal-close {
+    background: #11100e;
+}
+
+:root[data-theme="dark"] .bill-modal-primary {
+    background: #d8b45a;
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    color: #15110a;
+}
+
+:root[data-theme="dark"] .bill-modal-primary:hover:not(:disabled) {
+    background: #d8b45a;
+}
+
+:root[data-theme="dark"] .customer-input:focus {
+    border-color: rgba(212, 175, 55, 0.5);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
+}
+
+:root[data-theme="dark"] .bill-receipt {
+    background: linear-gradient(180deg, #11100e 0%, #11100e 100%);
+}
+
+:root[data-theme="dark"] .receipt-shop-icon {
+    background: #11100e;
+    box-shadow: rgba(0, 0, 0, 0.32) 0px 8px 20px;
+}
+
+:root[data-theme="dark"] .receipt-shop::after {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-shop span {
+    color: #e6cc89;
+}
+
+:root[data-theme="dark"] .receipt-customer {
+    color: #f6f4ef;
+    background: #131210;
+}
+
+:root[data-theme="dark"] .receipt-customer span {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-customer strong {
+    color: #e6e0d2;
+}
+
+:root[data-theme="dark"] .receipt-meta div {
+    background: #131210;
+}
+
+:root[data-theme="dark"] .receipt-meta span {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-meta strong {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-divider {
+    background: repeating-linear-gradient(90deg,
+            #11100e 0,
+            #11100e 5px,
+            transparent 5px,
+            transparent 10px);
+}
+
+:root[data-theme="dark"] .receipt-items-head {
+    background: #131210;
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-item-row {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-item-name {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-empty {
+    color: #c0bbae;
+}
+
+:root[data-theme="dark"] .receipt-totals>div {
+    color: #f6f4ef;
+}
+
+:root[data-theme="dark"] .receipt-grand-total {
+    background: #131210;
+    box-shadow: rgba(0, 0, 0, 0.32) 0px 8px 20px;
+}
+
+:root[data-theme="dark"] .receipt-grand-total span {
+    color: #e6e0d3;
+}
+
+:root[data-theme="dark"] .receipt-grand-total strong {
+    color: #e4c77e;
+}
+
+:root[data-theme="dark"] .receipt-footer {
+    color: #c0bbae;
+}
+
+:root[data-theme="dark"] .receipt-footer span:first-child {
+    color: #f6f4ef;
+}
+
+:root[data-theme="dark"] .cart-row-remove {
+    color: #ccc0a3;
+}
+
+:root[data-theme="dark"] .cart-row-remove:hover {
+    color: #e99696;
+}
+
+:root[data-theme="dark"] .cart-qty {
+    border: 1px solid rgba(212, 175, 55, 0.159);
+}
+
+:root[data-theme="dark"] .cart-qty button {
+    color: #ccc0a3;
+}
+
+:root[data-theme="dark"] .cart-qty input {
+    border-left: 1px solid rgba(212, 175, 55, 0.147);
+    border-right: 1px solid rgba(212, 175, 55, 0.147);
+}

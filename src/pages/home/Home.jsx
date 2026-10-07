@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png"
 import "./Home.css";
+import { useTheme } from "../../context/ThemeContext";
 import CgpaPercentageCalculator from "./CgpaPercentageCalculator";
 
 import Aadhar from "../../assets/aadhar1.png"
@@ -11,6 +12,7 @@ import Tan from "../../assets/tangen.png"
 import Udyam from "../../assets/udyam.png"
 import Vi from "../../assets/vi.png"
 import land from "../../assets/land.png"
+import epfo from "../../assets/epfo.png"
 
 import ssc from "../../assets/ssc.png"
 import rrb from "../../assets/railway.png"
@@ -59,6 +61,26 @@ const Icon = ({ name, size = 24 }) => {
                 <path d="M4 7h16" />
                 <path d="M4 12h16" />
                 <path d="M4 17h16" />
+            </svg>
+        ),
+
+        sun: (
+            <svg {...common}>
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="m4.93 4.93 1.41 1.41" />
+                <path d="m17.66 17.66 1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="m6.34 17.66-1.41 1.41" />
+                <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+        ),
+
+        moon: (
+            <svg {...common}>
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
             </svg>
         ),
 
@@ -244,6 +266,18 @@ const governmentServices = [
         wide: true,
     },
     {
+        title: "Employees Provident Fund Organisation, India",
+        shortTitle: "EPFO",
+        description:
+            "Access official Employee services, updates and identity-related facilities.",
+        icon: "epfo",
+        color: "violet",
+        tag: "EPFO",
+        url: "https://unifiedportal-mem.epfindia.gov.in/memberinterface/",
+        logo: epfo,
+        featured: true,
+    },
+    {
         title: "Land Records",
         shortTitle: "Land",
         description:
@@ -254,7 +288,7 @@ const governmentServices = [
         url: " https://www.landamax.com/services/patta-chitta",
         logo: land,
     },
-   
+
     {
         title: "PAN Services",
         shortTitle: "PAN",
@@ -553,6 +587,8 @@ const ToolCard = ({ tool, index }) => {
 
 const Home = () => {
     const [menuOpen, setMenuOpen] = useState(false);
+    const { theme, toggleTheme } = useTheme();
+    const isDark = theme === "dark";
 
     useEffect(() => {
         const revealElements = document.querySelectorAll(
@@ -595,10 +631,18 @@ const Home = () => {
         };
     }, []);
 
+    useEffect(() => {
+        document.body.classList.toggle("akr-home-dark", isDark);
+
+        return () => {
+            document.body.classList.remove("akr-home-dark");
+        };
+    }, [isDark]);
+
     const closeMenu = () => setMenuOpen(false);
 
     return (
-        <div className="akr-home">
+        <div className="akr-home" data-theme={isDark ? "dark" : "light"}>
             {/* =================================================
           BACKGROUND GRAPHICS
       ================================================= */}
@@ -631,6 +675,16 @@ const Home = () => {
                             Login
                         </Link>
                     </div>
+
+                    <button
+                        type="button"
+                        className="theme-toggle"
+                        onClick={toggleTheme}
+                        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                        title={isDark ? "Light mode" : "Dark mode"}
+                    >
+                        <Icon name={isDark ? "sun" : "moon"} size={19} />
+                    </button>
 
                     <Link to="/login" className="navbar-login">
                         <span>Login</span>

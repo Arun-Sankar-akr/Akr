@@ -6,19 +6,19 @@ import {
     ReceiptText,
     BarChart3,
     WalletCards,
-    CircleDollarSign,
     Package,
     Users,
-    UserRoundCog,
     Banknote,
     ArrowLeftRight,
     FileClock,
     Settings,
     LogOut,
-    Sparkles,
     X,
     ChevronRight,
+    Sun,
+    Moon,
 } from "lucide-react";
+import "./theme.css";
 import "./Sidebar.css"
 import { useAuth } from "../../context/AuthContext";
 
@@ -27,10 +27,7 @@ const admin = [
     ["Transactions", "/admin/transactions", ReceiptText],
     ["Accounts", "/admin/accounts/daily", BarChart3],
     ["Expenses", "/admin/expenses", WalletCards],
-    // ["Services", "/admin/services", CircleDollarSign],
     ["Inventory", "/admin/inventory", Package],
-    // ["Customers", "/admin/customers", Users],
-    // ["Staff", "/admin/staff", UserRoundCog],
     ["Cash Register", "/admin/cash", Banknote],
     ["Reports", "/admin/reports/sales", BarChart3],
     ["Audit Logs", "/admin/audit", FileClock],
@@ -48,7 +45,7 @@ const attendant = [
     ["Customers", "/attendant/customers", Users],
 ];
 
-export default function Sidebar({ open, onClose }) {
+export default function Sidebar({ open, onClose, theme = "light", onToggleTheme }) {
     const { profile, logout } = useAuth();
 
     const isAdmin = profile?.role === "admin";
@@ -63,17 +60,15 @@ export default function Sidebar({ open, onClose }) {
             : "Attendant";
 
     const avatarLetter = displayName.charAt(0).toUpperCase();
+    const isDark = theme === "dark";
 
     return (
         <aside
             className={`sidebar ${open ? "open" : ""}`}
             aria-label="Main navigation"
         >
-            {/* =====================================================
-          BRAND
-      ====================================================== */}
+            {/* BRAND */}
             <div className="brand">
-
                 <div className="brand-info">
                     <img src={logo} alt="logo" id="logo" />
                 </div>
@@ -88,9 +83,7 @@ export default function Sidebar({ open, onClose }) {
                 </button>
             </div>
 
-            {/* =====================================================
-          NAVIGATION
-      ====================================================== */}
+            {/* NAVIGATION */}
             <div className="side-label">
                 <span>Workspace</span>
             </div>
@@ -128,10 +121,19 @@ export default function Sidebar({ open, onClose }) {
                 ))}
             </nav>
 
-            {/* =====================================================
-          USER / LOGOUT
-      ====================================================== */}
+            {/* THEME / USER / LOGOUT */}
             <div className="side-bottom">
+                <button
+                    type="button"
+                    className="theme-toggle"
+                    onClick={onToggleTheme}
+                    aria-pressed={isDark}
+                    aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                    {isDark ? <Sun size={15} /> : <Moon size={15} />}
+                    <span>{isDark ? "Light mode" : "Dark mode"}</span>
+                </button>
+
                 <div className="user-mini">
                     <div className="avatar" aria-hidden="true">
                         {avatarLetter}
@@ -139,10 +141,7 @@ export default function Sidebar({ open, onClose }) {
 
                     <div className="user-details">
                         <b title={displayName}>{displayName}</b>
-
-                        <span>
-                            {roleName}
-                        </span>
+                        <span>{roleName}</span>
                     </div>
 
                     <div className="user-status" title="Online" />
@@ -154,7 +153,6 @@ export default function Sidebar({ open, onClose }) {
                     onClick={logout}
                 >
                     <LogOut size={16} />
-
                     <span>Sign out</span>
                 </button>
             </div>

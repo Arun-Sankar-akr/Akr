@@ -1587,7 +1587,7 @@
 .cash-denomination-list {
     display: grid;
 
-    grid-template-columns:
+    grid-template-rows:
         repeat(2, minmax(0, 1fr));
 
     gap: 9px;
@@ -3633,7 +3633,7 @@
 }
 
 .cash-history-daytotal .sum strong {
-    color:#168a4a;
+    color: #168a4a;
 
     font-size: 18px;
 }
@@ -4103,7 +4103,7 @@
 
 .cash-denomination-list {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;
 
     padding: 16px 20px 6px !important;
@@ -4629,7 +4629,7 @@
     }
 
     .cash-denomination-list {
-        grid-template-columns: 1fr !important;
+        grid-template-rows: 1fr !important;
         padding: 12px 14px 3px !important;
     }
 
@@ -5806,4 +5806,1277 @@
         flex: 1;
         white-space: nowrap;
     }
+}
+
+
+/* =========================================================
+   CASH | DIGITAL SPLIT LAYOUT  +  HISTORY CRUD
+   ========================================================= */
+
+.cash-modal.wide {
+    width: min(1040px, 100%);
+}
+
+.cash-split {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr) minmax(0, 1fr);
+
+    align-items: start;
+
+    gap: 18px;
+
+    padding: 21px 23px 0;
+}
+
+.cash-split-col {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 9px;
+
+    min-width: 0;
+}
+
+.cash-split .cash-denomination-list,
+.cash-denomination-list.single {
+    grid-template-columns: 1fr;
+
+    padding: 0;
+}
+
+.cash-split .cash-modal-block.cash-split-digital {
+    margin: 0;
+}
+
+.cash-split .cash-digital-list {
+    grid-template-columns: 1fr;
+}
+
+.cash-split-total {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 13px 16px;
+
+    border: 1px solid rgba(91, 92, 226, 0.18);
+
+    border-radius: 14px;
+
+    background: rgba(91, 92, 226, 0.06);
+
+    color: var(--cr-primary);
+}
+
+.cash-split-total span {
+    display: block;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    letter-spacing: 0.7px;
+
+    text-transform: uppercase;
+}
+
+.cash-split-total strong {
+    display: block;
+
+    margin-top: 3px;
+
+    color: var(--cr-text);
+
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.cash-entry-date {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 18px 23px 0;
+}
+
+.cash-entry-date label {
+    color: var(--cr-text-2);
+
+    font-size: 11px;
+    font-weight: 600;
+
+    letter-spacing: 0.7px;
+
+    text-transform: uppercase;
+}
+
+.cash-entry-date input {
+    min-height: 40px;
+
+    padding: 0 12px;
+
+    border: 1px solid var(--cr-border-2);
+
+    border-radius: 11px;
+
+    background: #ffffff;
+
+    color: var(--cr-text);
+
+    font: inherit;
+    font-size: 12px;
+}
+
+.cash-entry-section-title {
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 20px 23px 0;
+
+    color: var(--cr-primary);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    letter-spacing: 0.8px;
+
+    text-transform: uppercase;
+}
+
+.cash-history-head-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+}
+
+.cash-actions-th {
+    text-align: right !important;
+}
+
+.cash-actions-td {
+    width: 1%;
+}
+
+.cash-row-actions {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 7px;
+}
+
+.cash-icon-btn {
+    width: 32px;
+    height: 32px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--cr-border-2);
+
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: var(--cr-text-2);
+
+    cursor: pointer;
+
+    transition:
+        background 0.16s ease,
+        color 0.16s ease,
+        border-color 0.16s ease;
+}
+
+.cash-icon-btn:hover:not(:disabled) {
+    border-color: rgba(91, 92, 226, 0.35);
+
+    background: rgba(91, 92, 226, 0.07);
+
+    color: var(--cr-primary);
+}
+
+.cash-icon-btn.danger:hover:not(:disabled) {
+    border-color: rgba(220, 38, 38, 0.35);
+
+    background: rgba(220, 38, 38, 0.07);
+
+    color: #dc2626;
+}
+
+.cash-icon-btn:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+    .cash-split {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .cash-split {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .cash-history-head-actions {
+        width: 100%;
+    }
+}
+
+/* ============================================================
+   CASH REGISTER — OPENING & HISTORY PREVIEW POLISH
+   Light mode by default; black + gold when .dark-mode is applied
+   to .cash-register-page (or data-theme="dark").
+   ============================================================ */
+.cash-register-page {
+    --cr-primary: #b8872b;
+    --cr-primary-dark: #8f6518;
+    --cr-primary-light: #fff5dc;
+    --cr-text: #202124;
+    --cr-text-2: #62666f;
+    --cr-text-3: #8b9099;
+    --cr-bg: #f6f7f9;
+    --cr-white: #fff;
+    --cr-border: #e7e8ec;
+    --cr-border-2: #d9dbe1;
+    --cr-shadow-1: 0 5px 18px rgba(22, 25, 32, .045);
+    --cr-shadow-2: 0 14px 36px rgba(22, 25, 32, .075);
+    --cr-shadow-3: 0 28px 80px rgba(10, 10, 10, .18);
+}
+
+.cash-register-page .cash-modal-overlay {
+    padding: clamp(12px, 3vw, 28px) !important;
+    background: rgba(15, 17, 21, .62) !important;
+    backdrop-filter: blur(7px);
+}
+
+/* Opening / closing entry modal */
+.cash-register-page .cash-modal {
+    width: min(760px, calc(100vw - 24px)) !important;
+    max-height: min(90vh, 900px) !important;
+    overflow: auto !important;
+    border: 1px solid var(--cr-border) !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    color: var(--cr-text) !important;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .24) !important;
+}
+
+.cash-register-page .cash-modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    padding: 18px 22px !important;
+    border-bottom: 1px solid var(--cr-border) !important;
+    background: rgba(255, 255, 255, .96) !important;
+    backdrop-filter: blur(12px);
+}
+
+.cash-register-page .cash-modal-title strong {
+    color: #202124 !important;
+    font-size: 17px !important;
+    letter-spacing: -.35px;
+}
+
+.cash-register-page .cash-modal-title span {
+    color: #747984 !important;
+    font-size: 11px !important;
+    line-height: 1.5;
+}
+
+.cash-register-page .cash-modal-icon {
+    border: 1px solid #f0dfb7 !important;
+    border-radius: 12px !important;
+    background: #fff5dc !important;
+    color: #9a6b16 !important;
+}
+
+.cash-register-page .cash-entry-date {
+    display: grid !important;
+    grid-template-columns: 1fr minmax(180px, 260px) !important;
+    align-items: center !important;
+    gap: 14px !important;
+    margin: 18px 22px 6px !important;
+    padding: 14px 16px !important;
+    border: 1px solid #ececf0 !important;
+    border-radius: 13px !important;
+    background: #fafafa !important;
+}
+
+.cash-register-page .cash-entry-date label {
+    margin: 0 !important;
+    color: #4f535b !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
+}
+
+.cash-register-page .cash-entry-date input {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 39px !important;
+    padding: 0 11px !important;
+    border: 1px solid #dfe1e6 !important;
+    border-radius: 9px !important;
+    background: #fff !important;
+    color: #24262b !important;
+    font-size: 12px !important;
+    outline: none;
+}
+
+.cash-register-page .cash-entry-date input:focus {
+    border-color: #c79a43 !important;
+    box-shadow: 0 0 0 3px rgba(199, 154, 67, .14) !important;
+}
+
+.cash-register-page .cash-entry-section-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    margin: 18px 22px 10px !important;
+    padding: 0 0 9px !important;
+    border-bottom: 1px solid #eee8db !important;
+    color: #936716 !important;
+    font-size: 10px !important;
+    font-weight: 850 !important;
+    letter-spacing: 1.1px !important;
+}
+
+.cash-register-page .cash-entry-section-title svg {
+    color: #b8872b !important;
+}
+
+.cash-register-page .cash-modal-block {
+    margin: 0 22px 14px !important;
+    padding: 15px !important;
+    border: 1px solid #e9e9ed !important;
+    border-radius: 15px !important;
+    background: #fcfcfd !important;
+    box-shadow: 0 3px 12px rgba(18, 20, 25, .025) !important;
+}
+
+.cash-register-page .cash-modal-block-head {
+    margin-bottom: 12px !important;
+}
+
+.cash-register-page .cash-modal-block-head p {
+    color: #747984 !important;
+    line-height: 1.5 !important;
+}
+
+.cash-register-page .cash-modal-block-head>strong,
+.cash-register-page .cash-modal-total strong,
+.cash-register-page .cash-modal-grand strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page .cash-modal-grand {
+    margin: 0 22px 16px !important;
+    padding: 13px 15px !important;
+    border: 1px solid #ead8ad !important;
+    border-radius: 13px !important;
+    background: linear-gradient(135deg, #fff8e8, #fffdf8) !important;
+}
+
+.cash-register-page .cash-modal-grand span {
+    color: #755b2c !important;
+}
+
+.cash-register-page .cash-modal-grand strong {
+    color: #76500e !important;
+}
+
+.cash-register-page .cash-modal-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    margin: 0 !important;
+    padding: 14px 22px 18px !important;
+    border-top: 1px solid var(--cr-border) !important;
+    background: rgba(255, 255, 255, .97) !important;
+    backdrop-filter: blur(12px);
+}
+
+.cash-register-page .cash-save-btn {
+    border: 1px solid #a97920 !important;
+    background: linear-gradient(135deg, #d6ad5b, #b8872b) !important;
+    color: #17130b !important;
+    box-shadow: 0 5px 14px rgba(184, 135, 43, .2) !important;
+}
+
+.cash-register-page .cash-cancel-btn {
+    border-radius: 9px !important;
+}
+
+/* History preview / session detail */
+.cash-register-page .cash-history-detail-modal {
+    width: min(1040px, calc(100vw - 24px)) !important;
+    max-height: calc(100dvh - 28px) !important;
+    overflow: auto !important;
+    border: 1px solid #e2e3e7 !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    color: #24262b !important;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, .28) !important;
+}
+
+.cash-register-page .cash-history-detail-modal .cash-modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 17px 20px !important;
+    border-bottom: 1px solid #e9e9ed !important;
+    background: rgba(255, 255, 255, .96) !important;
+}
+
+.cash-register-page .cash-history-detail-summary {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding: 16px 20px !important;
+}
+
+.cash-register-page .cash-history-detail-summary>div {
+    min-width: 0;
+    padding: 14px !important;
+    border: 1px solid #e9e9ed !important;
+    border-radius: 13px !important;
+    background: #fafafa !important;
+}
+
+.cash-register-page .cash-history-detail-summary span {
+    display: block;
+    margin-bottom: 7px;
+    color: #7c8088 !important;
+    font-size: 9px !important;
+    font-weight: 800;
+    letter-spacing: .65px;
+    text-transform: uppercase;
+}
+
+.cash-register-page .cash-history-detail-summary strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #22252a !important;
+    font-size: clamp(13px, 1.5vw, 17px) !important;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page .cash-history-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 20px 10px;
+    color: #916719;
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .85px;
+    text-transform: uppercase;
+}
+
+.cash-register-page .cash-history-breakdown-grid,
+.cash-register-page .cash-history-extra-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    padding: 0 20px !important;
+}
+
+.cash-register-page .cash-history-breakdown-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #e6e7eb !important;
+    border-radius: 14px !important;
+    background: #fcfcfd !important;
+}
+
+.cash-register-page .cash-history-breakdown-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px !important;
+    border-bottom: 1px solid #ededf0;
+}
+
+.cash-register-page .cash-history-breakdown-head h3 {
+    margin: 5px 0 4px !important;
+    color: #282a30 !important;
+    font-size: 13px !important;
+    font-weight: 800;
+}
+
+.cash-register-page .cash-history-breakdown-head p {
+    margin: 0 !important;
+    color: #777c85 !important;
+    font-size: 10px !important;
+    line-height: 1.5;
+}
+
+.cash-register-page .cash-breakdown-total {
+    flex-shrink: 0;
+    color: #80580f !important;
+    font-size: 14px !important;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page .cash-history-denomination-list {
+    padding: 10px 12px 12px !important;
+}
+
+.cash-register-page .cash-history-denomination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 11px !important;
+    border: 1px solid #ececf0 !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+}
+
+.cash-register-page .cash-history-denomination-right {
+    flex-wrap: wrap;
+    gap: 8px !important;
+}
+
+.cash-register-page .cash-history-denomination-right span {
+    color: #25272c !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page .cash-history-daytotal {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+    margin: 18px 20px 0 !important;
+    padding: 12px !important;
+    border: 1px solid #ead9b5 !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, #fff8e8, #fffdf8) !important;
+}
+
+.cash-register-page .cash-history-daytotal>div {
+    min-width: 0;
+    padding: 8px 9px;
+    border-right: 1px solid #eddfc4;
+}
+
+.cash-register-page .cash-history-daytotal>div:last-child {
+    border-right: 0;
+}
+
+.cash-register-page .cash-history-daytotal span {
+    display: block;
+    margin-bottom: 6px;
+    color: #7d6b4b !important;
+    font-size: 9px !important;
+    font-weight: 750;
+}
+
+.cash-register-page .cash-history-daytotal strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #28251f !important;
+    font-size: clamp(11px, 1.3vw, 14px) !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page .cash-history-daytotal .sum strong {
+    color: #8a5d0b !important;
+}
+
+.cash-register-page .cash-history-detail-footer {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto !important;
+    align-items: center;
+    gap: 12px !important;
+    margin-top: 16px !important;
+    padding: 15px 20px 18px !important;
+    border-top: 1px solid #e9e9ed !important;
+    background: #fafafa !important;
+}
+
+.cash-register-page .cash-history-detail-footer>div {
+    min-width: 0;
+}
+
+.cash-register-page .cash-history-detail-footer span {
+    display: block;
+    margin-bottom: 5px;
+    color: #7b8088 !important;
+    font-size: 9px !important;
+    font-weight: 750;
+}
+
+.cash-register-page .cash-history-detail-footer strong {
+    overflow-wrap: anywhere;
+    color: #25272c;
+    font-size: 12px !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page .cash-view-btn,
+.cash-register-page .cash-export-btn {
+    border-color: #e8d7b0 !important;
+    background: #fff7e5 !important;
+    color: #8b6218 !important;
+}
+
+.cash-register-page .cash-view-btn:hover,
+.cash-register-page .cash-export-btn:hover {
+    border-color: #c49a4a !important;
+    background: #f8eac9 !important;
+}
+
+/* Black + gold theme. Add className="dark-mode" or data-theme="dark"
+   to .cash-register-page from the existing theme toggle. */
+.cash-register-page.dark-mode,
+.cash-register-page[data-theme="dark"],
+.dark .cash-register-page,
+[data-theme="dark"] .cash-register-page {
+    --cr-primary: #e0b85c;
+    --cr-primary-dark: #f0ca78;
+    --cr-primary-light: #302718;
+    --cr-text: #f3f0e8;
+    --cr-text-2: #c0b9a9;
+    --cr-text-3: #918979;
+    --cr-bg: #0b0b0c;
+    --cr-white: #151516;
+    --cr-border: #303033;
+    --cr-border-2: #414145;
+    --cr-shadow-1: 0 5px 18px rgba(0, 0, 0, .2);
+    --cr-shadow-2: 0 14px 36px rgba(0, 0, 0, .28);
+    --cr-shadow-3: 0 28px 80px rgba(0, 0, 0, .5);
+    color: var(--cr-text) !important;
+    background: radial-gradient(circle at 90% 0%, rgba(201, 157, 65, .08), transparent 28%), #0b0b0c !important;
+}
+
+.cash-register-page.dark-mode .cash-modal,
+.cash-register-page[data-theme="dark"] .cash-modal,
+.dark .cash-register-page .cash-modal,
+[data-theme="dark"] .cash-register-page .cash-modal,
+.cash-register-page.dark-mode .cash-history-detail-modal,
+.cash-register-page[data-theme="dark"] .cash-history-detail-modal,
+.dark .cash-register-page .cash-history-detail-modal,
+[data-theme="dark"] .cash-register-page .cash-history-detail-modal {
+    border-color: #38342b !important;
+    background: #141414 !important;
+    color: #f1eee6 !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-head,
+.cash-register-page[data-theme="dark"] .cash-modal-head,
+.dark .cash-register-page .cash-modal-head,
+[data-theme="dark"] .cash-register-page .cash-modal-head,
+.cash-register-page.dark-mode .cash-modal-actions,
+.cash-register-page[data-theme="dark"] .cash-modal-actions,
+.dark .cash-register-page .cash-modal-actions,
+[data-theme="dark"] .cash-register-page .cash-modal-actions {
+    border-color: #34312a !important;
+    background: rgba(20, 20, 20, .96) !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-title strong,
+.cash-register-page[data-theme="dark"] .cash-modal-title strong,
+.dark .cash-register-page .cash-modal-title strong,
+[data-theme="dark"] .cash-register-page .cash-modal-title strong,
+.cash-register-page.dark-mode .cash-history-detail-summary strong,
+.cash-register-page[data-theme="dark"] .cash-history-detail-summary strong,
+.dark .cash-register-page .cash-history-detail-summary strong,
+[data-theme="dark"] .cash-register-page .cash-history-detail-summary strong,
+.cash-register-page.dark-mode .cash-history-breakdown-head h3,
+.cash-register-page[data-theme="dark"] .cash-history-breakdown-head h3,
+.dark .cash-register-page .cash-history-breakdown-head h3,
+[data-theme="dark"] .cash-history-breakdown-head h3,
+.cash-register-page.dark-mode .cash-history-detail-footer strong,
+.cash-register-page[data-theme="dark"] .cash-history-detail-footer strong,
+.dark .cash-register-page .cash-history-detail-footer strong,
+[data-theme="dark"] .cash-history-detail-footer strong {
+    color: #f2eee5 !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-title span,
+.cash-register-page[data-theme="dark"] .cash-modal-title span,
+.dark .cash-register-page .cash-modal-title span,
+[data-theme="dark"] .cash-modal-title span,
+.cash-register-page.dark-mode .cash-history-breakdown-head p,
+.cash-register-page[data-theme="dark"] .cash-history-breakdown-head p,
+.dark .cash-register-page .cash-history-breakdown-head p,
+[data-theme="dark"] .cash-history-breakdown-head p {
+    color: #aaa394 !important;
+}
+
+.cash-register-page.dark-mode .cash-entry-date,
+.cash-register-page[data-theme="dark"] .cash-entry-date,
+.dark .cash-register-page .cash-entry-date,
+[data-theme="dark"] .cash-register-page .cash-entry-date,
+.cash-register-page.dark-mode .cash-modal-block,
+.cash-register-page[data-theme="dark"] .cash-modal-block,
+.dark .cash-register-page .cash-modal-block,
+[data-theme="dark"] .cash-register-page .cash-modal-block,
+.cash-register-page.dark-mode .cash-history-detail-summary>div,
+.cash-register-page[data-theme="dark"] .cash-history-detail-summary>div,
+.dark .cash-register-page .cash-history-detail-summary>div,
+[data-theme="dark"] .cash-history-detail-summary>div,
+.cash-register-page.dark-mode .cash-history-breakdown-card,
+.cash-register-page[data-theme="dark"] .cash-history-breakdown-card,
+.dark .cash-register-page .cash-history-breakdown-card,
+[data-theme="dark"] .cash-history-breakdown-card {
+    border-color: #343434 !important;
+    background: #1b1b1c !important;
+}
+
+.cash-register-page.dark-mode .cash-entry-date label,
+.cash-register-page[data-theme="dark"] .cash-entry-date label,
+.dark .cash-register-page .cash-entry-date label,
+[data-theme="dark"] .cash-register-page .cash-entry-date label,
+.cash-register-page.dark-mode .cash-history-denomination-right span,
+.cash-register-page[data-theme="dark"] .cash-history-denomination-right span,
+.dark .cash-register-page .cash-history-denomination-right span,
+[data-theme="dark"] .cash-history-denomination-right span {
+    color: #eee9de !important;
+}
+
+.cash-register-page.dark-mode .cash-entry-date input,
+.cash-register-page[data-theme="dark"] .cash-entry-date input,
+.dark .cash-register-page .cash-entry-date input,
+[data-theme="dark"] .cash-register-page .cash-entry-date input {
+    border-color: #45413a !important;
+    background: #101011 !important;
+    color: #f5f0e5 !important;
+    color-scheme: dark;
+}
+
+.cash-register-page.dark-mode .cash-history-denomination,
+.cash-register-page[data-theme="dark"] .cash-history-denomination,
+.dark .cash-register-page .cash-history-denomination,
+[data-theme="dark"] .cash-history-denomination {
+    border-color: #343434 !important;
+    background: #151516 !important;
+}
+
+.cash-register-page.dark-mode .cash-history-daytotal,
+.cash-register-page[data-theme="dark"] .cash-history-daytotal,
+.dark .cash-register-page .cash-history-daytotal,
+[data-theme="dark"] .cash-history-daytotal,
+.cash-register-page.dark-mode .cash-modal-grand,
+.cash-register-page[data-theme="dark"] .cash-modal-grand,
+.dark .cash-register-page .cash-modal-grand,
+[data-theme="dark"] .cash-modal-grand {
+    border-color: #665126 !important;
+    background: linear-gradient(135deg, #292216, #1d1a14) !important;
+}
+
+.cash-register-page.dark-mode .cash-history-daytotal span,
+.cash-register-page[data-theme="dark"] .cash-history-daytotal span,
+.dark .cash-register-page .cash-history-daytotal span,
+[data-theme="dark"] .cash-history-daytotal span,
+.cash-register-page.dark-mode .cash-modal-grand span,
+.cash-register-page[data-theme="dark"] .cash-modal-grand span,
+.dark .cash-register-page .cash-modal-grand span,
+[data-theme="dark"] .cash-modal-grand span {
+    color: #c6b17f !important;
+}
+
+.cash-register-page.dark-mode .cash-history-daytotal strong,
+.cash-register-page[data-theme="dark"] .cash-history-daytotal strong,
+.dark .cash-register-page .cash-history-daytotal strong,
+[data-theme="dark"] .cash-history-daytotal strong,
+.cash-register-page.dark-mode .cash-modal-grand strong,
+.cash-register-page[data-theme="dark"] .cash-modal-grand strong,
+.dark .cash-register-page .cash-modal-grand strong,
+[data-theme="dark"] .cash-modal-grand strong {
+    color: #f3d58b !important;
+}
+
+.cash-register-page.dark-mode .cash-history-detail-footer,
+.cash-register-page[data-theme="dark"] .cash-history-detail-footer,
+.dark .cash-register-page .cash-history-detail-footer,
+[data-theme="dark"] .cash-history-detail-footer {
+    border-color: #343434 !important;
+    background: #171718 !important;
+}
+
+.cash-register-page.dark-mode .cash-history-detail-footer span,
+.cash-register-page[data-theme="dark"] .cash-history-detail-footer span,
+.dark .cash-register-page .cash-history-detail-footer span,
+[data-theme="dark"] .cash-history-detail-footer span {
+    color: #aaa394 !important;
+}
+
+.cash-register-page.dark-mode .cash-view-btn,
+.cash-register-page[data-theme="dark"] .cash-view-btn,
+.dark .cash-register-page .cash-view-btn,
+[data-theme="dark"] .cash-view-btn,
+.cash-register-page.dark-mode .cash-export-btn,
+.cash-register-page[data-theme="dark"] .cash-export-btn,
+.dark .cash-register-page .cash-export-btn,
+[data-theme="dark"] .cash-export-btn {
+    border-color: #5a4827 !important;
+    background: #292216 !important;
+    color: #e7c777 !important;
+}
+
+@media (max-width: 720px) {
+    .cash-register-page .cash-history-detail-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        padding: 12px !important;
+    }
+
+    .cash-register-page .cash-history-breakdown-grid,
+    .cash-register-page .cash-history-extra-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        padding: 0 12px !important;
+    }
+
+    .cash-register-page .cash-history-daytotal {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        margin: 14px 12px 0 !important;
+    }
+
+    .cash-register-page .cash-history-daytotal>div {
+        border-right: 0;
+        border-bottom: 1px solid #eddfc4;
+    }
+
+    .cash-register-page .cash-history-daytotal>div:last-child {
+        grid-column: 1 / -1;
+        border-bottom: 0;
+    }
+
+    .cash-register-page .cash-history-detail-footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        padding: 13px 12px !important;
+    }
+
+    .cash-register-page .cash-history-detail-footer .cash-cancel-btn {
+        grid-column: 1 / -1;
+    }
+
+    .cash-register-page .cash-entry-date {
+        grid-template-columns: 1fr !important;
+        margin: 14px 12px 4px !important;
+        padding: 12px !important;
+    }
+
+    .cash-register-page .cash-entry-section-title {
+        margin: 16px 12px 9px !important;
+    }
+
+    .cash-register-page .cash-modal-block {
+        margin: 0 12px 12px !important;
+        padding: 12px !important;
+    }
+
+    .cash-register-page .cash-modal-grand {
+        margin: 0 12px 12px !important;
+    }
+
+    .cash-register-page .cash-modal-actions {
+        padding: 12px !important;
+    }
+
+    .cash-register-page .cash-modal-head {
+        padding: 14px 12px !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .cash-register-page .cash-history-detail-summary {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 7px !important;
+    }
+
+    .cash-register-page .cash-history-detail-summary>div {
+        padding: 10px !important;
+    }
+
+    .cash-register-page .cash-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .cash-register-page .cash-modal-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* =========================================================
+   FINAL CONTRAST FIX — dashboard + opening/closing modal
+   Dark mode uses readable ivory text and gold accents.
+   ========================================================= */
+.cash-register-page.dark-mode,
+.cash-register-page[data-theme="dark"],
+.dark .cash-register-page,
+[data-theme="dark"] .cash-register-page {
+    color: #f4f0e6 !important;
+}
+
+.cash-register-page.dark-mode h1,
+.cash-register-page.dark-mode h2,
+.cash-register-page.dark-mode h3,
+.cash-register-page.dark-mode h4,
+.cash-register-page.dark-mode p,
+.cash-register-page.dark-mode span,
+.cash-register-page.dark-mode label,
+.cash-register-page.dark-mode small,
+.cash-register-page.dark-mode strong,
+.cash-register-page.dark-mode div,
+.cash-register-page[data-theme="dark"] h1,
+.cash-register-page[data-theme="dark"] h2,
+.cash-register-page[data-theme="dark"] h3,
+.cash-register-page[data-theme="dark"] h4,
+.cash-register-page[data-theme="dark"] p,
+.cash-register-page[data-theme="dark"] span,
+.cash-register-page[data-theme="dark"] label,
+.cash-register-page[data-theme="dark"] small,
+.cash-register-page[data-theme="dark"] strong,
+.dark .cash-register-page h1,
+.dark .cash-register-page h2,
+.dark .cash-register-page h3,
+.dark .cash-register-page h4,
+.dark .cash-register-page p,
+.dark .cash-register-page span,
+.dark .cash-register-page label,
+.dark .cash-register-page small,
+.dark .cash-register-page strong,
+[data-theme="dark"] .cash-register-page h1,
+[data-theme="dark"] .cash-register-page h2,
+[data-theme="dark"] .cash-register-page h3,
+[data-theme="dark"] .cash-register-page h4,
+[data-theme="dark"] .cash-register-page p,
+[data-theme="dark"] .cash-register-page span,
+[data-theme="dark"] .cash-register-page label,
+[data-theme="dark"] .cash-register-page small,
+[data-theme="dark"] .cash-register-page strong {
+    color: #eee9df !important;
+}
+
+.cash-register-page.dark-mode .cash-eyebrow,
+.cash-register-page.dark-mode .cash-section-label,
+.cash-register-page.dark-mode .cash-entry-section-title,
+.cash-register-page.dark-mode .cash-history-kicker,
+.cash-register-page[data-theme="dark"] .cash-eyebrow,
+.cash-register-page[data-theme="dark"] .cash-section-label,
+.cash-register-page[data-theme="dark"] .cash-entry-section-title,
+.cash-register-page[data-theme="dark"] .cash-history-kicker,
+.dark .cash-register-page .cash-eyebrow,
+.dark .cash-register-page .cash-section-label,
+.dark .cash-register-page .cash-entry-section-title,
+.dark .cash-register-page .cash-history-kicker,
+[data-theme="dark"] .cash-register-page .cash-eyebrow,
+[data-theme="dark"] .cash-register-page .cash-section-label,
+[data-theme="dark"] .cash-register-page .cash-entry-section-title,
+[data-theme="dark"] .cash-register-page .cash-history-kicker {
+    color: #e7bf61 !important;
+}
+
+.cash-register-page.dark-mode .cash-modal,
+.cash-register-page.dark-mode .cash-history-detail-modal,
+.cash-register-page[data-theme="dark"] .cash-modal,
+.cash-register-page[data-theme="dark"] .cash-history-detail-modal,
+.dark .cash-register-page .cash-modal,
+.dark .cash-register-page .cash-history-detail-modal,
+[data-theme="dark"] .cash-modal,
+[data-theme="dark"] .cash-history-detail-modal {
+    color: #f2eee5 !important;
+    background: #171717 !important;
+    opacity: 1 !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-block,
+.cash-register-page.dark-mode .cash-entry-date,
+.cash-register-page.dark-mode .cash-history-breakdown-card,
+.cash-register-page.dark-mode .cash-history-denomination,
+.cash-register-page.dark-mode .cash-history-detail-summary>div,
+.cash-register-page[data-theme="dark"] .cash-modal-block,
+.cash-register-page[data-theme="dark"] .cash-entry-date,
+.cash-register-page[data-theme="dark"] .cash-history-breakdown-card,
+.cash-register-page[data-theme="dark"] .cash-history-denomination,
+.cash-register-page[data-theme="dark"] .cash-history-detail-summary>div,
+.dark .cash-register-page .cash-modal-block,
+.dark .cash-register-page .cash-entry-date,
+.dark .cash-register-page .cash-history-breakdown-card,
+.dark .cash-register-page .cash-history-denomination,
+.dark .cash-register-page .cash-history-detail-summary>div,
+[data-theme="dark"] .cash-modal-block,
+[data-theme="dark"] .cash-entry-date,
+[data-theme="dark"] .cash-history-breakdown-card,
+[data-theme="dark"] .cash-history-denomination,
+[data-theme="dark"] .cash-history-detail-summary>div {
+    color: #eee9df !important;
+    background: #202020 !important;
+    border-color: #3c382f !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-block p,
+.cash-register-page.dark-mode .cash-modal-block span,
+.cash-register-page.dark-mode .cash-modal-block label,
+.cash-register-page.dark-mode .cash-entry-date label,
+.cash-register-page.dark-mode .cash-history-breakdown-head p,
+.cash-register-page.dark-mode .cash-history-detail-footer span,
+.cash-register-page[data-theme="dark"] .cash-modal-block p,
+.cash-register-page[data-theme="dark"] .cash-modal-block span,
+.cash-register-page[data-theme="dark"] .cash-modal-block label,
+.cash-register-page[data-theme="dark"] .cash-entry-date label,
+.cash-register-page[data-theme="dark"] .cash-history-breakdown-head p,
+.cash-register-page[data-theme="dark"] .cash-history-detail-footer span,
+.dark .cash-register-page .cash-modal-block p,
+.dark .cash-register-page .cash-modal-block span,
+.dark .cash-register-page .cash-modal-block label,
+.dark .cash-register-page .cash-entry-date label,
+.dark .cash-register-page .cash-history-breakdown-head p,
+.dark .cash-register-page .cash-history-detail-footer span,
+[data-theme="dark"] .cash-modal-block p,
+[data-theme="dark"] .cash-modal-block span,
+[data-theme="dark"] .cash-modal-block label,
+[data-theme="dark"] .cash-entry-date label,
+[data-theme="dark"] .cash-history-breakdown-head p,
+[data-theme="dark"] .cash-history-detail-footer span {
+    color: #bcb5a7 !important;
+}
+
+.cash-register-page.dark-mode input,
+.cash-register-page.dark-mode select,
+.cash-register-page.dark-mode textarea,
+.cash-register-page[data-theme="dark"] input,
+.cash-register-page[data-theme="dark"] select,
+.cash-register-page[data-theme="dark"] textarea,
+.dark .cash-register-page input,
+.dark .cash-register-page select,
+.dark .cash-register-page textarea,
+[data-theme="dark"] .cash-register-page input,
+[data-theme="dark"] .cash-register-page select,
+[data-theme="dark"] .cash-register-page textarea {
+    color: #f6f0e3 !important;
+    background-color: #101011 !important;
+    border-color: #49443a !important;
+    caret-color: #e7bf61 !important;
+    color-scheme: dark;
+}
+
+.cash-register-page.dark-mode input::placeholder,
+.cash-register-page.dark-mode textarea::placeholder,
+.cash-register-page[data-theme="dark"] input::placeholder,
+.cash-register-page[data-theme="dark"] textarea::placeholder,
+.dark .cash-register-page input::placeholder,
+.dark .cash-register-page textarea::placeholder,
+[data-theme="dark"] .cash-register-page input::placeholder,
+[data-theme="dark"] .cash-register-page textarea::placeholder {
+    color: #898274 !important;
+    opacity: 1 !important;
+}
+
+.cash-register-page.dark-mode .cash-history-daytotal,
+.cash-register-page.dark-mode .cash-modal-grand,
+.cash-register-page[data-theme="dark"] .cash-history-daytotal,
+.cash-register-page[data-theme="dark"] .cash-modal-grand,
+.dark .cash-register-page .cash-history-daytotal,
+.dark .cash-register-page .cash-modal-grand,
+[data-theme="dark"] .cash-history-daytotal,
+[data-theme="dark"] .cash-modal-grand {
+    background: linear-gradient(135deg, #292318, #1d1b16) !important;
+    border-color: #66532b !important;
+}
+
+.cash-register-page.dark-mode .cash-history-daytotal strong,
+.cash-register-page.dark-mode .cash-modal-grand strong,
+.cash-register-page[data-theme="dark"] .cash-history-daytotal strong,
+.cash-register-page[data-theme="dark"] .cash-modal-grand strong,
+.dark .cash-register-page .cash-history-daytotal strong,
+.dark .cash-register-page .cash-modal-grand strong,
+[data-theme="dark"] .cash-history-daytotal strong,
+[data-theme="dark"] .cash-modal-grand strong {
+    color: #f0cf7a !important;
+}
+
+.cash-register-page.dark-mode button,
+.cash-register-page[data-theme="dark"] button,
+.dark .cash-register-page button,
+[data-theme="dark"] .cash-register-page button {
+    text-shadow: none !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-overlay,
+.cash-register-page[data-theme="dark"] .cash-modal-overlay,
+.dark .cash-register-page .cash-modal-overlay,
+[data-theme="dark"] .cash-modal-overlay {
+    background: rgba(4, 4, 5, .76) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+/* =========================================================
+   BLACK + GOLD DARK THEME — final user-requested palette
+   Keep cards/panels black; use gold for readable text.
+   ========================================================= */
+.cash-register-page.dark-mode,
+.cash-register-page[data-theme="dark"],
+.dark .cash-register-page,
+[data-theme="dark"] .cash-register-page {
+    background-color: #0b0b0c !important;
+    color: #e7bf61 !important;
+}
+
+.cash-register-page.dark-mode .cash-stat-card,
+.cash-register-page.dark-mode .cash-summary-card,
+.cash-register-page.dark-mode .cash-current-card,
+.cash-register-page.dark-mode .cash-history-card,
+.cash-register-page.dark-mode .cash-session-card,
+.cash-register-page.dark-mode .cash-modal,
+.cash-register-page.dark-mode .cash-modal-block,
+.cash-register-page.dark-mode .cash-entry-date,
+.cash-register-page.dark-mode .cash-history-detail-modal,
+.cash-register-page.dark-mode .cash-history-breakdown-card,
+.cash-register-page.dark-mode .cash-history-denomination,
+.cash-register-page.dark-mode .cash-history-detail-summary>div,
+.cash-register-page[data-theme="dark"] .cash-stat-card,
+.cash-register-page[data-theme="dark"] .cash-summary-card,
+.cash-register-page[data-theme="dark"] .cash-current-card,
+.cash-register-page[data-theme="dark"] .cash-history-card,
+.cash-register-page[data-theme="dark"] .cash-session-card,
+.cash-register-page[data-theme="dark"] .cash-modal,
+.cash-register-page[data-theme="dark"] .cash-modal-block,
+.cash-register-page[data-theme="dark"] .cash-entry-date,
+.cash-register-page[data-theme="dark"] .cash-history-detail-modal,
+.cash-register-page[data-theme="dark"] .cash-history-breakdown-card,
+.cash-register-page[data-theme="dark"] .cash-history-denomination,
+.cash-register-page[data-theme="dark"] .cash-history-detail-summary>div,
+.dark .cash-register-page .cash-stat-card,
+.dark .cash-register-page .cash-summary-card,
+.dark .cash-register-page .cash-current-card,
+.dark .cash-register-page .cash-history-card,
+.dark .cash-register-page .cash-session-card,
+.dark .cash-register-page .cash-modal,
+.dark .cash-register-page .cash-modal-block,
+.dark .cash-register-page .cash-entry-date,
+.dark .cash-register-page .cash-history-detail-modal,
+.dark .cash-register-page .cash-history-breakdown-card,
+.dark .cash-register-page .cash-history-denomination,
+.dark .cash-register-page .cash-history-detail-summary>div,
+[data-theme="dark"] .cash-stat-card,
+[data-theme="dark"] .cash-summary-card,
+[data-theme="dark"] .cash-current-card,
+[data-theme="dark"] .cash-history-card,
+[data-theme="dark"] .cash-session-card,
+[data-theme="dark"] .cash-modal,
+[data-theme="dark"] .cash-modal-block,
+[data-theme="dark"] .cash-entry-date,
+[data-theme="dark"] .cash-history-detail-modal,
+[data-theme="dark"] .cash-history-breakdown-card,
+[data-theme="dark"] .cash-history-denomination,
+[data-theme="dark"] .cash-history-detail-summary>div {
+    background: #111112 !important;
+    color: #e7bf61 !important;
+    border-color: #3b301b !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .22) !important;
+}
+
+.cash-register-page.dark-mode h1,
+.cash-register-page.dark-mode h2,
+.cash-register-page.dark-mode h3,
+.cash-register-page.dark-mode h4,
+.cash-register-page.dark-mode p,
+.cash-register-page.dark-mode span,
+.cash-register-page.dark-mode label,
+.cash-register-page.dark-mode small,
+.cash-register-page.dark-mode strong,
+.cash-register-page.dark-mode .cash-stat-card *,
+.cash-register-page.dark-mode .cash-current-card *,
+.cash-register-page.dark-mode .cash-history-card *,
+.cash-register-page.dark-mode .cash-session-card *,
+.cash-register-page.dark-mode .cash-modal *,
+.cash-register-page.dark-mode .cash-history-detail-modal *,
+.cash-register-page[data-theme="dark"] h1,
+.cash-register-page[data-theme="dark"] h2,
+.cash-register-page[data-theme="dark"] h3,
+.cash-register-page[data-theme="dark"] h4,
+.cash-register-page[data-theme="dark"] p,
+.cash-register-page[data-theme="dark"] span,
+.cash-register-page[data-theme="dark"] label,
+.cash-register-page[data-theme="dark"] small,
+.cash-register-page[data-theme="dark"] strong,
+.dark .cash-register-page h1,
+.dark .cash-register-page h2,
+.dark .cash-register-page h3,
+.dark .cash-register-page h4,
+.dark .cash-register-page p,
+.dark .cash-register-page span,
+.dark .cash-register-page label,
+.dark .cash-register-page small,
+.dark .cash-register-page strong,
+[data-theme="dark"] .cash-register-page h1,
+[data-theme="dark"] .cash-register-page h2,
+[data-theme="dark"] .cash-register-page h3,
+[data-theme="dark"] .cash-register-page h4,
+[data-theme="dark"] .cash-register-page p,
+[data-theme="dark"] .cash-register-page span,
+[data-theme="dark"] .cash-register-page label,
+[data-theme="dark"] .cash-register-page small,
+[data-theme="dark"] .cash-register-page strong {
+    color: #e7bf61 !important;
+}
+
+.cash-register-page.dark-mode input,
+.cash-register-page.dark-mode select,
+.cash-register-page.dark-mode textarea,
+.cash-register-page[data-theme="dark"] input,
+.cash-register-page[data-theme="dark"] select,
+.cash-register-page[data-theme="dark"] textarea,
+.dark .cash-register-page input,
+.dark .cash-register-page select,
+.dark .cash-register-page textarea,
+[data-theme="dark"] .cash-register-page input,
+[data-theme="dark"] .cash-register-page select,
+[data-theme="dark"] .cash-register-page textarea {
+    background: #080809 !important;
+    color: #e7bf61 !important;
+    border-color: #514221 !important;
+}
+
+.cash-register-page.dark-mode input::placeholder,
+.cash-register-page.dark-mode textarea::placeholder,
+.cash-register-page[data-theme="dark"] input::placeholder,
+.cash-register-page[data-theme="dark"] textarea::placeholder,
+.dark .cash-register-page input::placeholder,
+.dark .cash-register-page textarea::placeholder,
+[data-theme="dark"] .cash-register-page input::placeholder,
+[data-theme="dark"] .cash-register-page textarea::placeholder {
+    color: #a88b4b !important;
+}
+
+.cash-register-page.dark-mode .cash-modal-actions,
+.cash-register-page.dark-mode .cash-history-detail-footer,
+.cash-register-page[data-theme="dark"] .cash-modal-actions,
+.cash-register-page[data-theme="dark"] .cash-history-detail-footer,
+.dark .cash-register-page .cash-modal-actions,
+.dark .cash-register-page .cash-history-detail-footer,
+[data-theme="dark"] .cash-modal-actions,
+[data-theme="dark"] .cash-history-detail-footer {
+    background: #0b0b0c !important;
+    border-color: #332a19 !important;
 }

@@ -8,6 +8,8 @@ import {
   collection,
   addDoc,
   updateDoc,
+  deleteDoc,
+  Timestamp,
   doc,
   onSnapshot,
   query,
@@ -39,6 +41,9 @@ import {
   Smartphone,
   Receipt,
   Trash2,
+  Pencil,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 import { db } from "../../services/firebase";
@@ -429,6 +434,15 @@ function formatDateTime(value) {
 // ============================================================
 
 export default function CashRegister() {
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("cash-register-theme") || "light"; }
+    catch { return "light"; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("cash-register-theme", theme); } catch {}
+  }, [theme]);
+
   const {
     user,
     role,
@@ -529,6 +543,15 @@ export default function CashRegister() {
 
   const [closingCreditAmount, setClosingCreditAmount] =
     useState("");
+
+  // Transaction history CRUD (create / edit entry)
+  const [entryModal, setEntryModal] = useState(null); // { mode, id, status }
+  const [entryDate, setEntryDate] = useState("");
+  const [entryOpenDen, setEntryOpenDen] = useState(emptyDenominations());
+  const [entryOpenDigital, setEntryOpenDigital] = useState(emptyDigital());
+  const [entryCloseDen, setEntryCloseDen] = useState(emptyDenominations());
+  const [entryCloseDigital, setEntryCloseDigital] = useState(emptyDigital());
+  const [deletingId, setDeletingId] = useState(null);
 
   // ----------------------------------------------------------
   // FIRESTORE LISTENER
@@ -794,8 +817,8 @@ export default function CashRegister() {
     currentRegister?.status === "closed"
       ? Number(getClosingTotal(currentRegister) || 0)
       : currentCash +
-        calculateDigitalTotal(currentRegister?.digitalBalances) +
-        calculateCreditTotal(getCreditList(currentRegister));
+      calculateDigitalTotal(currentRegister?.digitalBalances) +
+      calculateCreditTotal(getCreditList(currentRegister));
 
   // ----------------------------------------------------------
   // DIFFERENCE
@@ -1747,9 +1770,10 @@ export default function CashRegister() {
 
   const renderDenominationEditor = (
     values,
-    setter
+    setter,
+    single = false
   ) => (
-    <div className="cash-denomination-list">
+    <div className={`cash-denomination-list ${single ? "single" : ""}`}>
       {DENOMINATIONS.map(
         (item) => {
           const pcs =
@@ -1929,6 +1953,264 @@ export default function CashRegister() {
       ))}
     </div>
   );
+
+  // ----------------------------------------------------------
+  // CASH (left) + DIGITAL MONEY (right) SPLIT LAYOUT
+  // 500, 200, 100, 50, 20, 10, coins, total  |  digital money
+  // ----------------------------------------------------------
+
+  const renderCashDigitalSplit = (
+    denoms,
+    setDenoms,
+    digital,
+    setDigital
+  ) => {
+    const cashTotal = calculateDenominationTotal(denoms);
+    const digitalTotal = calculateDigitalTotal(digital);
+
+    return (
+      <div className="cash-split">
+        <div className="cash-split-col">
+          {renderDenominationEditor(denoms, setDenoms, true)}
+
+          <div className="cash-split-total">
+            <div>
+              <span>Total</span>
+              <strong>{formatCurrency(cashTotal)}</strong>
+            </div>
+            <WalletCards size={18} />
+          </div>
+        </div>
+
+        <div className="cash-modal-block cash-split-digital">
+          <div className="cash-modal-block-head">
+            <div>
+              <span className="cash-section-label">DIGITAL MONEY</span>
+              <p>Enter the balance in each bank / wallet.</p>
+            </div>
+
+            <strong>{formatCurrency(digitalTotal)}</strong>
+          </div>
+
+          {renderDigitalEditor(digital, setDigital)}
+        </div>
+      </div>
+    );
+  };
+
+  // ----------------------------------------------------------
+  // TRANSACTION HISTORY  -  CREATE / EDIT / DELETE
+  // ----------------------------------------------------------
+
+  const denominationsToInputs = (denominations) =>
+    DENOMINATIONS.reduce((acc, item) => {
+      acc[item.value] = getDenominationCount(denominations, item);
+      return acc;
+    }, {});
+
+  const openCreateEntry = () => {
+    setEntryDate(getDateKey());
+    setEntryOpenDen(emptyDenominations());
+    setEntryOpenDigital(emptyDigital());
+    setEntryCloseDen(emptyDenominations());
+    setEntryCloseDigital(emptyDigital());
+    setEntryModal({ mode: "create", id: null, status: "closed" });
+  };
+
+  const openEditEntry = (item) => {
+    setEntryDate(item.dateKey || getDateKey());
+    setEntryOpenDen(denominationsToInputs(item.openingDenominations));
+    setEntryOpenDigital(digitalToInputs(getOpeningDigital(item)));
+    setEntryCloseDen(
+      item.status === "closed"
+        ? denominationsToInputs(item.closingDenominations)
+        : emptyDenominations()
+    );
+    setEntryCloseDigital(
+      item.status === "closed"
+        ? digitalToInputs(getClosingDigital(item))
+        : emptyDigital()
+    );
+    setEntryModal({ mode: "edit", id: item.id, status: item.status });
+  };
+
+  const closeEntryModal = () => {
+    if (saving) return;
+    setEntryModal(null);
+  };
+
+  const handleSaveEntry = async () => {
+    if (!entryModal) return;
+
+    if (!entryDate) {
+      alert("Please choose a date.");
+      return;
+    }
+
+    const isCreate = entryModal.mode === "create";
+    const hasClosing = isCreate || entryModal.status === "closed";
+
+    const openCash = calculateDenominationTotal(entryOpenDen);
+    const openDigitalAmount = calculateDigitalTotal(entryOpenDigital);
+    const closeCash = calculateDenominationTotal(entryCloseDen);
+    const closeDigitalAmount = calculateDigitalTotal(entryCloseDigital);
+
+    if (openCash <= 0 && openDigitalAmount <= 0) {
+      alert("Please enter the opening cash or digital money.");
+      return;
+    }
+
+    if (hasClosing && closeCash <= 0 && closeDigitalAmount <= 0) {
+      alert("Please enter the closing cash or digital money.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const [year, month, day] = entryDate.split("-").map(Number);
+      const entryDateObj = new Date(year, month - 1, day, 12, 0, 0);
+
+      const dateFields = {
+        dateKey: getDateKey(entryDateObj),
+        monthKey: getMonthKey(entryDateObj),
+        yearKey: getYearKey(entryDateObj),
+      };
+
+      if (isCreate) {
+        const attendantName =
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant";
+
+        const stamp = Timestamp.fromDate(entryDateObj);
+
+        await addDoc(collection(db, "cashRegisters"), {
+          ...dateFields,
+          attendantId: user.uid,
+          attendantName,
+
+          openingCash: openCash,
+          openingDenominations: { ...entryOpenDen },
+          openingDigital: cleanDigital(entryOpenDigital),
+
+          digitalBalances: cleanDigital(entryCloseDigital),
+          closingDigital: cleanDigital(entryCloseDigital),
+
+          expenses: [],
+          credits: [],
+          openingCredits: [],
+          closingCredits: [],
+
+          cashAdded: 0,
+          cashRemoved: 0,
+          cashSales: 0,
+
+          expectedCash: openCash,
+
+          closingCash: closeCash,
+          closingDenominations: { ...entryCloseDen },
+
+          cashDifference: closeCash - openCash,
+          difference:
+            closeCash + closeDigitalAmount - (openCash + openDigitalAmount),
+
+          status: "closed",
+
+          openedAt: stamp,
+          closedAt: stamp,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        const item = registers.find((r) => r.id === entryModal.id);
+
+        if (!item) {
+          throw new Error("This session no longer exists.");
+        }
+
+        const expectedCash =
+          openCash +
+          Number(item.cashAdded || 0) -
+          Number(item.cashRemoved || 0) +
+          Number(item.cashSales || 0);
+
+        const newOpeningDigital = cleanDigital(entryOpenDigital);
+
+        const payload = {
+          ...dateFields,
+          openingCash: openCash,
+          openingDenominations: { ...entryOpenDen },
+          openingDigital: newOpeningDigital,
+          expectedCash,
+          updatedAt: serverTimestamp(),
+        };
+
+        if (hasClosing) {
+          const newClosingDigital = cleanDigital(entryCloseDigital);
+
+          payload.closingCash = closeCash;
+          payload.closingDenominations = { ...entryCloseDen };
+          payload.closingDigital = newClosingDigital;
+          payload.digitalBalances = newClosingDigital;
+          payload.cashDifference = closeCash - expectedCash;
+          payload.difference =
+            closeCash +
+            closeDigitalAmount +
+            calculateCreditTotal(getClosingCredits(item) || []) -
+            (openCash +
+              openDigitalAmount +
+              calculateCreditTotal(getOpeningCredits(item)));
+        } else {
+          // Open session: only follow the new opening digital balances
+          // if they had not been changed during the day.
+          const oldOpening = cleanDigital(getOpeningDigital(item));
+          const live = cleanDigital(item.digitalBalances);
+
+          if (JSON.stringify(oldOpening) === JSON.stringify(live)) {
+            payload.digitalBalances = newOpeningDigital;
+          }
+        }
+
+        await updateDoc(doc(db, "cashRegisters", item.id), payload);
+
+        setSelectedHistoryRegister((current) =>
+          current?.id === item.id ? null : current
+        );
+      }
+
+      setEntryModal(null);
+    } catch (firebaseError) {
+      console.error("Save entry error:", firebaseError);
+      alert(firebaseError.message || "Unable to save this entry.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteEntry = async (item) => {
+    const confirmed = window.confirm(
+      `Delete the cash session of ${formatDate(item.dateKey)}?\n\nThis cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(item.id);
+
+    try {
+      await deleteDoc(doc(db, "cashRegisters", item.id));
+
+      setSelectedHistoryRegister((current) =>
+        current?.id === item.id ? null : current
+      );
+    } catch (firebaseError) {
+      console.error("Delete entry error:", firebaseError);
+      alert(firebaseError.message || "Unable to delete this entry.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const renderExpenseRows = (
     list,
@@ -2159,7 +2441,7 @@ export default function CashRegister() {
   // ==========================================================
 
   return (
-    <div className="cash-register-page">
+    <div className="cash-register-page" data-theme={theme}>
 
       {/* ====================================================
           HEADER
@@ -2191,6 +2473,16 @@ export default function CashRegister() {
         </div>
 
         <div className="cash-header-actions">
+          <button
+            type="button"
+            className="cash-theme-toggle"
+            onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          </button>
           {openRegister ? (
             <button
               className="cash-primary-btn close"
@@ -2932,18 +3224,30 @@ export default function CashRegister() {
             </p>
           </div>
 
-          <button
-            className="cash-export-btn"
-            onClick={
-              exportCSV
-            }
-          >
-            <Download
-              size={14}
-            />
+          <div className="cash-history-head-actions">
+            <button
+              type="button"
+              className="cash-export-btn"
+              onClick={openCreateEntry}
+            >
+              <Plus size={14} />
 
-            Export
-          </button>
+              Add Entry
+            </button>
+
+            <button
+              className="cash-export-btn"
+              onClick={
+                exportCSV
+              }
+            >
+              <Download
+                size={14}
+              />
+
+              Export
+            </button>
+          </div>
 
         </div>
 
@@ -3062,6 +3366,7 @@ export default function CashRegister() {
                   <th>Opening Total</th>
                   <th>Closing Total</th>
                   <th>Overall Difference</th>
+                  <th className="cash-actions-th">Actions</th>
                 </tr>
               </thead>
 
@@ -3112,10 +3417,10 @@ export default function CashRegister() {
                         {item.status === "closed" ? (
                           <span
                             className={`cash-difference ${itemDifference > 0
-                                ? "positive"
-                                : itemDifference < 0
-                                  ? "negative"
-                                  : "zero"
+                              ? "positive"
+                              : itemDifference < 0
+                                ? "negative"
+                                : "zero"
                               }`}
                           >
                             {itemDifference > 0 ? "+" : ""}
@@ -3124,6 +3429,39 @@ export default function CashRegister() {
                         ) : (
                           "—"
                         )}
+                      </td>
+
+                      <td
+                        className="cash-actions-td"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <div className="cash-row-actions">
+                          <button
+                            type="button"
+                            className="cash-icon-btn"
+                            onClick={() => openEditEntry(item)}
+                            aria-label="Edit session"
+                            title="Edit"
+                          >
+                            <Pencil size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="cash-icon-btn danger"
+                            onClick={() => handleDeleteEntry(item)}
+                            disabled={deletingId === item.id}
+                            aria-label="Delete session"
+                            title="Delete"
+                          >
+                            {deletingId === item.id ? (
+                              <RefreshCw size={14} className="spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </div>
                       </td>
 
                     </tr>
@@ -3160,7 +3498,7 @@ export default function CashRegister() {
           }}
         >
 
-          <div className="cash-modal">
+          <div className="cash-modal wide">
 
             <div className="cash-modal-head">
 
@@ -3200,34 +3538,12 @@ export default function CashRegister() {
 
             </div>
 
-            {renderDenominationEditor(
+            {renderCashDigitalSplit(
               openingDenominations,
-              setOpeningDenominations
+              setOpeningDenominations,
+              openingDigital,
+              setOpeningDigital
             )}
-
-            <div className="cash-modal-block">
-              <div className="cash-modal-block-head">
-                <div>
-                  <span className="cash-section-label">
-                    DIGITAL MONEY
-                  </span>
-                  <p>
-                    Enter the balance in each bank / wallet.
-                  </p>
-                </div>
-
-                <strong>
-                  {formatCurrency(
-                    openingDigitalTotal
-                  )}
-                </strong>
-              </div>
-
-              {renderDigitalEditor(
-                openingDigital,
-                setOpeningDigital
-              )}
-            </div>
 
             <div className="cash-modal-block">
               <div className="cash-modal-block-head">
@@ -3336,26 +3652,6 @@ export default function CashRegister() {
                   ))}
                 </div>
               )}
-            </div>
-
-            <div className="cash-modal-total">
-
-              <div>
-                <span>
-                  Opening cash
-                </span>
-
-                <strong>
-                  {formatCurrency(
-                    openingModalTotal
-                  )}
-                </strong>
-              </div>
-
-              <WalletCards
-                size={18}
-              />
-
             </div>
 
             <div className="cash-modal-grand">
@@ -3814,6 +4110,128 @@ export default function CashRegister() {
 
           </div>
         )}
+
+      {/* ====================================================
+          ADD / EDIT ENTRY MODAL (transaction history)
+      ==================================================== */}
+
+      {entryModal && (
+        <div
+          className="cash-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeEntryModal();
+            }
+          }}
+        >
+          <div className="cash-modal wide">
+            <div className="cash-modal-head">
+              <div className="cash-modal-title">
+                <div className="cash-modal-icon">
+                  {entryModal.mode === "create" ? (
+                    <Plus size={17} />
+                  ) : (
+                    <Pencil size={17} />
+                  )}
+                </div>
+
+                <div>
+                  <strong>
+                    {entryModal.mode === "create"
+                      ? "Add Entry"
+                      : "Edit Entry"}
+                  </strong>
+                  <span>
+                    {entryModal.mode === "create"
+                      ? "Record a completed cash session."
+                      : "Correct the opening / closing figures."}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="cash-modal-close"
+                onClick={closeEntryModal}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="cash-entry-date">
+              <label htmlFor="cash-entry-date-input">Date</label>
+              <input
+                id="cash-entry-date-input"
+                type="date"
+                value={entryDate}
+                max={getDateKey()}
+                onChange={(event) => setEntryDate(event.target.value)}
+              />
+            </div>
+
+            <div className="cash-entry-section-title">
+              <UnlockKeyhole size={14} />
+              Opening
+            </div>
+
+            {renderCashDigitalSplit(
+              entryOpenDen,
+              setEntryOpenDen,
+              entryOpenDigital,
+              setEntryOpenDigital
+            )}
+
+            {(entryModal.mode === "create" ||
+              entryModal.status === "closed") && (
+                <>
+                  <div className="cash-entry-section-title">
+                    <LockKeyhole size={14} />
+                    Closing
+                  </div>
+
+                  {renderCashDigitalSplit(
+                    entryCloseDen,
+                    setEntryCloseDen,
+                    entryCloseDigital,
+                    setEntryCloseDigital
+                  )}
+                </>
+              )}
+
+            <div className="cash-modal-actions">
+              <button
+                type="button"
+                className="cash-cancel-btn"
+                onClick={closeEntryModal}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="cash-save-btn"
+                onClick={handleSaveEntry}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw size={15} className="spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    {entryModal.mode === "create"
+                      ? "Add Entry"
+                      : "Save Changes"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedHistoryRegister && (
         <div

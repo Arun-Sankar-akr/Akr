@@ -1442,3 +1442,380 @@
         animation: none;
     }
 }
+
+/* =========================================================
+   DARK MODE — BLACK & GOLD (auto-generated from the light styles)
+   Activated by <html data-theme="dark">
+   ========================================================= */
+
+:root[data-theme="dark"] .customers-page {
+    color: #e9e4d7;
+    background: radial-gradient(circle at 0% 0%,
+            rgba(216, 180, 90, 0.07),
+            transparent 27%),
+        radial-gradient(circle at 100% 5%,
+            rgba(200, 157, 47, 0.065),
+            transparent 27%),
+        #141310;
+}
+
+:root[data-theme="dark"] .eyebrow {
+    color: #cbbfa2;
+}
+
+:root[data-theme="dark"] .eyebrow::before {
+    background: linear-gradient(90deg,
+            #d8b45a,
+            #be952d);
+}
+
+:root[data-theme="dark"] .page-head h1 {
+    color: #ece7dd;
+}
+
+:root[data-theme="dark"] .page-head p {
+    color: #bdb8ac;
+}
+
+:root[data-theme="dark"] .primary-btn {
+    background: linear-gradient(135deg,
+            #d8b45a,
+            #d7b254);
+    box-shadow: 0 8px 22px rgba(212, 175, 55, 0.2);
+    color: #15110a;
+}
+
+:root[data-theme="dark"] .primary-btn:hover {
+    box-shadow: 0 12px 28px rgba(212, 175, 55, 0.27);
+}
+
+:root[data-theme="dark"] .secondary-btn {
+    color: #ddd6c3;
+    border: 1px solid rgba(212, 175, 55, 0.146);
+    background: #11100e;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.185);
+}
+
+:root[data-theme="dark"] .secondary-btn:hover {
+    background: #131210;
+    border-color: rgba(212, 175, 55, 0.168);
+}
+
+:root[data-theme="dark"] .customer-stat-card {
+    border: 1px solid rgba(212, 175, 55, 0.146);
+    background: rgba(17, 16, 14, 0.9);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.215);
+}
+
+:root[data-theme="dark"] .customer-stat-card::after {
+    background: rgba(216, 180, 90, 0.035);
+}
+
+:root[data-theme="dark"] .customer-stat-icon.blue {
+    color: #debc65;
+    background: #231e13;
+}
+
+:root[data-theme="dark"] .customer-stat-icon.green {
+    color: #4df0bd;
+    background: #11271d;
+}
+
+:root[data-theme="dark"] .customer-stat-icon.purple {
+    color: #e2c478;
+    background: #221d12;
+}
+
+:root[data-theme="dark"] .customer-stat-icon.orange {
+    color: #f3af8b;
+    background: #261d11;
+}
+
+:root[data-theme="dark"] .customer-stat-card span {
+    color: #bdb8ac;
+}
+
+:root[data-theme="dark"] .customer-stat-card strong {
+    color: #e9e4d7;
+}
+
+:root[data-theme="dark"] .panel {
+    border: 1px solid rgba(212, 175, 55, 0.144);
+    background: rgba(17, 16, 14, 0.95);
+    box-shadow: 0 12px 38px rgba(0, 0, 0, 0.23);
+}
+
+:root[data-theme="dark"] .section-label {
+    color: #c0bbaf;
+}
+
+:root[data-theme="dark"] .panel-header h2 {
+    color: #e6e0d2;
+}
+
+:root[data-theme="dark"] .toolbar {
+    border-bottom: 1px solid rgba(212, 175, 55, 0.137);
+}
+
+:root[data-theme="dark"] .search-bar {
+    color: #c2beb2;
+    border: 1px solid rgba(212, 175, 55, 0.146);
+    background: #131210;
+}
+
+:root[data-theme="dark"] .search-bar:focus-within {
+    border-color: rgba(212, 175, 55, 0.5);
+    background: #11100e;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+
+:root[data-theme="dark"] .search-bar input {
+    color: #e6e0d2;
+}
+
+:root[data-theme="dark"] .search-bar input::placeholder {
+    color: #c4bfb4;
+}
+
+:root[data-theme="dark"] .result-count {
+    color: #c0bbaf;
+}
+
+:root[data-theme="dark"] .customer-table-wrap::-webkit-scrollbar-thumb {
+    background: #25231e;
+}
+
+:root[data-theme="dark"] .customer-table th {
+    color: #c0bbaf;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.137);
+    background: #1f1b11;
+}
+
+:root[data-theme="dark"] .customer-table td {
+    color: #ddd6c3;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.135);
+}
+
+:root[data-theme="dark"] .customer-table tbody tr:hover {
+    background: #1f1b11;
+}
+
+:root[data-theme="dark"] .customer-avatar {
+    color: #e3c67b;
+    background: linear-gradient(135deg,
+            #231f13,
+            #282315);
+}
+
+:root[data-theme="dark"] .customer-main strong {
+    color: #e2dccc;
+}
+
+:root[data-theme="dark"] .customer-main small {
+    color: #c3beb2;
+}
+
+:root[data-theme="dark"] .contact-details span {
+    color: #cbbfa2;
+}
+
+:root[data-theme="dark"] .contact-details svg {
+    color: #c2beb2;
+}
+
+:root[data-theme="dark"] .muted {
+    color: #c4bfb3 !important;
+}
+
+:root[data-theme="dark"] .address-cell {
+    color: #cbbfa2;
+}
+
+:root[data-theme="dark"] .address-cell svg {
+    color: #c2beb2;
+}
+
+:root[data-theme="dark"] .transaction-count {
+    color: #e3c67b;
+    background: #231f13;
+}
+
+:root[data-theme="dark"] .customer-total {
+    color: #4df0bd;
+}
+
+:root[data-theme="dark"] .customer-status {
+    color: #4df0c1;
+    background: #11271d;
+}
+
+:root[data-theme="dark"] .customer-status.inactive {
+    color: #cbbfa2;
+    background: #161512;
+}
+
+:root[data-theme="dark"] .customer-status.inactive .status-dot {
+    background: #3d3a32;
+}
+
+:root[data-theme="dark"] .customer-date {
+    color: #c0bbaf;
+}
+
+:root[data-theme="dark"] .icon-btn {
+    color: #cbbfa2;
+}
+
+:root[data-theme="dark"] .icon-btn:hover {
+    color: #e3c67b;
+    border-color: rgba(212, 175, 55, 0.5);
+    background: #231f13;
+}
+
+:root[data-theme="dark"] .action-menu {
+    border: 1px solid rgba(212, 175, 55, 0.147);
+    background: #11100e;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.44);
+}
+
+:root[data-theme="dark"] .action-menu button {
+    color: #d6cdb6;
+}
+
+:root[data-theme="dark"] .action-menu button:hover {
+    background: #131210;
+    color: #e3c67b;
+}
+
+:root[data-theme="dark"] .action-menu .delete-action {
+    color: #e99696;
+}
+
+:root[data-theme="dark"] .action-menu .delete-action:hover {
+    background: #251010;
+    color: #e78787;
+}
+
+:root[data-theme="dark"] .module-icon {
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    color: #e6cc89;
+    background: linear-gradient(135deg,
+            #231f13,
+            #221d12);
+}
+
+:root[data-theme="dark"] .empty-module h2,
+:root[data-theme="dark"] .module-state h3 {
+    color: #e1dbcb;
+}
+
+:root[data-theme="dark"] .empty-module p,
+:root[data-theme="dark"] .module-state p {
+    color: #c0bbaf;
+}
+
+:root[data-theme="dark"] .module-state.error .module-icon {
+    color: #e99696;
+    border-color: #422424;
+    background: #251010;
+}
+
+:root[data-theme="dark"] .module-state.error h3 {
+    color: #e78787;
+}
+
+:root[data-theme="dark"] .customer-modal {
+    border: 1px solid rgba(212, 175, 55, 0.12);
+    background: #11100e;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme="dark"] .customer-modal::-webkit-scrollbar-thumb {
+    background: #25231e;
+}
+
+:root[data-theme="dark"] .modal-header {
+    border-bottom: 1px solid rgba(212, 175, 55, 0.137);
+}
+
+:root[data-theme="dark"] .modal-icon {
+    color: #e3c67b;
+    background: linear-gradient(135deg,
+            #231f13,
+            #282315);
+}
+
+:root[data-theme="dark"] .modal-title h2 {
+    color: #e6e0d2;
+}
+
+:root[data-theme="dark"] .modal-title p {
+    color: #c0bbaf;
+}
+
+:root[data-theme="dark"] .modal-close {
+    color: #cbbfa2;
+    background: #131210;
+}
+
+:root[data-theme="dark"] .modal-close:hover {
+    background: #251010;
+}
+
+:root[data-theme="dark"] .customer-field label {
+    color: #d6cdb6;
+}
+
+:root[data-theme="dark"] .customer-input-wrap {
+    border: 1px solid rgba(212, 175, 55, 0.146);
+    color: #c2beb2;
+    background: #1f1b11;
+}
+
+:root[data-theme="dark"] .customer-input-wrap:focus-within {
+    border-color: rgba(212, 175, 55, 0.5);
+    background: #11100e;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+
+:root[data-theme="dark"] .customer-input-wrap input,
+:root[data-theme="dark"] .customer-input-wrap textarea {
+    color: #e6e0d2;
+}
+
+:root[data-theme="dark"] .customer-input-wrap input::placeholder,
+:root[data-theme="dark"] .customer-input-wrap textarea::placeholder {
+    color: #c5c0b5;
+}
+
+:root[data-theme="dark"] .modal-actions {
+    border-top: 1px solid rgba(212, 175, 55, 0.137);
+}
+
+:root[data-theme="dark"] .cancel-btn {
+    color: #cbbfa2;
+    border: 1px solid rgba(212, 175, 55, 0.146);
+    background: #11100e;
+}
+
+:root[data-theme="dark"] .cancel-btn:hover {
+    background: #131210;
+}
+
+:root[data-theme="dark"] .save-btn {
+    background: linear-gradient(135deg,
+            #d8b45a,
+            #d7b254);
+    box-shadow: 0 7px 18px rgba(212, 175, 55, 0.2);
+    color: #15110a;
+}
+
+:root[data-theme="dark"] .save-btn:hover:not(:disabled) {
+    box-shadow: 0 10px 23px rgba(212, 175, 55, 0.27);
+}
+
+@media (max-width: 720px) {
+:root[data-theme="dark"] .modal-actions {
+    background: rgba(17, 16, 14, 0.96);
+}
+}

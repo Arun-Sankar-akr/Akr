@@ -1242,3 +1242,333 @@
         animation: none;
     }
 }
+
+
+/* =========================================================
+   DARK MODE  —  BLACK + GOLD
+   Works with data-theme="dark" on any ancestor
+   (.akr-home, html, body, app wrapper).
+   ========================================================= */
+
+[data-theme="dark"] .cgpa-tool-card,
+[data-theme="dark"] .cgpa-modal-backdrop {
+    --cgpa-primary: #d4af37;
+    --cgpa-primary-dark: #b8932a;
+    --cgpa-secondary: #f2d675;
+
+    --cgpa-text: #f6f0df;
+    --cgpa-muted: #b3aa92;
+    --cgpa-soft: #9b937d;
+
+    --cgpa-border: rgba(212, 175, 55, 0.16);
+    --cgpa-bg: #0c0c0c;
+    --cgpa-soft-bg: #141414;
+
+    --cgpa-success: #d4af37;
+
+    color-scheme: dark;
+}
+
+
+/* ---------- tool card ---------- */
+
+[data-theme="dark"] .cgpa-tool-card {
+    border-color: rgba(212, 175, 55, 0.2);
+
+    background:
+        radial-gradient(circle at 100% 0%,
+            rgba(212, 175, 55, 0.16),
+            transparent 38%),
+        linear-gradient(145deg, #141311, #0a0a0a);
+
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.6),
+        0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .cgpa-tool-card:hover {
+    border-color: rgba(212, 175, 55, 0.5);
+
+    box-shadow:
+        0 24px 55px rgba(0, 0, 0, 0.75),
+        0 5px 22px rgba(212, 175, 55, 0.14);
+}
+
+[data-theme="dark"] .cgpa-card-glow {
+    background: rgba(212, 175, 55, 0.12);
+}
+
+[data-theme="dark"] .cgpa-card-icon,
+[data-theme="dark"] .cgpa-modal-icon {
+    color: #0a0a0a;
+
+    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.28);
+}
+
+[data-theme="dark"] .cgpa-card-badge,
+[data-theme="dark"] .cgpa-card-arrow {
+    background: rgba(212, 175, 55, 0.12);
+}
+
+
+/* ---------- modal shell ---------- */
+
+[data-theme="dark"] .cgpa-modal-backdrop {
+    background: rgba(0, 0, 0, 0.74);
+}
+
+[data-theme="dark"] .cgpa-modal {
+    background: #0c0c0c;
+
+    border-color: rgba(212, 175, 55, 0.28);
+
+    box-shadow:
+        0 40px 100px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(212, 175, 55, 0.06),
+        0 15px 60px rgba(212, 175, 55, 0.07);
+}
+
+[data-theme="dark"] .cgpa-modal-head {
+    border-bottom-color: rgba(212, 175, 55, 0.14);
+
+    background:
+        radial-gradient(circle at 0% 0%,
+            rgba(212, 175, 55, 0.13),
+            transparent 34%),
+        #0c0c0c;
+}
+
+[data-theme="dark"] .cgpa-modal-footer {
+    border-top-color: rgba(212, 175, 55, 0.14);
+
+    background: #0c0c0c;
+}
+
+[data-theme="dark"] .cgpa-close {
+    background: #1a1a1a;
+    color: #b3aa92;
+}
+
+[data-theme="dark"] .cgpa-close:hover {
+    background: #262626;
+    color: #f2d675;
+}
+
+
+/* ---------- mode switch ---------- */
+
+[data-theme="dark"] .cgpa-mode-switch {
+    border-color: rgba(212, 175, 55, 0.14);
+
+    background: #141414;
+}
+
+[data-theme="dark"] .cgpa-mode-switch button {
+    color: #b3aa92;
+}
+
+[data-theme="dark"] .cgpa-mode-switch button.active {
+    background: rgba(212, 175, 55, 0.14);
+
+    color: #f2d675;
+
+    box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.4);
+}
+
+[data-theme="dark"] .cgpa-mode-icon {
+    background: rgba(212, 175, 55, 0.14);
+}
+
+
+/* ---------- input ---------- */
+
+[data-theme="dark"] .cgpa-field-label {
+    color: #d9d1bb;
+}
+
+[data-theme="dark"] .cgpa-input-wrap input {
+    border-color: rgba(212, 175, 55, 0.24);
+
+    background: #070707;
+
+    color: #f6f0df;
+}
+
+[data-theme="dark"] .cgpa-input-wrap input:hover {
+    border-color: rgba(212, 175, 55, 0.45);
+}
+
+[data-theme="dark"] .cgpa-input-wrap input:focus {
+    border-color: #d4af37;
+
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.16);
+}
+
+[data-theme="dark"] .cgpa-input-wrap input::placeholder {
+    color: #6f6857;
+}
+
+[data-theme="dark"] .cgpa-input-suffix {
+    background: #1a1a1a;
+    color: #b3aa92;
+}
+
+[data-theme="dark"] .cgpa-input-help {
+    color: #9b937d;
+}
+
+
+/* ---------- formula ---------- */
+
+[data-theme="dark"] .cgpa-formula-note {
+    border-color: rgba(212, 175, 55, 0.2);
+
+    background:
+        linear-gradient(135deg,
+            rgba(212, 175, 55, 0.1),
+            rgba(212, 175, 55, 0.03));
+}
+
+[data-theme="dark"] .cgpa-note-title {
+    color: #d9d1bb;
+}
+
+[data-theme="dark"] .cgpa-note-dot {
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.16);
+}
+
+[data-theme="dark"] .cgpa-formula-main {
+    color: #f2d675;
+}
+
+[data-theme="dark"] .cgpa-formula-main span {
+    color: #9b937d;
+}
+
+[data-theme="dark"] .cgpa-formula-note p {
+    color: #9b937d;
+}
+
+
+/* ---------- calculate ---------- */
+
+[data-theme="dark"] .cgpa-calculate {
+    color: #0a0a0a;
+
+    box-shadow: 0 10px 24px rgba(212, 175, 55, 0.24);
+}
+
+[data-theme="dark"] .cgpa-calculate:hover {
+    box-shadow: 0 14px 30px rgba(212, 175, 55, 0.36);
+}
+
+
+/* ---------- result ---------- */
+
+[data-theme="dark"] .cgpa-result {
+    border-color: rgba(212, 175, 55, 0.3);
+
+    background:
+        linear-gradient(145deg,
+            rgba(212, 175, 55, 0.12),
+            rgba(14, 14, 14, 0.95));
+}
+
+[data-theme="dark"] .cgpa-result-label {
+    color: #b3aa92;
+}
+
+[data-theme="dark"] .cgpa-result-value {
+    color: #f6f0df;
+}
+
+[data-theme="dark"] .cgpa-result-value small {
+    color: #d4af37;
+}
+
+[data-theme="dark"] .cgpa-result-check {
+    background: rgba(212, 175, 55, 0.16);
+    color: #f2d675;
+}
+
+[data-theme="dark"] .cgpa-working {
+    border-top-color: rgba(212, 175, 55, 0.16);
+}
+
+[data-theme="dark"] .cgpa-working span {
+    color: #9b937d;
+}
+
+[data-theme="dark"] .cgpa-working strong {
+    color: #e6dfc9;
+}
+
+[data-theme="dark"] .cgpa-copy {
+    border-color: rgba(212, 175, 55, 0.24);
+
+    background: #141414;
+
+    color: #e6dfc9;
+}
+
+[data-theme="dark"] .cgpa-copy:hover {
+    background: #1c1b18;
+
+    border-color: #d4af37;
+}
+
+
+/* ---------- disclaimer ---------- */
+
+[data-theme="dark"] .cgpa-disclaimer {
+    border-color: rgba(212, 175, 55, 0.12);
+
+    background: #111;
+}
+
+[data-theme="dark"] .cgpa-disclaimer-icon {
+    color: #d4af37;
+}
+
+[data-theme="dark"] .cgpa-disclaimer p {
+    color: #9b937d;
+}
+
+
+/* ---------- footer buttons ---------- */
+
+[data-theme="dark"] .cgpa-reset {
+    border-color: rgba(212, 175, 55, 0.2);
+
+    background: #141414;
+
+    color: #b3aa92;
+}
+
+[data-theme="dark"] .cgpa-reset:hover {
+    background: #1e1d1a;
+    color: #f2d675;
+}
+
+[data-theme="dark"] .cgpa-done {
+    background: linear-gradient(135deg, #e6c35c, #c9a227);
+
+    color: #0a0a0a;
+}
+
+[data-theme="dark"] .cgpa-done:hover {
+    background: linear-gradient(135deg, #f2d675, #d4af37);
+}
+
+
+/* ---------- focus ---------- */
+
+[data-theme="dark"] .cgpa-tool-card:focus-visible,
+[data-theme="dark"] .cgpa-close:focus-visible,
+[data-theme="dark"] .cgpa-mode-switch button:focus-visible,
+[data-theme="dark"] .cgpa-calculate:focus-visible,
+[data-theme="dark"] .cgpa-copy:focus-visible,
+[data-theme="dark"] .cgpa-reset:focus-visible,
+[data-theme="dark"] .cgpa-done:focus-visible {
+    outline-color: rgba(212, 175, 55, 0.6);
+}
