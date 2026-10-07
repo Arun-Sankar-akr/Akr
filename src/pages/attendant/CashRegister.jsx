@@ -2473,16 +2473,7 @@ export default function CashRegister() {
         </div>
 
         <div className="cash-header-actions">
-          <button
-            type="button"
-            className="cash-theme-toggle"
-            onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-          </button>
+        
           {openRegister ? (
             <button
               className="cash-primary-btn close"

@@ -6989,6 +6989,9 @@
 [data-theme="dark"] .cash-history-detail-modal,
 [data-theme="dark"] .cash-history-breakdown-card,
 [data-theme="dark"] .cash-history-denomination,
+[data-theme="dark"].cash-main-card,
+[data-theme="dark"].cash-main-left,
+[data-theme="dark"].cash-main-action,
 [data-theme="dark"] .cash-history-detail-summary>div {
     background: #111112 !important;
     color: #e7bf61 !important;

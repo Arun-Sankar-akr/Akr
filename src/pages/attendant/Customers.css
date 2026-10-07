@@ -1448,7 +1448,7 @@
    Activated by <html data-theme="dark">
    ========================================================= */
 
-:root[data-theme="dark"] .customers-page {
+:root[data-theme="dark"] .customers-page, .cash-main-card {
     color: #e9e4d7;
     background: radial-gradient(circle at 0% 0%,
             rgba(216, 180, 90, 0.07),
