@@ -3924,3 +3924,34 @@
         grid-column: 1 / -1;
     }
 }
+/* Typed quantity box in the Current Bill */
+.nt-qty-control .nt-qty-input {
+    width: 34px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    background: transparent;
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: none;
+}
+
+.nt-qty-control .nt-qty-input:focus {
+    background: rgba(127, 127, 127, 0.12);
+    color: var(--nt-accent);
+}
+
+.nt-qty-control:focus-within {
+    border-color: var(--nt-accent);
+}
+
+@media (max-width: 560px) {
+    .nt-qty-control .nt-qty-input {
+        width: 28px;
+    }
+}

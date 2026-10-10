@@ -197,6 +197,57 @@ function CartRow({ item, onQty, onSetQty, onRemove }) {
 }
 
 /* =========================================================
+   QUANTITY BOX — type the quantity directly, or use - / +
+   ========================================================= */
+
+function QtyInput({ value, onChange }) {
+    const [draft, setDraft] = useState(String(value));
+
+    // keep the box in sync when the +/- buttons change the quantity
+    useEffect(() => {
+        setDraft(String(value));
+    }, [value]);
+
+    function handleChange(event) {
+        const digits = event.target.value
+            .replace(/\D/g, "")
+            .slice(0, 5);
+
+        setDraft(digits);
+
+        const next = parseInt(digits, 10);
+
+        if (next > 0) {
+            onChange(next);
+        }
+    }
+
+    function handleBlur() {
+        // empty or 0 -> go back to the last valid quantity
+        setDraft(String(value));
+    }
+
+    return (
+        <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            aria-label="Quantity"
+            className="nt-qty-input"
+            value={draft}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            onFocus={(event) => event.target.select()}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                }
+            }}
+        />
+    );
+}
+
+/* =========================================================
    PAGE
    ========================================================= */
 
@@ -617,6 +668,69 @@ export default function NewTransaction() {
                 }[char])
             );
 
+        // Amount in words (Indian system: thousand, lakh, crore)
+        const amountInWords = (value) => {
+            const ones = [
+                "", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+                "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
+                "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen",
+                "Nineteen",
+            ];
+
+            const tens = [
+                "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty",
+                "Seventy", "Eighty", "Ninety",
+            ];
+
+            const underHundred = (n) =>
+                n < 20
+                    ? ones[n]
+                    : `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ""}`;
+
+            const underThousand = (n) => {
+                const hundreds = Math.floor(n / 100);
+                const rest = n % 100;
+
+                return [
+                    hundreds ? `${ones[hundreds]} Hundred` : "",
+                    rest ? underHundred(rest) : "",
+                ]
+                    .filter(Boolean)
+                    .join(" ");
+            };
+
+            const toWords = (n) => {
+                if (n === 0) return "Zero";
+
+                const parts = [];
+                const crore = Math.floor(n / 10000000);
+                const lakh = Math.floor((n % 10000000) / 100000);
+                const thousand = Math.floor((n % 100000) / 1000);
+                const rest = n % 1000;
+
+                if (crore) parts.push(`${underHundred(crore)} Crore`);
+                if (lakh) parts.push(`${underHundred(lakh)} Lakh`);
+                if (thousand) parts.push(`${underHundred(thousand)} Thousand`);
+                if (rest) parts.push(underThousand(rest));
+
+                return parts.join(" ");
+            };
+
+            const safe = Math.max(0, Number(value) || 0);
+            const rupees = Math.floor(safe);
+            const paise = Math.round((safe - rupees) * 100);
+
+            let words = `Rupees ${toWords(rupees)}`;
+
+            if (paise > 0) {
+                words += ` and ${toWords(paise)} Paise`;
+            }
+
+            return `${words} Only`;
+        };
+
+        const totalInWords = amountInWords(total);
+
         const rowsHtml = cart
             .map((item, index) => {
                 const rate =
@@ -656,829 +770,635 @@ export default function NewTransaction() {
 
         const receiptHtml = `
         <!DOCTYPE html>
-
         <html lang="en">
-
         <head>
-
             <meta charset="utf-8" />
-
-            <meta
-                name="viewport"
-                content="width=device-width, initial-scale=1"
-            />
-
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
             <title>AKR Communications - Sale Receipt</title>
 
             <style>
-
-                * {
-                    box-sizing: border-box;
+                :root {
+                    --navy: #1b1740;
+                    --navy-2: #2b2563;
+                    --indigo: #3b34a0;
+                    --gold: #c9a14a;
+                    --gold-soft: #f7efd9;
+                    --ink: #0f1222;
+                    --muted: #5d6479;
+                    --line: #e3e6ef;
+                    --tint: #f5f6fb;
+                    --green: #0f8a5f;
+                    --green-soft: #e6f6ee;
                 }
 
-                html,
-                body {
-                    margin: 0;
-                    padding: 0;
-                }
+                * { box-sizing: border-box; }
+
+                html, body { margin: 0; padding: 0; }
 
                 body {
                     background: #ffffff;
-
-                    color: #05080f;
-
-                    font-family:
-                        Inter,
-                        Arial,
-                        Helvetica,
-                        sans-serif;
-
+                    color: var(--ink);
+                    font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
                 }
 
                 .receipt-page {
+                    position: relative;
                     width: 100%;
-
                     max-width: 820px;
-
                     margin: 0 auto;
-
-                    padding: 30px 36px 40px;
-
                     background: #ffffff;
+                    overflow: hidden;
                 }
 
+                /* top accent band */
+                .top-band {
+                    height: 12px;
+                    background: linear-gradient(90deg, var(--navy) 0%, var(--indigo) 60%, var(--gold) 100%);
+                }
 
-                /* =========================================
-                   TOP BRAND
-                   ========================================= */
+                .receipt-inner { padding: 30px 38px 34px; }
 
+                /* ---------- brand ---------- */
                 .brand {
                     display: flex;
-
                     align-items: center;
                     justify-content: space-between;
-
-                    gap: 25px;
-
-                    padding-bottom: 25px;
-
-                    border-bottom: 1px solid #9aa3b2;
+                    gap: 24px;
+                    padding-bottom: 24px;
                 }
 
-                .brand-left {
-                    display: flex;
-
-                    align-items: center;
-
-                    gap: 18px;
-                }
+                .brand-left { display: flex; align-items: center; gap: 18px; }
 
                 .brand-logo-wrap {
-                    width: 82px;
-                    height: 82px;
-
+                    width: 84px;
+                    height: 84px;
                     display: flex;
-
                     align-items: center;
                     justify-content: center;
-
-                    padding: 8px;
-
+                    padding: 9px;
                     background: #ffffff;
-
-                    border: 1px solid #9aa3b2;
-
-                    border-radius: 18px;
-
-                    box-shadow:
-                        0 8px 20px
-                        rgba(15, 23, 42, 0.07);
+                    border: 1px solid var(--line);
+                    border-radius: 22px;
+                    box-shadow: 0 10px 24px rgba(27, 23, 64, 0.10);
                 }
 
-                .brand-logo {
-                    width: 100%;
-                    height: 100%;
-
-                    object-fit: contain;
-                }
+                .brand-logo { width: 100%; height: 100%; object-fit: contain; }
 
                 .brand-name {
                     margin: 0;
-
-                    color: #000000;
-
-                    font-size: 35px;
-
+                    color: var(--navy);
+                    font-size: 31px;
                     line-height: 1.1;
-
                     font-weight: 800;
-
-                    letter-spacing: -0.04em;
+                    letter-spacing: -0.035em;
                 }
 
                 .brand-subtitle {
-                    margin-top: 6px;
-
-                    color: #2f3a4d;
-
-                    font-size: 14px;
-
-                    font-weight: 600;
-
-                    letter-spacing: 0.08em;
-
+                    margin-top: 7px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: var(--muted);
+                    font-size: 11.5px;
+                    font-weight: 700;
+                    letter-spacing: 0.16em;
                     text-transform: uppercase;
                 }
 
-
-                /* =========================================
-                   RECEIPT LABEL
-                   ========================================= */
-
-                .receipt-label {
-                    text-align: right;
+                .brand-subtitle::before {
+                    content: "";
+                    width: 22px;
+                    height: 2px;
+                    border-radius: 2px;
+                    background: var(--gold);
                 }
 
+                .receipt-label { text-align: right; }
+
                 .receipt-label span {
-                    display: block;
-
-                    color: #312e81;
-
-                    font-size: 13px;
-
+                    display: inline-block;
+                    padding: 5px 13px;
+                    border-radius: 999px;
+                    background: var(--gold-soft);
+                    border: 1px solid #ecdcae;
+                    color: #8a6a1f;
+                    font-size: 10.5px;
                     font-weight: 800;
-
-                    letter-spacing: 0.15em;
-
+                    letter-spacing: 0.18em;
                     text-transform: uppercase;
                 }
 
                 .receipt-label strong {
                     display: block;
-
-                    margin-top: 6px;
-
-                    color: #000000;
-
-                    font-size: 23px;
-
+                    margin-top: 10px;
+                    color: var(--navy);
+                    font-size: 24px;
+                    line-height: 1.05;
                     font-weight: 800;
+                    letter-spacing: -0.02em;
                 }
 
+                .receipt-label small {
+                    display: block;
+                    margin-top: 6px;
+                    color: var(--muted);
+                    font-size: 12px;
+                    font-weight: 600;
+                }
 
-                /* =========================================
-                   META
-                   ========================================= */
+                .divider {
+                    height: 1px;
+                    border: 0;
+                    margin: 0;
+                    background: linear-gradient(90deg, var(--navy-2), var(--line) 55%, transparent);
+                }
 
+                /* ---------- billed to / meta ---------- */
                 .receipt-meta {
                     display: grid;
-
-                    grid-template-columns:
-                        repeat(3, minmax(0, 1fr));
-
-                    gap: 12px;
-
+                    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+                    gap: 0;
                     margin-top: 22px;
-                }
-
-                .customer-card {
-                    grid-column: 1 / -1;
-                }
-
-                .customer-card .meta-value {
-                    font-size: 22px;
+                    border: 1px solid var(--line);
+                    border-radius: 18px;
+                    background: var(--tint);
+                    overflow: hidden;
                 }
 
                 .meta-card {
-                    padding: 13px 15px;
+                    padding: 14px 18px 15px;
+                    border-left: 1px solid var(--line);
+                }
 
-                    background: #eceff5;
-
-                    border: 1px solid #b7bfcc;
-
-                    border-radius: 12px;
+                .meta-card:first-child {
+                    border-left: 0;
+                    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
                 }
 
                 .meta-label {
                     display: block;
-
-                    color: #475569;
-
-                    font-size: 12px;
-
+                    color: var(--muted);
+                    font-size: 9.5px;
                     font-weight: 800;
-
-                    letter-spacing: 0.09em;
-
+                    letter-spacing: 0.15em;
                     text-transform: uppercase;
                 }
 
                 .meta-value {
                     display: block;
-
-                    margin-top: 5px;
-
-                    color: #0b1220;
-
-                    font-size: 16px;
-
-                    font-weight: 700;
+                    margin-top: 6px;
+                    color: var(--ink);
+                    font-size: 14.5px;
+                    font-weight: 750;
+                    word-break: break-word;
                 }
 
+                .meta-card:first-child .meta-label { color: #cdbfff; }
+                .meta-card:first-child .meta-value { color: #ffffff; font-size: 17px; }
 
-                /* =========================================
-                   SECTION TITLE
-                   ========================================= */
-
-                .items-section {
-                    margin-top: 28px;
-                }
+                /* ---------- items ---------- */
+                .items-section { margin-top: 28px; }
 
                 .section-heading {
                     display: flex;
-
                     align-items: center;
                     justify-content: space-between;
-
-                    margin-bottom: 10px;
+                    margin-bottom: 11px;
                 }
 
                 .section-heading strong {
-                    color: #05080f;
-
-                    font-size: 16px;
-
+                    color: var(--navy);
+                    font-size: 12px;
                     font-weight: 800;
-
-                    letter-spacing: 0.04em;
-
+                    letter-spacing: 0.16em;
                     text-transform: uppercase;
                 }
 
                 .section-heading span {
-                    color: #475569;
-
-                    font-size: 13px;
-
-                    font-weight: 600;
+                    padding: 3px 11px;
+                    border-radius: 999px;
+                    background: var(--tint);
+                    border: 1px solid var(--line);
+                    color: var(--muted);
+                    font-size: 11px;
+                    font-weight: 700;
                 }
-
-
-                /* =========================================
-                   TABLE
-                   ========================================= */
 
                 .items-table {
                     width: 100%;
-
                     border-collapse: separate;
-
                     border-spacing: 0;
-
+                    border: 1px solid var(--line);
+                    border-radius: 18px;
                     overflow: hidden;
-
-                    border: 1px solid #9aa3b2;
-
-                    border-radius: 14px;
                 }
 
                 .items-table thead th {
-                    padding: 12px 13px;
-
-                    background: #dfe4ee;
-
-                    color: #2f3a4d;
-
-                    border-bottom: 1px solid #8b95a7;
-
-                    font-size: 12px;
-
+                    padding: 13px 16px;
+                    background: var(--navy);
+                    color: #ffffff;
+                    font-size: 10px;
                     font-weight: 800;
-
-                    letter-spacing: 0.07em;
-
+                    letter-spacing: 0.14em;
                     text-align: left;
-
                     text-transform: uppercase;
                 }
 
-                .items-table thead th:first-child {
-                    width: 52px;
-
-                    text-align: center;
-                }
-
-                .items-table th.num {
-                    text-align: right;
-                }
+                .items-table th.num,
+                .items-table td.num { text-align: right; }
 
                 .items-table tbody td {
-                    padding: 13px;
-
-                    border-bottom: 1px solid #b7bfcc;
-
-                    color: #0b1220;
-
-                    font-size: 16px;
-
-                    font-weight: 500;
+                    padding: 14px 16px;
+                    border-top: 1px solid var(--line);
+                    font-size: 13.5px;
+                    color: var(--ink);
                 }
 
-                .items-table tbody tr:last-child td {
-                    border-bottom: none;
-                }
+                .items-table tbody tr:first-child td { border-top: 0; }
+                .items-table tbody tr:nth-child(even) td { background: #fafbfe; }
 
                 .item-number {
-                    color: #475569;
-
-                    text-align: center;
-
-                    font-size: 13px !important;
-
-                    font-weight: 700 !important;
+                    width: 46px;
+                    color: var(--gold);
+                    font-size: 12px;
+                    font-weight: 800;
+                    letter-spacing: 0.04em;
                 }
 
-                .item-name {
-                    color: #05080f !important;
+                .item-name { font-weight: 700; }
 
-                    font-weight: 700 !important;
+                td.amount { font-weight: 800; color: var(--navy); }
+
+                /* ---------- summary ---------- */
+                .summary-area {
+                    display: flex;
+                    align-items: stretch;
+                    justify-content: space-between;
+                    gap: 18px;
+                    margin-top: 22px;
                 }
 
-                .items-table td.num {
-                    text-align: right;
-
-                    white-space: nowrap;
+                .words-box {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    gap: 8px;
+                    padding: 18px 20px;
+                    border-radius: 20px;
+                    border: 1px solid #ecdcae;
+                    background: linear-gradient(135deg, var(--gold-soft), #fffdf6);
                 }
 
-                .items-table td.amount {
-                    color: #05080f;
+                .words-label {
+                    color: #8a6a1f;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 0.16em;
+                    text-transform: uppercase;
+                }
 
+                .words-value {
+                    color: var(--navy);
+                    font-size: 15px;
+                    line-height: 1.5;
                     font-weight: 800;
                 }
 
-
-                /* =========================================
-                   SUMMARY
-                   ========================================= */
-
-                .summary-area {
-                    display: flex;
-
-                    justify-content: flex-end;
-
-                    margin-top: 18px;
+                .words-note {
+                    color: var(--muted);
+                    font-size: 11px;
+                    font-weight: 600;
                 }
 
                 .summary-box {
-                    width: 390px;
-
-                    padding: 17px;
-
-                    background: #eceff5;
-
-                    border: 1px solid #9aa3b2;
-
-                    border-radius: 15px;
+                    width: 50%;
+                    min-width: 270px;
+                    border-radius: 20px;
+                    overflow: hidden;
+                    border: 1px solid var(--line);
+                    background: #ffffff;
                 }
 
                 .summary-row {
                     display: flex;
-
                     align-items: center;
                     justify-content: space-between;
-
-                    padding: 6px 0;
-
-                    color: #2f3a4d;
-
-                    font-size: 14px;
+                    padding: 12px 20px;
+                    border-bottom: 1px solid var(--line);
+                    color: var(--muted);
+                    font-size: 12.5px;
+                    font-weight: 600;
                 }
 
-                .summary-row strong {
-                    color: #0b1220;
-
-                    font-weight: 700;
-                }
+                .summary-row strong { color: var(--ink); font-weight: 800; }
 
                 .summary-total {
                     display: flex;
-
                     align-items: center;
                     justify-content: space-between;
-
-                    margin-top: 10px;
-
-                    padding-top: 14px;
-
-                    border-top: 1px solid #8b95a7;
+                    gap: 16px;
+                    padding: 18px 20px;
+                    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+                    color: #ffffff;
                 }
 
                 .summary-total span {
-                    color: #05080f;
-
-                    font-size: 17px;
-
+                    font-size: 11px;
                     font-weight: 800;
+                    letter-spacing: 0.18em;
+                    color: #d9d2ff;
                 }
 
                 .summary-total strong {
-                    color: #312e81;
-
-                    font-size: 27px;
-
-                    font-weight: 900;
+                    color: #f2cf7a;
+                    font-size: 30px;
+                    line-height: 1;
+                    font-weight: 800;
+                    letter-spacing: -0.03em;
                 }
 
-
-                /* =========================================
-                   PAYMENT STATUS
-                   ========================================= */
-
+                /* ---------- paid badge ---------- */
                 .payment-status {
                     display: flex;
-
                     align-items: center;
-
                     justify-content: center;
-
-                    gap: 8px;
-
-                    margin-top: 20px;
-
-                    padding: 10px 14px;
-
-                    background: #dcf5e4;
-
-                    border: 1px solid #7fc79a;
-
-                    border-radius: 10px;
-
-                    color: #0b5a2c;
-
-                    font-size: 13px;
-
+                    gap: 10px;
+                    margin-top: 24px;
+                    padding: 12px 16px;
+                    border-radius: 14px;
+                    border: 1px solid #bfe8d2;
+                    background: var(--green-soft);
+                    color: var(--green);
+                    font-size: 11.5px;
                     font-weight: 800;
-
-                    letter-spacing: 0.05em;
-
+                    letter-spacing: 0.16em;
                     text-transform: uppercase;
                 }
 
                 .payment-dot {
-                    width: 7px;
-                    height: 7px;
-
+                    width: 18px;
+                    height: 18px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
                     border-radius: 50%;
-
-                    background: #22c55e;
+                    background: var(--green);
+                    color: #ffffff;
+                    font-size: 11px;
+                    line-height: 1;
                 }
 
+                .payment-dot::before { content: "✓"; }
 
-                /* =========================================
-                   FOOTER
-                   ========================================= */
-
+                /* ---------- footer ---------- */
                 .receipt-footer {
-                    margin-top: 32px;
-
-                    padding-top: 20px;
-
-                    border-top: 1px dashed #6b7587;
-
+                    margin-top: 30px;
+                    padding-top: 22px;
+                    border-top: 1px dashed #c3c8d8;
                     text-align: center;
                 }
 
                 .footer-thanks {
-                    color: #05080f;
-
-                    font-size: 17px;
-
+                    color: var(--navy);
+                    font-size: 16px;
                     font-weight: 800;
+                    letter-spacing: -0.01em;
                 }
 
                 .footer-sub {
-                    margin-top: 6px;
-
-                    color: #475569;
-
-                    font-size: 13px;
-
+                    margin-top: 7px;
+                    color: var(--muted);
+                    font-size: 11.5px;
                     line-height: 1.6;
                 }
 
                 .footer-brand {
-                    margin-top: 13px;
-
-                    color: #312e81;
-
-                    font-size: 12px;
-
+                    display: inline-block;
+                    margin-top: 14px;
+                    padding: 5px 16px;
+                    border-radius: 999px;
+                    background: var(--tint);
+                    border: 1px solid var(--line);
+                    color: var(--indigo);
+                    font-size: 10px;
                     font-weight: 800;
-
-                    letter-spacing: 0.12em;
-
+                    letter-spacing: 0.2em;
                     text-transform: uppercase;
                 }
 
-
-                /* =========================================
-                   PRINT
-                   ========================================= */
-
-                @page {
-                    size: A4;
-                    margin: 12mm;
+                .sign-row {
+                    display: flex;
+                    align-items: flex-end;
+                    justify-content: space-between;
+                    gap: 40px;
+                    margin-top: 38px;
                 }
+
+                .sign-box {
+                    width: 44%;
+                    text-align: center;
+                }
+
+                .sign-box small {
+                    display: block;
+                    margin-bottom: 30px;
+                    color: var(--navy);
+                    font-size: 11px;
+                    font-weight: 800;
+                    letter-spacing: 0.06em;
+                }
+
+                .sign-box:not(.right) { padding-top: 41px; }
+
+                .sign-line {
+                    height: 1px;
+                    background: #9aa1b5;
+                }
+
+                .sign-box span {
+                    display: block;
+                    margin-top: 7px;
+                    color: var(--muted);
+                    font-size: 10.5px;
+                    font-weight: 700;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                }
+
+                .footer-eoe {
+                    margin-top: 12px;
+                    color: #8a90a4;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 0.08em;
+                }
+
+                .bottom-band {
+                    height: 6px;
+                    background: linear-gradient(90deg, var(--gold), var(--indigo) 40%, var(--navy));
+                }
+
+                /* ---------- print ---------- */
+                @page { size: A4; margin: 10mm; }
 
                 @media print {
-
-                    html,
-                    body {
-                        width: 100%;
-
-                        margin: 0;
-
-                        padding: 0;
-
-                        background: #ffffff;
-                    }
-
-                    .receipt-page {
-                        max-width: none;
-
-                        padding: 0;
-
-                        margin: 0;
-                    }
-
-                    .items-table {
-                        page-break-inside: auto;
-                    }
-
-                    .items-table tr {
-                        page-break-inside: avoid;
-                    }
-
-                    .summary-box {
-                        page-break-inside: avoid;
-                    }
-
-                    .receipt-footer {
-                        page-break-inside: avoid;
-                    }
+                    html, body { width: 100%; margin: 0; padding: 0; background: #ffffff; }
+                    .receipt-page { max-width: none; margin: 0; }
+                    .items-table tr,
+                    .summary-box,
+                    .words-box,
+                    .sign-row,
+                    .payment-status,
+                    .receipt-footer { page-break-inside: avoid; }
                 }
-
             </style>
-
         </head>
 
         <body>
-
             <main class="receipt-page">
 
-                <!-- BRAND HEADER -->
+                <div class="top-band"></div>
 
-                <section class="brand">
+                <div class="receipt-inner">
 
-                    <div class="brand-left">
-
-                        <div class="brand-logo-wrap">
-
-                            <img
-                                class="brand-logo"
-                                src="${logos}"
-                                alt="AKR Communications"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <h1 class="brand-name">
-                                AKR Communications
-                            </h1>
-
-                            <div class="brand-subtitle">
-                                Digital Services &amp; Printing
+                    <!-- BRAND HEADER -->
+                    <section class="brand">
+                        <div class="brand-left">
+                            <div class="brand-logo-wrap">
+                                <img class="brand-logo" src="${logos}" alt="AKR Communications" />
                             </div>
 
+                            <div>
+                                <h1 class="brand-name">AKR Communications</h1>
+                                <div class="brand-subtitle">Digital Services &amp; Printing</div>
+                            </div>
                         </div>
 
-                    </div>
+                        <div class="receipt-label">
+                            <span>Original for Customer</span>
+                            <strong>Cash Bill</strong>
+                            <small>${dateStr} &middot; ${timeStr}</small>
+                        </div>
+                    </section>
 
+                    <hr class="divider" />
 
-                    <div class="receipt-label">
-
-                        <span>Official</span>
-
-                        <strong>
-                            SALES RECEIPT
-                        </strong>
-
-                    </div>
-
-                </section>
-
-
-                <!-- META -->
-
-                <section class="receipt-meta">
-
-                    <div class="meta-card customer-card">
-
-                        <span class="meta-label">
-                            Customer Name
-                        </span>
-
-                        <span class="meta-value">
-                            ${escapeHtml(customerLabel)}
-                        </span>
-
-                    </div>
-
-
-                    <div class="meta-card">
-
-                        <span class="meta-label">
-                            Date
-                        </span>
-
-                        <span class="meta-value">
-                            ${dateStr}
-                        </span>
-
-                    </div>
-
-
-                    <div class="meta-card">
-
-                        <span class="meta-label">
-                            Time
-                        </span>
-
-                        <span class="meta-value">
-                            ${timeStr}
-                        </span>
-
-                    </div>
-
-
-                    <div class="meta-card">
-
-                        <span class="meta-label">
-                            Attendant
-                        </span>
-
-                        <span class="meta-value">
-                            ${escapeHtml(attendantName)}
-                        </span>
-
-                    </div>
-
-                </section>
-
-
-                <!-- ITEMS -->
-
-                <section class="items-section">
-
-                    <div class="section-heading">
-
-                        <strong>
-                            Transaction Details
-                        </strong>
-
-                        <span>
-                            ${itemCount} item${itemCount !== 1 ? "s" : ""}
-                        </span>
-
-                    </div>
-
-
-                    <table class="items-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>#</th>
-
-                                <th>
-                                    Item / Service
-                                </th>
-
-                                <th class="num">
-                                    Qty
-                                </th>
-
-                                <th class="num">
-                                    Rate
-                                </th>
-
-                                <th class="num">
-                                    Amount
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            ${rowsHtml}
-
-                        </tbody>
-
-                    </table>
-
-                </section>
-
-
-                <!-- SUMMARY -->
-
-                <section class="summary-area">
-
-                    <div class="summary-box">
-
-                        <div class="summary-row">
-
-                            <span>
-                                Total Items
-                            </span>
-
-                            <strong>
-                                ${itemCount}
-                            </strong>
-
+                    <!-- META -->
+                    <section class="receipt-meta">
+                        <div class="meta-card">
+                            <span class="meta-label">Billed To</span>
+                            <span class="meta-value">${escapeHtml(customerLabel)}</span>
                         </div>
 
-
-                        <div class="summary-row">
-
-                            <span>
-                                Payment Method
-                            </span>
-
-                            <strong>
-                                ${paymentLabel}
-                            </strong>
-
+                        <div class="meta-card">
+                            <span class="meta-label">Date</span>
+                            <span class="meta-value">${dateStr}</span>
                         </div>
 
-
-                        <div class="summary-total">
-
-                            <span>
-                                GRAND TOTAL
-                            </span>
-
-                            <strong>
-                                ₹${Number(total).toLocaleString("en-IN")}
-                            </strong>
-
+                        <div class="meta-card">
+                            <span class="meta-label">Time</span>
+                            <span class="meta-value">${timeStr}</span>
                         </div>
 
+                        <div class="meta-card">
+                            <span class="meta-label">Attendant</span>
+                            <span class="meta-value">${escapeHtml(attendantName)}</span>
+                        </div>
+                    </section>
+
+                    <!-- ITEMS -->
+                    <section class="items-section">
+                        <div class="section-heading">
+                            <strong>Transaction Details</strong>
+                            <span>${itemCount} item${itemCount !== 1 ? "s" : ""}</span>
+                        </div>
+
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Sl.</th>
+                                    <th>Item / Service</th>
+                                    <th class="num">Qty</th>
+                                    <th class="num">Rate</th>
+                                    <th class="num">Amount</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <!-- SUMMARY -->
+                    <section class="summary-area">
+                        <div class="words-box">
+                            <span class="words-label">Amount in Words</span>
+                            <strong class="words-value">${totalInWords}</strong>
+                            <span class="words-note">Paid by ${paymentLabel}</span>
+                        </div>
+
+                        <div class="summary-box">
+                            <div class="summary-row">
+                                <span>Total Items</span>
+                                <strong>${itemCount}</strong>
+                            </div>
+
+                            <div class="summary-row">
+                                <span>Payment Method</span>
+                                <strong>${paymentLabel}</strong>
+                            </div>
+
+                            <div class="summary-total">
+                                <span>GRAND TOTAL</span>
+                                <strong>₹${Number(total).toLocaleString("en-IN")}</strong>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- PAYMENT -->
+                    <div class="payment-status">
+                        <span class="payment-dot"></span>
+                        Payment received &middot; ${paymentLabel}
                     </div>
 
-                </section>
+                    <!-- SIGNATURES -->
+                    <section class="sign-row">
+                        <div class="sign-box">
+                            <div class="sign-line"></div>
+                            <span>Customer Signature</span>
+                        </div>
 
+                        <div class="sign-box right">
+                            <small>For AKR Communications</small>
+                            <div class="sign-line"></div>
+                            <span>Authorised Signatory</span>
+                        </div>
+                    </section>
 
-                <!-- PAYMENT -->
+                    <!-- FOOTER -->
+                    <footer class="receipt-footer">
+                        <div class="footer-thanks">Thank you for choosing AKR Communications</div>
 
-                <div class="payment-status">
+                        <div class="footer-sub">
+                            We appreciate your business.<br />
+                            Please retain this receipt for your records.
+                        </div>
 
-                    <span class="payment-dot"></span>
+                        <div class="footer-brand">AKR Communications</div>
 
-                    Payment received · ${paymentLabel}
+                        <div class="footer-eoe">E. &amp; O.E. &middot; Thank you, visit again</div>
+                    </footer>
 
                 </div>
 
-
-                <!-- FOOTER -->
-
-                <footer class="receipt-footer">
-
-                    <div class="footer-thanks">
-                        Thank you for choosing AKR Communications
-                    </div>
-
-                    <div class="footer-sub">
-                        We appreciate your business.<br />
-                        Please retain this receipt for your records.
-                    </div>
-
-                    <div class="footer-brand">
-                        AKR Communications
-                    </div>
-
-                </footer>
+                <div class="bottom-band"></div>
 
             </main>
-
         </body>
-
         </html>
     `;
 
@@ -1587,14 +1507,13 @@ export default function NewTransaction() {
                                 </button>)}
                                 {!filteredServices.length && <div className="nt-empty-services">No services found.</div>}
                             </div>}
-                            <div className="nt-popular"><div className="nt-popular-title"><Flame /><strong>Popular Services</strong></div><div className="nt-popular-list">{availableServices.slice(0, 6).map((s) => <button type="button" key={s.id} onClick={() => add(s)}>{s.name}</button>)}</div></div>
                         </section>
                     </div>
                     <aside className="nt-bill-panel">
                         <div className="nt-bill-heading"><div className="nt-section-heading"><span className="nt-heading-icon"><ShoppingCart /></span><h2>Current Bill</h2></div><button type="button" className="nt-clear-all" disabled={!cart.length} onClick={() => setCart([])}><Trash2 /> Clear All</button></div>
                         <div className="nt-bill-items">{cart.map((item) => <div className="nt-bill-row" key={item.id}>
                             <div className="nt-bill-item-art">{serviceEmoji(item)}</div><div className="nt-bill-item-info"><strong>{item.name}</strong><span>₹{Number(item.sellingPrice || 0).toLocaleString("en-IN")} / {item.unit || "unit"}</span></div>
-                            <div className="nt-qty-control"><button type="button" onClick={() => qty(item.id, -1)}><Minus /></button><span>{item.quantity}</span><button type="button" onClick={() => qty(item.id, 1)}><Plus /></button></div>
+                            <div className="nt-qty-control"><button type="button" onClick={() => qty(item.id, -1)}><Minus /></button><QtyInput value={item.quantity} onChange={(value) => setQty(item.id, value)} /><button type="button" onClick={() => qty(item.id, 1)}><Plus /></button></div>
                             <strong className="nt-line-total">₹{(Number(item.sellingPrice || 0) * item.quantity).toLocaleString("en-IN")}</strong><button type="button" className="nt-remove-item" onClick={() => removeItem(item.id)}><Trash2 /></button>
                         </div>)}{!cart.length && <div className="nt-empty-cart"><ShoppingCart /><strong>Your bill is empty</strong><span>Add a service to begin</span></div>}</div>
                         <section className="nt-customer-panel nt-customer-panel-bill">
