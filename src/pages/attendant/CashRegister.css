@@ -8079,3 +8079,483 @@
 .cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .given strong {
     color: var(--dt-minus) !important;
 }
+.cash-credit-history-card {
+    margin-bottom: 18px;
+}
+
+.cash-credit-history-card .cash-history-head {
+    margin-bottom: 14px;
+}
+
+/* History detail footer now has 4 values + Close button */
+.cash-register-page .cash-history-detail-footer {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto !important;
+}
+
+@media (max-width: 900px) {
+    .cash-register-page .cash-history-detail-footer {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .cash-register-page .cash-history-detail-footer {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* =========================================================
+   CREDIT / LOAN HISTORY TABLE (all days)
+   Row colour goes red -> green as the credit gets paid.
+   ========================================================= */
+
+.cash-register-page .cash-credit-table td,
+.cash-register-page .cash-credit-table tbody td {
+    background: hsl(var(--credit-hue, 0) 85% 50% / 0.12) !important;
+}
+
+.cash-register-page .cash-credit-table tbody tr:hover td {
+    background: hsl(var(--credit-hue, 0) 85% 50% / 0.2) !important;
+}
+
+.cash-register-page .cash-credit-table tbody td:first-child {
+    box-shadow: inset 5px 0 0 hsl(var(--credit-hue, 0) 70% 45%);
+}
+
+.cash-register-page .cash-credit-table .cash-credit-paid-cell strong {
+    color: hsl(145 63% 36%) !important;
+}
+
+.cash-register-page .cash-credit-table .cash-credit-due-cell strong {
+    color: hsl(var(--credit-hue, 0) 70% 42%) !important;
+}
+
+.cash-register-page .cash-credit-table th:nth-child(n+3),
+.cash-register-page .cash-credit-table td:nth-child(n+3) {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.cash-register-page .cash-credit-table td small {
+    display: block;
+    margin-top: 2px;
+}
+
+.cash-register-page .cash-credit-table {
+    min-width: 640px;
+}
+
+/* ============================================================
+   PREMIUM LAYER (fresh look) - polish only, reads the same
+   light / dark tokens, so both modes stay consistent.
+   ============================================================ */
+
+@keyframes crPremiumRise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes crPremiumSheen {
+    from { transform: translateX(-120%); }
+    to   { transform: translateX(120%); }
+}
+
+/* ---------- page + typography ---------- */
+.cash-register-page.cash-register-page.cash-register-page {
+    font-family: "Inter", "SF Pro Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--t-page) !important;
+    letter-spacing: -0.005em;
+}
+
+.cash-register-page.cash-register-page.cash-register-page strong,
+.cash-register-page.cash-register-page.cash-register-page b {
+    font-variant-numeric: tabular-nums;
+}
+
+.cash-register-page.cash-register-page.cash-register-page ::selection {
+    background: var(--t-gold-bg);
+    color: var(--t-gold-text);
+}
+
+/* ---------- header ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-page-header {
+    padding: 22px 26px !important;
+    border: 1px solid var(--cr-border) !important;
+    border-radius: 26px !important;
+    background:
+        linear-gradient(135deg, var(--t-gold-bg-2), transparent 55%),
+        var(--t-surface) !important;
+    box-shadow: var(--cr-shadow-2) !important;
+    position: relative;
+    overflow: hidden;
+    animation: crPremiumRise .45s ease both;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-page-header::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--t-accent-grad);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-title-icon {
+    border-radius: 18px !important;
+    box-shadow: 0 10px 24px var(--t-glow), inset 0 1px 0 rgba(255, 255, 255, .35) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 11px;
+    border: 1px solid var(--t-gold-border);
+    border-radius: 999px;
+    background: var(--t-gold-bg);
+    color: var(--t-gold-text) !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .14em !important;
+    text-transform: uppercase;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-page-header h1 {
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+}
+
+/* ---------- section labels ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-section-label:not(.light) {
+    color: var(--t-gold-text) !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .16em !important;
+}
+
+/* ---------- cards ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-card {
+    position: relative;
+    border-radius: 24px !important;
+    background:
+        linear-gradient(180deg, var(--t-surface), var(--t-surface-2)) !important;
+    border: 1px solid var(--cr-border) !important;
+    box-shadow: var(--cr-shadow-1) !important;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    animation: crPremiumRise .5s ease both;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel:hover {
+    transform: translateY(-3px);
+    border-color: var(--t-gold-border) !important;
+    box-shadow: var(--cr-shadow-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card::before,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0 22px auto 22px;
+    height: 2px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(90deg, transparent, var(--cr-primary), transparent);
+    opacity: .75;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid > :nth-child(2) { animation-delay: .05s; }
+.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid > :nth-child(3) { animation-delay: .10s; }
+.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid > :nth-child(4) { animation-delay: .15s; }
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card > strong {
+    font-weight: 800 !important;
+    letter-spacing: -0.035em !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon,
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-icon {
+    border-radius: 14px !important;
+    box-shadow: 0 6px 16px var(--t-glow);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total {
+    border-radius: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-head h3,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-head h2 {
+    font-weight: 800 !important;
+    letter-spacing: -0.025em !important;
+}
+
+/* ---------- day total hero ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total {
+    border-radius: 28px !important;
+    position: relative;
+    overflow: hidden;
+    animation: crPremiumRise .55s ease both;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .07), transparent);
+    animation: crPremiumSheen 5.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines > div,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines > .cash-credit-split > div {
+    border-radius: 16px !important;
+    transition: transform .2s ease, background .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines > div:hover {
+    transform: translateY(-2px);
+}
+
+/* ---------- inputs ---------- */
+.cash-register-page.cash-register-page.cash-register-page input[type="text"],
+.cash-register-page.cash-register-page.cash-register-page input[type="number"],
+.cash-register-page.cash-register-page.cash-register-page input[type="date"],
+.cash-register-page.cash-register-page.cash-register-page input[type="search"],
+.cash-register-page.cash-register-page.cash-register-page select,
+.cash-register-page.cash-register-page.cash-register-page textarea {
+    border-radius: 14px !important;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page input:focus,
+.cash-register-page.cash-register-page.cash-register-page select:focus,
+.cash-register-page.cash-register-page.cash-register-page textarea:focus {
+    outline: none !important;
+    border-color: var(--cr-primary) !important;
+    box-shadow: 0 0 0 4px var(--t-focus) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money,
+.cash-register-page.cash-register-page.cash-register-page .cash-search,
+.cash-register-page.cash-register-page.cash-register-page .cash-filter {
+    border-radius: 14px !important;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money:focus-within,
+.cash-register-page.cash-register-page.cash-register-page .cash-search:focus-within {
+    border-color: var(--cr-primary) !important;
+    box-shadow: 0 0 0 4px var(--t-focus);
+}
+
+/* ---------- list rows (denominations, digital, expenses, credit) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item {
+    border-radius: 16px !important;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item:hover {
+    transform: translateX(3px);
+    border-color: var(--t-gold-border) !important;
+    box-shadow: var(--cr-shadow-1);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-btn {
+    border-radius: 12px !important;
+    transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-btn:active {
+    transform: scale(.92);
+}
+
+/* ---------- buttons ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-add,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-action {
+    border-radius: 14px !important;
+    font-weight: 750 !important;
+    letter-spacing: .01em;
+    box-shadow: 0 10px 22px var(--t-glow), inset 0 1px 0 rgba(255, 255, 255, .28);
+    transition: transform .18s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-add:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-main-action:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+    box-shadow: 0 16px 30px var(--t-glow), inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn:active:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn:active:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-add:active:not(:disabled) {
+    transform: translateY(0) scale(.98);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-export-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-cancel-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-btn {
+    border-radius: 13px !important;
+    transition: transform .18s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-export-btn:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-cancel-btn:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: var(--cr-primary) !important;
+    box-shadow: var(--cr-shadow-1);
+}
+
+.cash-register-page.cash-register-page.cash-register-page button:focus-visible,
+.cash-register-page.cash-register-page.cash-register-page [role="button"]:focus-visible,
+.cash-register-page.cash-register-page.cash-register-page tr:focus-visible {
+    outline: 2px solid var(--cr-primary);
+    outline-offset: 2px;
+}
+
+/* ---------- status pill ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-status-pill,
+.cash-register-page.cash-register-page.cash-register-page .cash-table-status {
+    border-radius: 999px !important;
+    font-weight: 800 !important;
+    letter-spacing: .08em;
+}
+
+/* ---------- tables ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-table-wrap {
+    border-radius: 20px !important;
+    border: 1px solid var(--cr-border) !important;
+    background: var(--t-surface) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table thead th {
+    background: var(--t-surface-3) !important;
+    color: var(--t-gold-text) !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .13em !important;
+    text-transform: uppercase;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table:not(.cash-credit-table) tbody tr {
+    transition: background .2s ease, transform .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table:not(.cash-credit-table) tbody tr:nth-child(even) td {
+    background: var(--t-surface-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-table tbody tr {
+    transition: transform .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-table tbody tr:hover {
+    transform: scale(1.003);
+}
+
+/* ---------- modals ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-overlay {
+    background: var(--t-overlay) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal {
+    border-radius: 28px !important;
+    border: 1px solid var(--cr-border) !important;
+    box-shadow: var(--cr-shadow-3) !important;
+    animation: crPremiumRise .3s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-head {
+    background: linear-gradient(180deg, var(--t-gold-bg-2), transparent) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-close {
+    border-radius: 12px !important;
+    transition: transform .2s ease, background .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-close:hover {
+    transform: rotate(90deg);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-export-option {
+    border-radius: 20px !important;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-export-option:hover:not(:disabled) {
+    transform: translateY(-4px);
+    box-shadow: var(--cr-shadow-2);
+    border-color: var(--cr-primary) !important;
+}
+
+/* ---------- credit popup ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-summary > div {
+    border-radius: 16px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-progress {
+    height: 10px !important;
+    border-radius: 999px !important;
+    overflow: hidden;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-progress i {
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--cr-red), var(--cr-orange), var(--cr-green)) !important;
+    transition: width .6s cubic-bezier(.2, .8, .2, 1);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-history-row {
+    border-radius: 14px !important;
+}
+
+/* ---------- scrollbars ---------- */
+.cash-register-page.cash-register-page.cash-register-page *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.cash-register-page.cash-register-page.cash-register-page *::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: var(--cr-border-2);
+    background-clip: padding-box;
+}
+
+.cash-register-page.cash-register-page.cash-register-page *::-webkit-scrollbar-thumb:hover {
+    background: var(--cr-primary);
+    background-clip: padding-box;
+}
+
+.cash-register-page.cash-register-page.cash-register-page *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .cash-register-page.cash-register-page.cash-register-page *,
+    .cash-register-page.cash-register-page.cash-register-page *::before,
+    .cash-register-page.cash-register-page.cash-register-page *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}

@@ -1563,8 +1563,6 @@ export default function NewTransaction() {
     const paymentOptions = [
         { id: "cash", label: "Cash", Icon: Banknote },
         { id: "upi", label: "UPI", Icon: Zap },
-        { id: "card", label: "Card", Icon: CreditCard },
-        { id: "wallet", label: "Wallet", Icon: Wallet },
     ];
 
     return (
