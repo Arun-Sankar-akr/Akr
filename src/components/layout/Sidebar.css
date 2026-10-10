@@ -398,9 +398,8 @@
    ========================================================= */
 
 .theme-toggle {
-    width: 40px;
+    width: 39px;
     min-height: 38px;
-    margin-bottom: 8px;
 
     display: flex;
     align-items: center;

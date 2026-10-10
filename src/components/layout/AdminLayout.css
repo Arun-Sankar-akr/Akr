@@ -21,9 +21,11 @@ body {
 .app-shell {
     position: relative;
 
-    width: 90%;
-    left: 5%;
+    width: 100%;
+    /* left: 5%; */
     min-height: 100vh;
+
+    padding: 10px;
 
     display: flex;
 

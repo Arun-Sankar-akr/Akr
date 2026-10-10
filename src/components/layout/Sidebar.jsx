@@ -60,7 +60,7 @@ export default function Sidebar({ open, onClose, theme = "light", onToggleTheme 
             : "Attendant";
 
     const avatarLetter = displayName.charAt(0).toUpperCase();
-    const isDark = theme === "dark";
+    // const isDark = theme === "dark";
 
     return (
         <aside
@@ -123,16 +123,7 @@ export default function Sidebar({ open, onClose, theme = "light", onToggleTheme 
 
             {/* THEME / USER / LOGOUT */}
             <div className="side-bottom">
-                <button
-                    type="button"
-                    className="theme-toggle"
-                    onClick={onToggleTheme}
-                    aria-pressed={isDark}
-                    aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                >
-                    {isDark ? <Sun size={15} /> : <Moon size={15} />}
-                    <span>{isDark ? "Light mode" : "Dark mode"}</span>
-                </button>
+                
 
                 <div className="user-mini">
                     <div className="avatar" aria-hidden="true">

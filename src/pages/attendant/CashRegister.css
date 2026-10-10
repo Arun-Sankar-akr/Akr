@@ -3220,6 +3220,8 @@
 
     gap: 7px;
 
+    margin-top: 20px;
+    
     max-height: 260px;
 
     overflow-y: auto;
@@ -4836,7 +4838,7 @@
 .cash-digital-row.disabled {
     min-height: 0 !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: stretch !important;
     gap: 12px !important;
     padding: 14px !important;
@@ -4895,9 +4897,10 @@
 }
 
 .cash-digital-input {
-    width: 100%;
+    width: 150px;
     min-width: 0 !important;
-    height: 44px !important;
+    height: 40px !important;
+    margin-left: 32px;
     padding: 0 12px !important;
     gap: 6px !important;
     border: 1px solid #e1e6f0 !important;
@@ -5234,9 +5237,6 @@
 
 .cash-title-icon {
     background: linear-gradient(145deg, #1b2547, #0b1226);
-    box-shadow:
-        0 14px 28px rgba(11, 18, 38, .22),
-        inset 0 1px 0 rgba(255, 255, 255, .14);
 }
 
 .cash-title-wrap h1 {
@@ -6052,6 +6052,12 @@
     --cr-text-2: #62666f;
     --cr-text-3: #8b9099;
     --cr-bg: #f6f7f9;
+    --cr-ink: #1b1d22;
+    --cr-gold: #b8872b;
+    --cr-ring: 0 0 0 4px rgba(184, 135, 43, .14);
+    --cr-card-border: 1px solid #e7e8ec;
+    --cr-card-shadow: 0 1px 2px rgba(22, 25, 32, .04), 0 10px 30px rgba(22, 25, 32, .06);
+    --cr-card-shadow-hover: 0 2px 4px rgba(22, 25, 32, .05), 0 18px 44px rgba(22, 25, 32, .10);
     --cr-white: #fff;
     --cr-border: #e7e8ec;
     --cr-border-2: #d9dbe1;
@@ -6453,194 +6459,6 @@
     background: #f8eac9 !important;
 }
 
-/* Black + gold theme. Add className="dark-mode" or data-theme="dark"
-   to .cash-register-page from the existing theme toggle. */
-.cash-register-page.dark-mode,
-.cash-register-page[data-theme="dark"],
-.dark .cash-register-page,
-[data-theme="dark"] .cash-register-page {
-    --cr-primary: #e0b85c;
-    --cr-primary-dark: #f0ca78;
-    --cr-primary-light: #302718;
-    --cr-text: #f3f0e8;
-    --cr-text-2: #c0b9a9;
-    --cr-text-3: #918979;
-    --cr-bg: #0b0b0c;
-    --cr-white: #151516;
-    --cr-border: #303033;
-    --cr-border-2: #414145;
-    --cr-shadow-1: 0 5px 18px rgba(0, 0, 0, .2);
-    --cr-shadow-2: 0 14px 36px rgba(0, 0, 0, .28);
-    --cr-shadow-3: 0 28px 80px rgba(0, 0, 0, .5);
-    color: var(--cr-text) !important;
-    background: radial-gradient(circle at 90% 0%, rgba(201, 157, 65, .08), transparent 28%), #0b0b0c !important;
-}
-
-.cash-register-page.dark-mode .cash-modal,
-.cash-register-page[data-theme="dark"] .cash-modal,
-.dark .cash-register-page .cash-modal,
-[data-theme="dark"] .cash-register-page .cash-modal,
-.cash-register-page.dark-mode .cash-history-detail-modal,
-.cash-register-page[data-theme="dark"] .cash-history-detail-modal,
-.dark .cash-register-page .cash-history-detail-modal,
-[data-theme="dark"] .cash-register-page .cash-history-detail-modal {
-    border-color: #38342b !important;
-    background: #141414 !important;
-    color: #f1eee6 !important;
-}
-
-.cash-register-page.dark-mode .cash-modal-head,
-.cash-register-page[data-theme="dark"] .cash-modal-head,
-.dark .cash-register-page .cash-modal-head,
-[data-theme="dark"] .cash-register-page .cash-modal-head,
-.cash-register-page.dark-mode .cash-modal-actions,
-.cash-register-page[data-theme="dark"] .cash-modal-actions,
-.dark .cash-register-page .cash-modal-actions,
-[data-theme="dark"] .cash-register-page .cash-modal-actions {
-    border-color: #34312a !important;
-    background: rgba(20, 20, 20, .96) !important;
-}
-
-.cash-register-page.dark-mode .cash-modal-title strong,
-.cash-register-page[data-theme="dark"] .cash-modal-title strong,
-.dark .cash-register-page .cash-modal-title strong,
-[data-theme="dark"] .cash-register-page .cash-modal-title strong,
-.cash-register-page.dark-mode .cash-history-detail-summary strong,
-.cash-register-page[data-theme="dark"] .cash-history-detail-summary strong,
-.dark .cash-register-page .cash-history-detail-summary strong,
-[data-theme="dark"] .cash-register-page .cash-history-detail-summary strong,
-.cash-register-page.dark-mode .cash-history-breakdown-head h3,
-.cash-register-page[data-theme="dark"] .cash-history-breakdown-head h3,
-.dark .cash-register-page .cash-history-breakdown-head h3,
-[data-theme="dark"] .cash-history-breakdown-head h3,
-.cash-register-page.dark-mode .cash-history-detail-footer strong,
-.cash-register-page[data-theme="dark"] .cash-history-detail-footer strong,
-.dark .cash-register-page .cash-history-detail-footer strong,
-[data-theme="dark"] .cash-history-detail-footer strong {
-    color: #f2eee5 !important;
-}
-
-.cash-register-page.dark-mode .cash-modal-title span,
-.cash-register-page[data-theme="dark"] .cash-modal-title span,
-.dark .cash-register-page .cash-modal-title span,
-[data-theme="dark"] .cash-modal-title span,
-.cash-register-page.dark-mode .cash-history-breakdown-head p,
-.cash-register-page[data-theme="dark"] .cash-history-breakdown-head p,
-.dark .cash-register-page .cash-history-breakdown-head p,
-[data-theme="dark"] .cash-history-breakdown-head p {
-    color: #aaa394 !important;
-}
-
-.cash-register-page.dark-mode .cash-entry-date,
-.cash-register-page[data-theme="dark"] .cash-entry-date,
-.dark .cash-register-page .cash-entry-date,
-[data-theme="dark"] .cash-register-page .cash-entry-date,
-.cash-register-page.dark-mode .cash-modal-block,
-.cash-register-page[data-theme="dark"] .cash-modal-block,
-.dark .cash-register-page .cash-modal-block,
-[data-theme="dark"] .cash-register-page .cash-modal-block,
-.cash-register-page.dark-mode .cash-history-detail-summary>div,
-.cash-register-page[data-theme="dark"] .cash-history-detail-summary>div,
-.dark .cash-register-page .cash-history-detail-summary>div,
-[data-theme="dark"] .cash-history-detail-summary>div,
-.cash-register-page.dark-mode .cash-history-breakdown-card,
-.cash-register-page[data-theme="dark"] .cash-history-breakdown-card,
-.dark .cash-register-page .cash-history-breakdown-card,
-[data-theme="dark"] .cash-history-breakdown-card {
-    border-color: #343434 !important;
-    background: #1b1b1c !important;
-}
-
-.cash-register-page.dark-mode .cash-entry-date label,
-.cash-register-page[data-theme="dark"] .cash-entry-date label,
-.dark .cash-register-page .cash-entry-date label,
-[data-theme="dark"] .cash-register-page .cash-entry-date label,
-.cash-register-page.dark-mode .cash-history-denomination-right span,
-.cash-register-page[data-theme="dark"] .cash-history-denomination-right span,
-.dark .cash-register-page .cash-history-denomination-right span,
-[data-theme="dark"] .cash-history-denomination-right span {
-    color: #eee9de !important;
-}
-
-.cash-register-page.dark-mode .cash-entry-date input,
-.cash-register-page[data-theme="dark"] .cash-entry-date input,
-.dark .cash-register-page .cash-entry-date input,
-[data-theme="dark"] .cash-register-page .cash-entry-date input {
-    border-color: #45413a !important;
-    background: #101011 !important;
-    color: #f5f0e5 !important;
-    color-scheme: dark;
-}
-
-.cash-register-page.dark-mode .cash-history-denomination,
-.cash-register-page[data-theme="dark"] .cash-history-denomination,
-.dark .cash-register-page .cash-history-denomination,
-[data-theme="dark"] .cash-history-denomination {
-    border-color: #343434 !important;
-    background: #151516 !important;
-}
-
-.cash-register-page.dark-mode .cash-history-daytotal,
-.cash-register-page[data-theme="dark"] .cash-history-daytotal,
-.dark .cash-register-page .cash-history-daytotal,
-[data-theme="dark"] .cash-history-daytotal,
-.cash-register-page.dark-mode .cash-modal-grand,
-.cash-register-page[data-theme="dark"] .cash-modal-grand,
-.dark .cash-register-page .cash-modal-grand,
-[data-theme="dark"] .cash-modal-grand {
-    border-color: #665126 !important;
-    background: linear-gradient(135deg, #292216, #1d1a14) !important;
-}
-
-.cash-register-page.dark-mode .cash-history-daytotal span,
-.cash-register-page[data-theme="dark"] .cash-history-daytotal span,
-.dark .cash-register-page .cash-history-daytotal span,
-[data-theme="dark"] .cash-history-daytotal span,
-.cash-register-page.dark-mode .cash-modal-grand span,
-.cash-register-page[data-theme="dark"] .cash-modal-grand span,
-.dark .cash-register-page .cash-modal-grand span,
-[data-theme="dark"] .cash-modal-grand span {
-    color: #c6b17f !important;
-}
-
-.cash-register-page.dark-mode .cash-history-daytotal strong,
-.cash-register-page[data-theme="dark"] .cash-history-daytotal strong,
-.dark .cash-register-page .cash-history-daytotal strong,
-[data-theme="dark"] .cash-history-daytotal strong,
-.cash-register-page.dark-mode .cash-modal-grand strong,
-.cash-register-page[data-theme="dark"] .cash-modal-grand strong,
-.dark .cash-register-page .cash-modal-grand strong,
-[data-theme="dark"] .cash-modal-grand strong {
-    color: #f3d58b !important;
-}
-
-.cash-register-page.dark-mode .cash-history-detail-footer,
-.cash-register-page[data-theme="dark"] .cash-history-detail-footer,
-.dark .cash-register-page .cash-history-detail-footer,
-[data-theme="dark"] .cash-history-detail-footer {
-    border-color: #343434 !important;
-    background: #171718 !important;
-}
-
-.cash-register-page.dark-mode .cash-history-detail-footer span,
-.cash-register-page[data-theme="dark"] .cash-history-detail-footer span,
-.dark .cash-register-page .cash-history-detail-footer span,
-[data-theme="dark"] .cash-history-detail-footer span {
-    color: #aaa394 !important;
-}
-
-.cash-register-page.dark-mode .cash-view-btn,
-.cash-register-page[data-theme="dark"] .cash-view-btn,
-.dark .cash-register-page .cash-view-btn,
-[data-theme="dark"] .cash-view-btn,
-.cash-register-page.dark-mode .cash-export-btn,
-.cash-register-page[data-theme="dark"] .cash-export-btn,
-.dark .cash-register-page .cash-export-btn,
-[data-theme="dark"] .cash-export-btn {
-    border-color: #5a4827 !important;
-    background: #292216 !important;
-    color: #e7c777 !important;
-}
 
 @media (max-width: 720px) {
     .cash-register-page .cash-history-detail-summary {
@@ -6726,360 +6544,1538 @@
     }
 }
 
-/* =========================================================
-   FINAL CONTRAST FIX — dashboard + opening/closing modal
-   Dark mode uses readable ivory text and gold accents.
-   ========================================================= */
-.cash-register-page.dark-mode,
-.cash-register-page[data-theme="dark"],
+/* ============================================================
+   CASH REGISTER — UNIFIED LIGHT / DARK THEME (FINAL LAYER)
+   - One set of tokens per mode, set by data-theme="light|dark"
+     on .cash-register-page (toggled from the header button).
+   - Every component below reads tokens only, so both modes are
+     styled identically in structure.
+   - Palette kept from the existing design: ivory/gold primary,
+     blue / green / orange / red semantic accents.
+   ============================================================ */
+
+/* ---------- LIGHT TOKENS (default) ---------- */
+.cash-register-page,
+.cash-register-page[data-theme="light"] {
+    color-scheme: light;
+
+    --cr-primary: #b8872b;
+    --cr-primary-dark: #8f6518;
+    --cr-primary-light: #fff5dc;
+
+    --cr-blue: #2f80ed;
+    --cr-blue-light: #edf5ff;
+    --cr-green: #159a72;
+    --cr-green-light: #eaf8f3;
+    --cr-orange: #e79525;
+    --cr-orange-light: #fff6e7;
+    --cr-red: #df5a62;
+    --cr-red-light: #fff0f1;
+
+    --cr-text: #202124;
+    --cr-text-2: #62666f;
+    --cr-text-3: #8b9099;
+    --cr-bg: #f6f7f9;
+    --cr-white: #ffffff;
+    --cr-border: #e7e8ec;
+    --cr-border-2: #d9dbe1;
+
+    --cr-shadow-1: 0 5px 18px rgba(22, 25, 32, .045);
+    --cr-shadow-2: 0 14px 36px rgba(22, 25, 32, .075);
+    --cr-shadow-3: 0 28px 80px rgba(10, 10, 10, .18);
+
+    --t-page: radial-gradient(circle at 12% -10%, rgba(184, 135, 43, .10), transparent 30%),
+        radial-gradient(circle at 100% 0%, rgba(47, 128, 237, .05), transparent 26%),
+        #f6f7f9;
+    --t-surface: #ffffff;
+    --t-surface-2: #fafafa;
+    --t-surface-3: #f1f2f5;
+    --t-hover: #f7f7f9;
+    --t-overlay: rgba(15, 17, 21, .62);
+    --t-glow: rgba(184, 135, 43, .10);
+
+    --t-gold-bg: #fff5dc;
+    --t-gold-bg-2: #fff8e8;
+    --t-gold-border: #ead8ad;
+    --t-gold-text: #8f6518;
+    --t-blue-bg: #edf5ff;
+    --t-blue-border: #d3e4ff;
+    --t-blue-text: #2563eb;
+    --t-green-bg: #eaf8f3;
+    --t-green-border: #cdeedf;
+    --t-green-text: #128255;
+    --t-orange-bg: #fff6e7;
+    --t-orange-border: #f5e2bf;
+    --t-orange-text: #b45309;
+    --t-red-bg: #fff0f1;
+    --t-red-border: #ffd5d8;
+    --t-red-text: #d33e3e;
+
+    --t-accent-grad: linear-gradient(135deg, #d6ad5b, #b8872b);
+    --t-accent-border: #a97920;
+    --t-on-accent: #17130b;
+    --t-red-grad: linear-gradient(135deg, #ea6a72, #d84a53);
+    --t-hero: linear-gradient(135deg, #2a2413 0%, #16130b 60%, #0f0d08 100%);
+    --t-hero-shadow: 0 18px 45px rgba(30, 22, 5, .28);
+    --t-focus: rgba(184, 135, 43, .28);
+}
+
+/* ---------- DARK TOKENS (black + gold) ---------- */
 .dark .cash-register-page,
-[data-theme="dark"] .cash-register-page {
-    color: #f4f0e6 !important;
-}
-
-.cash-register-page.dark-mode h1,
-.cash-register-page.dark-mode h2,
-.cash-register-page.dark-mode h3,
-.cash-register-page.dark-mode h4,
-.cash-register-page.dark-mode p,
-.cash-register-page.dark-mode span,
-.cash-register-page.dark-mode label,
-.cash-register-page.dark-mode small,
-.cash-register-page.dark-mode strong,
-.cash-register-page.dark-mode div,
-.cash-register-page[data-theme="dark"] h1,
-.cash-register-page[data-theme="dark"] h2,
-.cash-register-page[data-theme="dark"] h3,
-.cash-register-page[data-theme="dark"] h4,
-.cash-register-page[data-theme="dark"] p,
-.cash-register-page[data-theme="dark"] span,
-.cash-register-page[data-theme="dark"] label,
-.cash-register-page[data-theme="dark"] small,
-.cash-register-page[data-theme="dark"] strong,
-.dark .cash-register-page h1,
-.dark .cash-register-page h2,
-.dark .cash-register-page h3,
-.dark .cash-register-page h4,
-.dark .cash-register-page p,
-.dark .cash-register-page span,
-.dark .cash-register-page label,
-.dark .cash-register-page small,
-.dark .cash-register-page strong,
-[data-theme="dark"] .cash-register-page h1,
-[data-theme="dark"] .cash-register-page h2,
-[data-theme="dark"] .cash-register-page h3,
-[data-theme="dark"] .cash-register-page h4,
-[data-theme="dark"] .cash-register-page p,
-[data-theme="dark"] .cash-register-page span,
-[data-theme="dark"] .cash-register-page label,
-[data-theme="dark"] .cash-register-page small,
-[data-theme="dark"] .cash-register-page strong {
-    color: #eee9df !important;
-}
-
-.cash-register-page.dark-mode .cash-eyebrow,
-.cash-register-page.dark-mode .cash-section-label,
-.cash-register-page.dark-mode .cash-entry-section-title,
-.cash-register-page.dark-mode .cash-history-kicker,
-.cash-register-page[data-theme="dark"] .cash-eyebrow,
-.cash-register-page[data-theme="dark"] .cash-section-label,
-.cash-register-page[data-theme="dark"] .cash-entry-section-title,
-.cash-register-page[data-theme="dark"] .cash-history-kicker,
-.dark .cash-register-page .cash-eyebrow,
-.dark .cash-register-page .cash-section-label,
-.dark .cash-register-page .cash-entry-section-title,
-.dark .cash-register-page .cash-history-kicker,
-[data-theme="dark"] .cash-register-page .cash-eyebrow,
-[data-theme="dark"] .cash-register-page .cash-section-label,
-[data-theme="dark"] .cash-register-page .cash-entry-section-title,
-[data-theme="dark"] .cash-register-page .cash-history-kicker {
-    color: #e7bf61 !important;
-}
-
-.cash-register-page.dark-mode .cash-modal,
-.cash-register-page.dark-mode .cash-history-detail-modal,
-.cash-register-page[data-theme="dark"] .cash-modal,
-.cash-register-page[data-theme="dark"] .cash-history-detail-modal,
-.dark .cash-register-page .cash-modal,
-.dark .cash-register-page .cash-history-detail-modal,
-[data-theme="dark"] .cash-modal,
-[data-theme="dark"] .cash-history-detail-modal {
-    color: #f2eee5 !important;
-    background: #171717 !important;
-    opacity: 1 !important;
-}
-
-.cash-register-page.dark-mode .cash-modal-block,
-.cash-register-page.dark-mode .cash-entry-date,
-.cash-register-page.dark-mode .cash-history-breakdown-card,
-.cash-register-page.dark-mode .cash-history-denomination,
-.cash-register-page.dark-mode .cash-history-detail-summary>div,
-.cash-register-page[data-theme="dark"] .cash-modal-block,
-.cash-register-page[data-theme="dark"] .cash-entry-date,
-.cash-register-page[data-theme="dark"] .cash-history-breakdown-card,
-.cash-register-page[data-theme="dark"] .cash-history-denomination,
-.cash-register-page[data-theme="dark"] .cash-history-detail-summary>div,
-.dark .cash-register-page .cash-modal-block,
-.dark .cash-register-page .cash-entry-date,
-.dark .cash-register-page .cash-history-breakdown-card,
-.dark .cash-register-page .cash-history-denomination,
-.dark .cash-register-page .cash-history-detail-summary>div,
-[data-theme="dark"] .cash-modal-block,
-[data-theme="dark"] .cash-entry-date,
-[data-theme="dark"] .cash-history-breakdown-card,
-[data-theme="dark"] .cash-history-denomination,
-[data-theme="dark"] .cash-history-detail-summary>div {
-    color: #eee9df !important;
-    background: #202020 !important;
-    border-color: #3c382f !important;
-}
-
-.cash-register-page.dark-mode .cash-modal-block p,
-.cash-register-page.dark-mode .cash-modal-block span,
-.cash-register-page.dark-mode .cash-modal-block label,
-.cash-register-page.dark-mode .cash-entry-date label,
-.cash-register-page.dark-mode .cash-history-breakdown-head p,
-.cash-register-page.dark-mode .cash-history-detail-footer span,
-.cash-register-page[data-theme="dark"] .cash-modal-block p,
-.cash-register-page[data-theme="dark"] .cash-modal-block span,
-.cash-register-page[data-theme="dark"] .cash-modal-block label,
-.cash-register-page[data-theme="dark"] .cash-entry-date label,
-.cash-register-page[data-theme="dark"] .cash-history-breakdown-head p,
-.cash-register-page[data-theme="dark"] .cash-history-detail-footer span,
-.dark .cash-register-page .cash-modal-block p,
-.dark .cash-register-page .cash-modal-block span,
-.dark .cash-register-page .cash-modal-block label,
-.dark .cash-register-page .cash-entry-date label,
-.dark .cash-register-page .cash-history-breakdown-head p,
-.dark .cash-register-page .cash-history-detail-footer span,
-[data-theme="dark"] .cash-modal-block p,
-[data-theme="dark"] .cash-modal-block span,
-[data-theme="dark"] .cash-modal-block label,
-[data-theme="dark"] .cash-entry-date label,
-[data-theme="dark"] .cash-history-breakdown-head p,
-[data-theme="dark"] .cash-history-detail-footer span {
-    color: #bcb5a7 !important;
-}
-
-.cash-register-page.dark-mode input,
-.cash-register-page.dark-mode select,
-.cash-register-page.dark-mode textarea,
-.cash-register-page[data-theme="dark"] input,
-.cash-register-page[data-theme="dark"] select,
-.cash-register-page[data-theme="dark"] textarea,
-.dark .cash-register-page input,
-.dark .cash-register-page select,
-.dark .cash-register-page textarea,
-[data-theme="dark"] .cash-register-page input,
-[data-theme="dark"] .cash-register-page select,
-[data-theme="dark"] .cash-register-page textarea {
-    color: #f6f0e3 !important;
-    background-color: #101011 !important;
-    border-color: #49443a !important;
-    caret-color: #e7bf61 !important;
+.dark-mode .cash-register-page,
+.dark-theme .cash-register-page,
+.theme-dark .cash-register-page,
+[data-theme="dark"] .cash-register-page,
+[data-bs-theme="dark"] .cash-register-page,
+[data-mode="dark"] .cash-register-page,
+.cash-register-page[data-theme="dark"],
+.cash-register-page.dark-mode {
     color-scheme: dark;
+
+    --cr-primary: #e0b85c;
+    --cr-primary-dark: #f0ca78;
+    --cr-primary-light: #302718;
+
+    --cr-blue: #6aa8ff;
+    --cr-blue-light: #13233b;
+    --cr-green: #3fcf9f;
+    --cr-green-light: #0f2b23;
+    --cr-orange: #f2b04c;
+    --cr-orange-light: #33260f;
+    --cr-red: #ff7a82;
+    --cr-red-light: #351a1d;
+
+    --cr-text: #e9c46a;
+    --cr-text-2: #c9a65a;
+    --cr-text-3: #9f8450;
+    --cr-bg: #0b0b0c;
+    --cr-ink: #f0cd77;
+    --cr-gold: #e0b85c;
+    --cr-ring: 0 0 0 4px rgba(224, 184, 92, .22);
+    --cr-card-border: 1px solid #303033;
+    --cr-card-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+    --cr-card-shadow-hover: 0 2px 4px rgba(0, 0, 0, .35), 0 18px 44px rgba(0, 0, 0, .5);
+    --cr-white: #151516;
+    --cr-border: #303033;
+    --cr-border-2: #414145;
+
+    --cr-shadow-1: 0 5px 18px rgba(0, 0, 0, .25);
+    --cr-shadow-2: 0 14px 36px rgba(0, 0, 0, .32);
+    --cr-shadow-3: 0 28px 80px rgba(0, 0, 0, .55);
+
+    --t-page: radial-gradient(circle at 90% 0%, rgba(201, 157, 65, .09), transparent 30%),
+        radial-gradient(circle at 0% 100%, rgba(201, 157, 65, .04), transparent 30%),
+        #0b0b0c;
+    --t-surface: #151516;
+    --t-surface-2: #1b1b1d;
+    --t-surface-3: #232326;
+    --t-hover: #202023;
+    --t-overlay: rgba(0, 0, 0, .74);
+    --t-glow: rgba(224, 184, 92, .10);
+
+    --t-gold-bg: #302718;
+    --t-gold-bg-2: #231d11;
+    --t-gold-border: #4a3b1c;
+    --t-gold-text: #f0ca78;
+    --t-blue-bg: #13233b;
+    --t-blue-border: #1f3a5f;
+    --t-blue-text: #8bb8ff;
+    --t-green-bg: #0f2b23;
+    --t-green-border: #1a4a3a;
+    --t-green-text: #52d9aa;
+    --t-orange-bg: #33260f;
+    --t-orange-border: #594118;
+    --t-orange-text: #f5b758;
+    --t-red-bg: #351a1d;
+    --t-red-border: #5a2a2e;
+    --t-red-text: #ff8a90;
+
+    --t-accent-grad: linear-gradient(135deg, #e7c26c, #c99d41);
+    --t-accent-border: #e0b85c;
+    --t-on-accent: #17130b;
+    --t-red-grad: linear-gradient(135deg, #ef6a73, #cf4650);
+    --t-hero: linear-gradient(135deg, #1d1809 0%, #0f0d07 60%, #0a0905 100%);
+    --t-hero-shadow: 0 18px 45px rgba(0, 0, 0, .55);
+    --t-focus: rgba(224, 184, 92, .35);
 }
 
-.cash-register-page.dark-mode input::placeholder,
-.cash-register-page.dark-mode textarea::placeholder,
-.cash-register-page[data-theme="dark"] input::placeholder,
-.cash-register-page[data-theme="dark"] textarea::placeholder,
-.dark .cash-register-page input::placeholder,
-.dark .cash-register-page textarea::placeholder,
-[data-theme="dark"] .cash-register-page input::placeholder,
-[data-theme="dark"] .cash-register-page textarea::placeholder {
-    color: #898274 !important;
-    opacity: 1 !important;
+/* ---------- PAGE ---------- */
+.cash-register-page.cash-register-page {
+    background: var(--t-page) !important;
+    color: var(--cr-text) !important;
+    transition: background .25s ease, color .25s ease;
 }
 
-.cash-register-page.dark-mode .cash-history-daytotal,
-.cash-register-page.dark-mode .cash-modal-grand,
-.cash-register-page[data-theme="dark"] .cash-history-daytotal,
-.cash-register-page[data-theme="dark"] .cash-modal-grand,
-.dark .cash-register-page .cash-history-daytotal,
-.dark .cash-register-page .cash-modal-grand,
-[data-theme="dark"] .cash-history-daytotal,
-[data-theme="dark"] .cash-modal-grand {
-    background: linear-gradient(135deg, #292318, #1d1b16) !important;
-    border-color: #66532b !important;
+.cash-register-page.cash-register-page.cash-register-page input,
+.cash-register-page.cash-register-page.cash-register-page select,
+.cash-register-page.cash-register-page.cash-register-page textarea {
+    color: var(--cr-text) !important;
+    caret-color: var(--cr-primary);
 }
 
-.cash-register-page.dark-mode .cash-history-daytotal strong,
-.cash-register-page.dark-mode .cash-modal-grand strong,
-.cash-register-page[data-theme="dark"] .cash-history-daytotal strong,
-.cash-register-page[data-theme="dark"] .cash-modal-grand strong,
-.dark .cash-register-page .cash-history-daytotal strong,
-.dark .cash-register-page .cash-modal-grand strong,
-[data-theme="dark"] .cash-history-daytotal strong,
-[data-theme="dark"] .cash-modal-grand strong {
-    color: #f0cf7a !important;
+.cash-register-page.cash-register-page.cash-register-page input::placeholder,
+.cash-register-page.cash-register-page.cash-register-page textarea::placeholder {
+    color: var(--cr-text-3) !important;
+    opacity: 1;
 }
 
-.cash-register-page.dark-mode button,
-.cash-register-page[data-theme="dark"] button,
-.dark .cash-register-page button,
-[data-theme="dark"] .cash-register-page button {
-    text-shadow: none !important;
+.cash-register-page.cash-register-page.cash-register-page select option {
+    background: var(--t-surface);
+    color: var(--cr-text);
 }
 
-.cash-register-page.dark-mode .cash-modal-overlay,
-.cash-register-page[data-theme="dark"] .cash-modal-overlay,
-.dark .cash-register-page .cash-modal-overlay,
-[data-theme="dark"] .cash-modal-overlay {
-    background: rgba(4, 4, 5, .76) !important;
-    backdrop-filter: blur(8px) !important;
+.cash-register-page.cash-register-page.cash-register-page button:focus-visible,
+.cash-register-page.cash-register-page.cash-register-page input:focus-visible {
+    outline: 3px solid var(--t-focus) !important;
 }
 
-/* =========================================================
-   BLACK + GOLD DARK THEME — final user-requested palette
-   Keep cards/panels black; use gold for readable text.
-   ========================================================= */
-.cash-register-page.dark-mode,
-.cash-register-page[data-theme="dark"],
+/* ---------- HEADER ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-eyebrow {
+    color: var(--cr-primary-dark) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-title-wrap h1 {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-title-wrap p {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-title-icon {
+    background: var(--t-accent-grad) !important;
+    color: var(--t-on-accent) !important;
+    box-shadow: 0 12px 28px var(--t-glow) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn {
+    background: var(--t-accent-grad) !important;
+    color: var(--t-on-accent) !important;
+    border: 1px solid var(--t-accent-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn.close {
+    background: var(--t-red-grad) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-error {
+    background: var(--t-red-bg) !important;
+    border: 1px solid var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-error button {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+/* ---------- STAT CARDS ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+    color: var(--cr-text) !important;
+    box-shadow: var(--cr-shadow-1) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card:hover {
+    border-color: var(--cr-border-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card::after {
+    background: radial-gradient(circle, var(--t-glow), transparent 70%) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card small,
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card>small {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.purple {
+    background: var(--t-gold-bg) !important;
+    color: var(--t-gold-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.blue {
+    background: var(--t-blue-bg) !important;
+    color: var(--t-blue-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.green {
+    background: var(--t-green-bg) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.orange {
+    background: var(--t-orange-bg) !important;
+    color: var(--t-orange-text) !important;
+}
+
+/* ---------- MAIN REGISTER CARD ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-main-left {
+    background: radial-gradient(circle at 85% 10%, var(--t-glow), transparent 45%), transparent !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-main-action {
+    background: var(--t-surface-2) !important;
+    border-color: var(--cr-border) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-balance-row {
+    border-bottom: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-action-icon {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--t-gold-border) !important;
+    color: var(--cr-primary-dark) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-action-btn {
+    background: var(--t-accent-grad) !important;
+    color: var(--t-on-accent) !important;
+    border: 1px solid var(--t-accent-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-action-btn.danger {
+    background: var(--t-red-grad) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-status-pill.open {
+    background: var(--t-green-bg) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-status-pill.closed {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-mini-grid>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-closed-result>div {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-mini-grid>div:hover {
+    background: var(--t-hover) !important;
+    border-color: var(--cr-border-2) !important;
+}
+
+/* ---------- HISTORY: TOOLBAR, SEARCH, FILTER ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-view-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-export-btn {
+    background: var(--t-gold-bg) !important;
+    border: 1px solid var(--t-gold-border) !important;
+    color: var(--t-gold-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-view-btn:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-export-btn:hover {
+    background: var(--t-gold-bg-2) !important;
+    border-color: var(--cr-primary) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-search {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-search:focus-within {
+    background: var(--t-surface) !important;
+    border-color: var(--cr-primary) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-search svg {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-search input {
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-search button {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-filter {
+    background: var(--t-surface-3) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-filter button {
+    background: transparent !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-filter button:hover {
+    background: var(--t-hover) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-filter button.active {
+    background: var(--t-surface) !important;
+    color: var(--cr-primary-dark) !important;
+    box-shadow: var(--cr-shadow-1) !important;
+}
+
+/* ---------- TABLES ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-table-wrap,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-table-wrap {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table th,
+.cash-register-page.cash-register-page.cash-register-page .cash-table thead th,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-table thead th {
+    background: var(--t-surface-2) !important;
+    color: var(--cr-text-3) !important;
+    border-bottom: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table td,
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody td {
+    color: var(--cr-text) !important;
+    border-top: 1px solid var(--cr-border) !important;
+    border-bottom: 0 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody tr:hover {
+    background: var(--t-hover) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody tr.cash-row-clickable:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody tr.cash-row-clickable:focus-visible {
+    background: linear-gradient(90deg, var(--t-gold-bg), transparent) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table-status.open {
+    background: var(--t-green-bg) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table-status.closed {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-difference.positive {
+    background: var(--t-green-bg) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-difference.negative {
+    background: var(--t-red-bg) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-difference.zero {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-empty,
+.cash-register-page.cash-register-page.cash-register-page .cash-loading {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn:hover:not(:disabled) {
+    background: var(--t-gold-bg) !important;
+    border-color: var(--cr-primary) !important;
+    color: var(--cr-primary-dark) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn.danger:hover:not(:disabled) {
+    background: var(--t-red-bg) !important;
+    border-color: var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+/* ---------- MODALS ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-overlay {
+    background: var(--t-overlay) !important;
+    backdrop-filter: blur(7px);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-modal {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+    color: var(--cr-text) !important;
+    box-shadow: var(--cr-shadow-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-head,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-modal .cash-modal-head {
+    background: var(--t-surface) !important;
+    border-bottom: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-title strong {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-title span {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-icon {
+    background: var(--t-gold-bg) !important;
+    border: 1px solid var(--t-gold-border) !important;
+    color: var(--t-gold-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-icon.danger {
+    background: var(--t-red-bg) !important;
+    border-color: var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-close {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-close:hover {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date label {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date input,
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date-input {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date input:focus,
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date-input:focus {
+    border-color: var(--cr-primary) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-section-title,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-section-title {
+    color: var(--t-gold-text) !important;
+    border-bottom: 1px solid var(--t-gold-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-section-title svg {
+    color: var(--cr-primary) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-block {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-block-head p {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-block-head>strong {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-block-head>strong.red {
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-section-label {
+    color: var(--cr-text-3) !important;
+}
+
+/* denominations */
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row.disabled {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row:hover {
+    background: var(--t-hover) !important;
+    border-color: var(--cr-border-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row:focus-within,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row:focus-within {
+    background: var(--t-surface) !important;
+    border-color: var(--cr-primary) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row.disabled {
+    opacity: .6;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-symbol.note {
+    background: var(--t-green-bg) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-symbol.coin {
+    background: var(--t-orange-bg) !important;
+    color: var(--t-orange-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-symbol.bank {
+    background: var(--t-blue-bg) !important;
+    color: var(--t-blue-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-symbol.wallet {
+    background: var(--t-orange-bg) !important;
+    color: var(--t-orange-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-main strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-main strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-total {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-control {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-btn {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-btn:hover:not(:disabled) {
+    background: var(--t-gold-bg) !important;
+    color: var(--cr-primary-dark) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-input,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-reason {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row.disabled .cash-digital-input,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row.disabled .cash-digital-input input {
+    background: var(--t-surface-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-input input,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money input {
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-input b {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-input:focus-within,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money:focus-within,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-reason:focus {
+    border-color: var(--cr-primary) !important;
+    background: var(--t-surface) !important;
+}
+
+/* totals */
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-total,
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal,
+.cash-register-page.cash-register-page.cash-register-page .cash-split-total {
+    background: linear-gradient(135deg, var(--t-gold-bg-2), var(--t-surface)) !important;
+    border: 1px solid var(--t-gold-border) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand span {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand strong {
+    color: var(--t-gold-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand>div {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand .sum {
+    background: #fff !important;
+    border-color: var(--t-gold-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand .sum span {
+    color: #000 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand .sum strong {
+    color: #ac7e19  !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expected-box,
+.cash-register-page.cash-register-page.cash-register-page .cash-close-preview>div {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-actions {
+    background: var(--t-surface) !important;
+    border-top: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-cancel-btn {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-cancel-btn:hover:not(:disabled) {
+    background: var(--t-hover) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn {
+    background: var(--t-accent-grad) !important;
+    border: 1px solid var(--t-accent-border) !important;
+    color: var(--t-on-accent) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn.danger {
+    background: var(--t-red-grad) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+}
+
+/* ---------- ADD-MONEY PANELS (digital / expenses / credit) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon.blue {
+    background: var(--t-blue-bg) !important;
+    color: var(--t-blue-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon.red {
+    background: var(--t-red-bg) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon.green {
+    background: var(--t-green-bg) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total {
+    background: var(--t-gold-bg) !important;
+    border: 1px solid var(--t-gold-border) !important;
+    color: var(--t-gold-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total.red {
+    background: var(--t-red-bg) !important;
+    border-color: var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total.green {
+    background: var(--t-green-bg) !important;
+    border-color: var(--t-green-border) !important;
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-btn {
+    background: var(--t-accent-grad) !important;
+    color: var(--t-on-accent) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-add {
+    background: var(--t-red-grad) !important;
+    color: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item {
+    background: var(--t-red-bg) !important;
+    border: 1px solid var(--t-red-border) !important;
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item {
+    background: var(--t-green-bg) !important;
+    border-color: var(--t-green-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-text span {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-amount {
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-amount,
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-amount {
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-remove {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-remove:hover {
+    background: var(--t-red-bg) !important;
+    border-color: var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-empty {
+    background: var(--t-surface-2) !important;
+    border: 1.5px dashed var(--cr-border-2) !important;
+    color: var(--cr-text-3) !important;
+}
+
+/* ---------- DAY TOTAL HERO (dark in both modes, gold text) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total {
+    background: var(--t-hero) !important;
+    border: 1px solid rgba(224, 184, 92, .22) !important;
+    color: #ffffff !important;
+    box-shadow: var(--t-hero-shadow) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-head strong {
+    background: linear-gradient(180deg, #ffffff, #f0ca78) !important;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-head span,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines span {
+    color: rgba(255, 255, 255, .72) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-section-label.light {
+    color: rgba(255, 255, 255, .75) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-icon {
+    background: rgba(224, 184, 92, .12) !important;
+    border: 1px solid rgba(224, 184, 92, .25) !important;
+    color: #f0ca78 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div {
+    background: rgba(255, 255, 255, .06) !important;
+    border: 1px solid rgba(255, 255, 255, .08) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div:hover {
+    background: rgba(255, 255, 255, .10) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines strong {
+    color: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .sum {
+    background: linear-gradient(135deg, rgba(224, 184, 92, .24), rgba(224, 184, 92, .06)) !important;
+    border-color: rgba(224, 184, 92, .45) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .minus strong {
+    color: #ffd2d2 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .credit strong {
+    color: #c9f5da !important;
+}
+
+/* ---------- HISTORY DETAIL MODAL ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-summary>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-footer {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-summary span,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-footer span {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-summary strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-footer strong {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-footer strong.positive {
+    color: var(--t-green-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-footer strong.negative {
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-footer strong.zero {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-breakdown-card {
+    background: var(--t-surface-2) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-breakdown-head {
+    border-bottom: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-breakdown-head h3 {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-breakdown-head p {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-breakdown-kicker {
+    color: var(--t-blue-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-breakdown-kicker.close {
+    color: var(--t-orange-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-breakdown-total {
+    background: var(--t-blue-bg) !important;
+    border: 1px solid var(--t-blue-border) !important;
+    color: var(--t-blue-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-breakdown-total.close {
+    background: var(--t-orange-bg) !important;
+    border-color: var(--t-orange-border) !important;
+    color: var(--t-orange-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination.has-value {
+    border-color: var(--cr-border-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-icon {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-icon.note {
+    background: var(--t-blue-bg) !important;
+    color: var(--t-blue-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-icon.coin {
+    background: var(--t-orange-bg) !important;
+    color: var(--t-orange-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-left strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-right span {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-left span {
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-denomination-right strong {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-not-closed {
+    border: 1px dashed var(--cr-border-2) !important;
+    color: var(--cr-text-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-not-closed strong {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal>div {
+    border-color: var(--t-gold-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal span {
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal strong {
+    color: var(--cr-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal .sum {
+    background: var(--t-gold-bg) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal .sum strong {
+    color: var(--t-gold-text) !important;
+}
+
+/* ---------- SMALL POLISH ---------- */
+.cash-register-page,
+.cash-register-page .cash-modal,
+.cash-register-page .cash-history-detail-modal {
+    scrollbar-width: none;
+}
+
+/* ---------- BIG VALUES (stat cards + register total) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card>strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-left strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-left h2,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-left h3,
+.cash-register-page.cash-register-page.cash-register-page .cash-mini-grid strong {
+    color: var(--cr-ink) !important;
+    -webkit-text-fill-color: var(--cr-ink) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-top>span {
+    color: var(--cr-text-2) !important;
+}
+/* ---------- CREDIT: Amount + Paid + Add, repayment box ---------- */
+.cash-expense-form.cash-credit-form {
+    grid-template-columns: minmax(0, 1fr) 118px 118px auto !important;
+}
+
+.cash-credit-detail {
+    white-space: normal !important;
+    font-size: 11px !important;
+}
+
+.cash-credit-item {
+    flex-wrap: wrap;
+}
+
+.cash-credit-pay {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cash-credit-pay input {
+    width: 86px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--cr-border-2, #e1e6f0);
+    border-radius: 9px;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    outline: 0;
+}
+
+.cash-credit-pay input:focus {
+    border-color: var(--cr-primary, #635bff);
+}
+
+.cash-credit-pay button {
+    height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--cr-primary, #635bff);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 560px) {
+    .cash-expense-form.cash-credit-form {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .cash-expense-form.cash-credit-form .cash-expense-reason,
+    .cash-expense-form.cash-credit-form .cash-expense-add {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ---------- CREDIT PREVIEW BOX ---------- */
+.cash-credit-item.clickable {
+    cursor: pointer;
+}
+
+.cash-credit-item.clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(15, 23, 41, .08);
+}
+
+.cash-credit-chevron {
+    flex: none;
+    color: var(--cr-text-3, #9aa3b5);
+}
+
+.cash-modal-overlay.cash-credit-overlay {
+    z-index: 10000 !important;
+}
+
+.cash-modal.cash-credit-modal {
+    width: min(460px, calc(100vw - 34px)) !important;
+    padding-bottom: 18px !important;
+}
+
+.cash-credit-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 18px 0;
+}
+
+.cash-credit-summary > div {
+    padding: 12px;
+    border: 1px solid var(--cr-border-2, #e1e6f0);
+    border-radius: 14px;
+    background: var(--t-surface-2, #f7f8fc);
+}
+
+.cash-credit-summary span {
+    display: block;
+    color: var(--cr-text-3, #8a93a6);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.cash-credit-summary strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--cr-text, #141b2b);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.cash-credit-summary .paid strong {
+    color: #0b8a5a;
+}
+
+.cash-credit-summary .due strong {
+    color: #d8404c;
+}
+
+.cash-credit-progress {
+    height: 8px;
+    margin: 12px 18px 0;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--cr-border-2, #e6eaf2);
+}
+
+.cash-credit-progress i {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #12b886, #0b8a5a);
+    transition: width .3s ease;
+}
+
+.cash-credit-update,
+.cash-credit-history {
+    display: grid;
+    gap: 10px;
+    margin: 18px 18px 0;
+}
+
+.cash-credit-update-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+}
+
+.cash-credit-settled {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 18px 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(18, 184, 134, .12);
+    color: #0b8a5a;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.cash-credit-history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--cr-border-2, #e1e6f0);
+    border-radius: 12px;
+    background: var(--t-surface-2, #f7f8fc);
+}
+
+.cash-credit-history-row strong {
+    display: block;
+    color: var(--cr-text, #141b2b);
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.cash-credit-history-row span {
+    display: block;
+    margin-top: 2px;
+    color: var(--cr-text-3, #8a93a6);
+    font-size: 11px;
+}
+
+.cash-credit-history-row b {
+    color: #0b8a5a;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.cash-credit-history-row.start b {
+    color: #d8404c;
+}
+
+/* ---------- CREDIT FULLY PAID = GREEN ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item.settled {
+    background: linear-gradient(135deg, #16b27a, #0b8a5a) !important;
+    border-color: #0b8a5a !important;
+    color: #ffffff !important;
+}
+
+.cash-expense-item.settled::before {
+    background: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-expense-text strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-expense-text span,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-credit-amount,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-credit-chevron {
+    color: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-expense-remove {
+    background: rgba(255, 255, 255, .2) !important;
+    border-color: rgba(255, 255, 255, .35) !important;
+    color: #ffffff !important;
+}
+
+.cash-credit-summary.settled > div {
+    border-color: #0b8a5a;
+    background: rgba(18, 184, 134, .14);
+}
+
+.cash-credit-summary.settled .due strong {
+    color: #0b8a5a;
+}
+
+/* ---------- DAY TOTAL: credit split ---------- */
+.cash-day-total-lines>.cash-credit-split {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0;
+    background: transparent;
+}
+
+.cash-day-total-lines>.cash-credit-split>div {
+    padding: 12px 14px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.cash-day-total-lines .cash-credit-split .paid strong {
+    color: #c9f5da;
+}
+
+.cash-day-total-lines .cash-credit-split .due strong {
+    color: #ffe3a3;
+}
+
+.cash-register-page.cash-register-page .cash-history-daytotal {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.cash-register-page.cash-register-page .cash-history-daytotal>div:nth-child(4n) {
+    border-right: 0;
+}
+
+@media (max-width: 1000px) {
+    .cash-register-page.cash-register-page .cash-history-daytotal {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .cash-day-total-lines .cash-credit-split strong {
+        font-size: 14px;
+    }
+}
+
+/* ============================================================
+   DAY TOTAL HERO — purple + black (light mode)
+                    black + purple + gold (dark mode)
+   ============================================================ */
+
+/* ---------- light tokens ---------- */
+.cash-register-page,
+.cash-register-page[data-theme="light"] {
+    --dt-bg:
+        radial-gradient(circle at 96% -10%, rgba(167, 139, 250, .55), transparent 46%),
+        linear-gradient(135deg, #6d28d9 0%, #6d28d9 34%, #6d28d9 68%, #6d28d9 100%);
+    --dt-border: rgba(196, 181, 253, .35);
+    --dt-shadow: 0 20px 48px rgba(76, 29, 149, .38);
+    --dt-label: rgba(233, 213, 255, .88);
+    --dt-sub: rgba(245, 240, 255, .78);
+    --dt-num: linear-gradient(180deg, #ffffff 10%, #ddd6fe 100%);
+    --dt-icon-bg: rgba(196, 181, 253, .18);
+    --dt-icon-border: rgba(196, 181, 253, .42);
+    --dt-icon: #ede9fe;
+    --dt-tile-bg: rgba(10, 6, 18, .34);
+    --dt-tile-border: rgba(196, 181, 253, .20);
+    --dt-tile-hover: rgba(10, 6, 18, .50);
+    --dt-sum-bg: linear-gradient(135deg, rgba(196, 181, 253, .40), rgba(124, 58, 237, .16));
+    --dt-sum-border: rgba(221, 214, 254, .65);
+    --dt-credit: #e9d5ff;
+    --dt-paid: #ddd6fe;
+    --dt-due: #fbcfe8;
+    --dt-minus: #ffd2dc;
+}
+
+/* ---------- dark tokens ---------- */
 .dark .cash-register-page,
-[data-theme="dark"] .cash-register-page {
-    background-color: #0b0b0c !important;
-    color: #e7bf61 !important;
+.dark-mode .cash-register-page,
+.dark-theme .cash-register-page,
+.theme-dark .cash-register-page,
+[data-theme="dark"] .cash-register-page,
+[data-bs-theme="dark"] .cash-register-page,
+[data-mode="dark"] .cash-register-page,
+.cash-register-page[data-theme="dark"],
+.cash-register-page.dark-mode {
+    --dt-bg:
+        radial-gradient(circle at 96% -15%, rgba(139, 92, 246, .50), transparent 46%),
+        radial-gradient(circle at 0% 125%, rgba(224, 184, 92, .16), transparent 42%),
+        linear-gradient(135deg, #0e0819 0%, #08050f 60%, #030206 100%);
+    --dt-border: rgba(224, 184, 92, .34);
+    --dt-shadow: 0 20px 48px rgba(0, 0, 0, .62), 0 0 0 1px rgba(139, 92, 246, .20);
+    --dt-label: rgba(240, 202, 120, .90);
+    --dt-sub: rgba(255, 255, 255, .70);
+    --dt-num: linear-gradient(180deg, #fff3cf 0%, #e0b85c 100%);
+    --dt-icon-bg: rgba(224, 184, 92, .12);
+    --dt-icon-border: rgba(224, 184, 92, .34);
+    --dt-icon: #f0ca78;
+    --dt-tile-bg: rgba(139, 92, 246, .10);
+    --dt-tile-border: rgba(167, 139, 250, .22);
+    --dt-tile-hover: rgba(139, 92, 246, .20);
+    --dt-sum-bg: linear-gradient(135deg, rgba(224, 184, 92, .28), rgba(139, 92, 246, .16));
+    --dt-sum-border: rgba(224, 184, 92, .60);
+    --dt-credit: #f0ca78;
+    --dt-paid: #d8b4fe;
+    --dt-due: #f0ca78;
+    --dt-minus: #ffb4bd;
 }
 
-.cash-register-page.dark-mode .cash-stat-card,
-.cash-register-page.dark-mode .cash-summary-card,
-.cash-register-page.dark-mode .cash-current-card,
-.cash-register-page.dark-mode .cash-history-card,
-.cash-register-page.dark-mode .cash-session-card,
-.cash-register-page.dark-mode .cash-modal,
-.cash-register-page.dark-mode .cash-modal-block,
-.cash-register-page.dark-mode .cash-entry-date,
-.cash-register-page.dark-mode .cash-history-detail-modal,
-.cash-register-page.dark-mode .cash-history-breakdown-card,
-.cash-register-page.dark-mode .cash-history-denomination,
-.cash-register-page.dark-mode .cash-history-detail-summary>div,
-.cash-register-page[data-theme="dark"] .cash-stat-card,
-.cash-register-page[data-theme="dark"] .cash-summary-card,
-.cash-register-page[data-theme="dark"] .cash-current-card,
-.cash-register-page[data-theme="dark"] .cash-history-card,
-.cash-register-page[data-theme="dark"] .cash-session-card,
-.cash-register-page[data-theme="dark"] .cash-modal,
-.cash-register-page[data-theme="dark"] .cash-modal-block,
-.cash-register-page[data-theme="dark"] .cash-entry-date,
-.cash-register-page[data-theme="dark"] .cash-history-detail-modal,
-.cash-register-page[data-theme="dark"] .cash-history-breakdown-card,
-.cash-register-page[data-theme="dark"] .cash-history-denomination,
-.cash-register-page[data-theme="dark"] .cash-history-detail-summary>div,
-.dark .cash-register-page .cash-stat-card,
-.dark .cash-register-page .cash-summary-card,
-.dark .cash-register-page .cash-current-card,
-.dark .cash-register-page .cash-history-card,
-.dark .cash-register-page .cash-session-card,
-.dark .cash-register-page .cash-modal,
-.dark .cash-register-page .cash-modal-block,
-.dark .cash-register-page .cash-entry-date,
-.dark .cash-register-page .cash-history-detail-modal,
-.dark .cash-register-page .cash-history-breakdown-card,
-.dark .cash-register-page .cash-history-denomination,
-.dark .cash-register-page .cash-history-detail-summary>div,
-[data-theme="dark"] .cash-stat-card,
-[data-theme="dark"] .cash-summary-card,
-[data-theme="dark"] .cash-current-card,
-[data-theme="dark"] .cash-history-card,
-[data-theme="dark"] .cash-session-card,
-[data-theme="dark"] .cash-modal,
-[data-theme="dark"] .cash-modal-block,
-[data-theme="dark"] .cash-entry-date,
-[data-theme="dark"] .cash-history-detail-modal,
-[data-theme="dark"] .cash-history-breakdown-card,
-[data-theme="dark"] .cash-history-denomination,
-[data-theme="dark"].cash-main-card,
-[data-theme="dark"].cash-main-left,
-[data-theme="dark"].cash-main-action,
-[data-theme="dark"] .cash-history-detail-summary>div {
-    background: #111112 !important;
-    color: #e7bf61 !important;
-    border-color: #3b301b !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .22) !important;
+/* ---------- card ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total {
+    background: var(--dt-bg) !important;
+    border: 1px solid var(--dt-border) !important;
+    box-shadow: var(--dt-shadow) !important;
+    color: #ffffff !important;
 }
 
-.cash-register-page.dark-mode h1,
-.cash-register-page.dark-mode h2,
-.cash-register-page.dark-mode h3,
-.cash-register-page.dark-mode h4,
-.cash-register-page.dark-mode p,
-.cash-register-page.dark-mode span,
-.cash-register-page.dark-mode label,
-.cash-register-page.dark-mode small,
-.cash-register-page.dark-mode strong,
-.cash-register-page.dark-mode .cash-stat-card *,
-.cash-register-page.dark-mode .cash-current-card *,
-.cash-register-page.dark-mode .cash-history-card *,
-.cash-register-page.dark-mode .cash-session-card *,
-.cash-register-page.dark-mode .cash-modal *,
-.cash-register-page.dark-mode .cash-history-detail-modal *,
-.cash-register-page[data-theme="dark"] h1,
-.cash-register-page[data-theme="dark"] h2,
-.cash-register-page[data-theme="dark"] h3,
-.cash-register-page[data-theme="dark"] h4,
-.cash-register-page[data-theme="dark"] p,
-.cash-register-page[data-theme="dark"] span,
-.cash-register-page[data-theme="dark"] label,
-.cash-register-page[data-theme="dark"] small,
-.cash-register-page[data-theme="dark"] strong,
-.dark .cash-register-page h1,
-.dark .cash-register-page h2,
-.dark .cash-register-page h3,
-.dark .cash-register-page h4,
-.dark .cash-register-page p,
-.dark .cash-register-page span,
-.dark .cash-register-page label,
-.dark .cash-register-page small,
-.dark .cash-register-page strong,
-[data-theme="dark"] .cash-register-page h1,
-[data-theme="dark"] .cash-register-page h2,
-[data-theme="dark"] .cash-register-page h3,
-[data-theme="dark"] .cash-register-page h4,
-[data-theme="dark"] .cash-register-page p,
-[data-theme="dark"] .cash-register-page span,
-[data-theme="dark"] .cash-register-page label,
-[data-theme="dark"] .cash-register-page small,
-[data-theme="dark"] .cash-register-page strong {
-    color: #e7bf61 !important;
+/* big total: gradient text (background-clip must not be reset) */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-head strong {
+    background-color: transparent !important;
+    background-image: var(--dt-num) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
 }
 
-.cash-register-page.dark-mode input,
-.cash-register-page.dark-mode select,
-.cash-register-page.dark-mode textarea,
-.cash-register-page[data-theme="dark"] input,
-.cash-register-page[data-theme="dark"] select,
-.cash-register-page[data-theme="dark"] textarea,
-.dark .cash-register-page input,
-.dark .cash-register-page select,
-.dark .cash-register-page textarea,
-[data-theme="dark"] .cash-register-page input,
-[data-theme="dark"] .cash-register-page select,
-[data-theme="dark"] .cash-register-page textarea {
-    background: #080809 !important;
-    color: #e7bf61 !important;
-    border-color: #514221 !important;
+.cash-register-page.cash-register-page.cash-register-page .cash-section-label.light {
+    color: var(--dt-label) !important;
 }
 
-.cash-register-page.dark-mode input::placeholder,
-.cash-register-page.dark-mode textarea::placeholder,
-.cash-register-page[data-theme="dark"] input::placeholder,
-.cash-register-page[data-theme="dark"] textarea::placeholder,
-.dark .cash-register-page input::placeholder,
-.dark .cash-register-page textarea::placeholder,
-[data-theme="dark"] .cash-register-page input::placeholder,
-[data-theme="dark"] .cash-register-page textarea::placeholder {
-    color: #a88b4b !important;
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-head span {
+    color: var(--dt-sub) !important;
 }
 
-.cash-register-page.dark-mode .cash-modal-actions,
-.cash-register-page.dark-mode .cash-history-detail-footer,
-.cash-register-page[data-theme="dark"] .cash-modal-actions,
-.cash-register-page[data-theme="dark"] .cash-history-detail-footer,
-.dark .cash-register-page .cash-modal-actions,
-.dark .cash-register-page .cash-history-detail-footer,
-[data-theme="dark"] .cash-modal-actions,
-[data-theme="dark"] .cash-history-detail-footer {
-    background: #0b0b0c !important;
-    border-color: #332a19 !important;
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-icon {
+    background: var(--dt-icon-bg) !important;
+    border: 1px solid var(--dt-icon-border) !important;
+    color: var(--dt-icon) !important;
+}
+
+/* ---------- tiles ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>.cash-credit-split>div {
+    background: var(--dt-tile-bg) !important;
+    border: 1px solid var(--dt-tile-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>.cash-credit-split>div:hover {
+    background: var(--dt-tile-hover) !important;
+}
+
+/* wrapper of the Given / Paid / Not paid row is only a layout box */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>.cash-credit-split {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines span {
+    color: var(--dt-sub) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines strong {
+    color: #ffffff !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .sum {
+    background: var(--dt-sum-bg) !important;
+    border-color: var(--dt-sum-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .minus strong {
+    color: var(--dt-minus) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .credit strong {
+    color: var(--dt-credit) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .paid strong {
+    color: var(--dt-paid) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .due strong {
+    color: var(--dt-due) !important;
+}
+
+/* ---------- EXPORT CHOOSER (PDF / Excel) ---------- */
+.cash-modal.cash-export-modal {
+    width: min(460px, calc(100vw - 34px)) !important;
+    padding-bottom: 18px !important;
+}
+
+.cash-export-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 18px 20px 0;
+}
+
+.cash-export-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px 12px;
+    border: 1px solid var(--cr-border-2, #d9dbe1);
+    border-radius: 16px;
+    background: var(--t-surface-2, #fafafa);
+    color: var(--cr-text, #202124);
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.cash-export-option:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 41, .12);
+}
+
+.cash-export-option:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.cash-export-option strong {
+    font-size: 14px;
+    font-weight: 750;
+}
+
+.cash-export-option span {
+    color: var(--cr-text-3, #8b9099);
+    font-size: 11px;
+}
+
+.cash-export-option.pdf svg {
+    color: #d8404c;
+}
+
+.cash-export-option.pdf:hover:not(:disabled) {
+    border-color: #d8404c;
+}
+
+.cash-export-option.xlsx svg {
+    color: #159a72;
+}
+
+.cash-export-option.xlsx:hover:not(:disabled) {
+    border-color: #159a72;
+}
+
+.cash-export-note {
+    margin: 14px 20px 0;
+    color: var(--cr-text-3, #8b9099);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+/* day total: credit given (deducted) tile */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .given strong {
+    color: var(--dt-minus) !important;
 }

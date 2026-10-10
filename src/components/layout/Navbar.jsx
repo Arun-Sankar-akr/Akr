@@ -49,10 +49,7 @@ export default function Navbar({ onMenu }) {
                     </button>
                 </div>
 
-                <div className="smc-navbar__status">
-                    <i className="smc-navbar__status-dot" />
-                    <span>Live</span>
-                </div>
+                
             </div>
         </header>
     );
