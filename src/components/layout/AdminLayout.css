@@ -210,12 +210,13 @@ body {
 .app-shell input,
 .app-shell select,
 .app-shell textarea {
-    color: var(--text);
+    color: #000;
 }
 
 .app-shell input::placeholder,
 .app-shell textarea::placeholder {
-    color: var(--muted);
+    color: #000;
+    /* color: var(--muted); */
 }
 
 

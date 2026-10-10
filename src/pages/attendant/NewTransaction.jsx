@@ -19,6 +19,8 @@ import {
     Minus,
     Plus,
     Trash2,
+    CalendarDays, LayoutDashboard, ClipboardList, Users, BarChart3,
+    Settings, FileText, Search, Flame, UserRound, Banknote, CreditCard, Wallet, Tag,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -29,6 +31,7 @@ import BillSummary from "../../components/billing/BillSummary";
 import useServices from "../../hooks/useServices";
 import { createTransaction } from "../../services/transactionService";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 import { calculateCart } from "../../utils/calculations";
 
 import "./NewTransaction.css";
@@ -278,6 +281,8 @@ export default function NewTransaction() {
        STATE
        ===================================================== */
 
+    const { theme } = useTheme();
+
     const [cart, setCart] = useState([]);
 
     const [payment, setPayment] =
@@ -289,8 +294,12 @@ export default function NewTransaction() {
     const [showBillPreview, setShowBillPreview] =
         useState(false);
 
-    const [customerName, setCustomerName] =
-        useState("");
+    const [customerName, setCustomerName] = useState("");
+    const [customerPhone, setCustomerPhone] = useState("");
+    const [serviceSearch, setServiceSearch] = useState("");
+    const [activeCategory, setActiveCategory] = useState("All");
+    const [promoCode, setPromoCode] = useState("");
+    const [promoApplied, setPromoApplied] = useState(false);
 
     /* =====================================================
        ADD SERVICE
@@ -1534,455 +1543,71 @@ export default function NewTransaction() {
        RENDER
        ===================================================== */
 
+    const categories = ["All", "Xerox", "Printing", "Lamination", "Photo", "Stationery"];
+    const filteredServices = availableServices.filter((s) => {
+        const text = `${s.name || ""} ${s.category || ""}`.toLowerCase();
+        const category = String(s.category || "").toLowerCase();
+        return (activeCategory === "All" || category.includes(activeCategory.toLowerCase()) ||
+            (activeCategory === "Printing" && /print/i.test(s.name || ""))) &&
+            text.includes(serviceSearch.toLowerCase());
+    });
+    const serviceEmoji = (s) => {
+        const t = `${s.name || ""} ${s.category || ""}`.toLowerCase();
+        if (/xerox|black|b&w/.test(t)) return "🖨️";
+        if (/color|printout/.test(t)) return "🖼️";
+        if (/lamination/.test(t)) return "📄";
+        if (/photo/.test(t)) return "📸";
+        if (/pen/.test(t)) return "🖊️";
+        return "📦";
+    };
+    const paymentOptions = [
+        { id: "cash", label: "Cash", Icon: Banknote },
+        { id: "upi", label: "UPI", Icon: Zap },
+        { id: "card", label: "Card", Icon: CreditCard },
+        { id: "wallet", label: "Wallet", Icon: Wallet },
+    ];
+
     return (
-        <div className="new-transaction-page">
-
-            {/* =============================================
-                TOP NAVIGATION
-            ============================================= */}
-
-            <header className="transaction-topbar">
-
-                <div className="transaction-topbar-left">
-
-                    <Link
-                        to="/attendant"
-                        className="transaction-back"
-                    >
-                        <ArrowLeft size={17} />
-                    </Link>
-
-                    <div className="transaction-title-wrap">
-
-                        <div className="transaction-eyebrow">
-                            <span className="eyebrow-dot" />
-                            AKR Communications
-                        </div>
-
-                        <h1>
-                            New Transaction
-                        </h1>
-
-                        <p>
-                            Create a quick bill and
-                            complete the customer order.
-                        </p>
-
+        <div className={`new-transaction-page theme-${theme}`}>
+            <div className="nt-main">
+                <header className="nt-page-header">
+                    <div className="nt-heading"><h1>New Transaction</h1><p>Add services, collect payment and complete the bill</p></div>
+                    <div className="nt-header-tools">
+                        <label className="nt-search"><Search /><input value={serviceSearch} onChange={(e) => setServiceSearch(e.target.value)} placeholder="Search services..." /><Search /></label>
+                        <div className="nt-date"><CalendarDays /><span>{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}<small>{new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</small></span></div>
                     </div>
-
+                </header>
+                <div className="nt-content-grid">
+                    <div className="nt-left-column">
+                        <section className="nt-services-panel">
+                            <div className="nt-section-heading"><span className="nt-heading-icon"><Printer /></span><h2>Services</h2></div>
+                            <div className="nt-category-tabs">{categories.map((c) => <button type="button" key={c} className={activeCategory === c ? "active" : ""} onClick={() => setActiveCategory(c)}>{c}</button>)}</div>
+                            {servicesLoading ? <div className="nt-empty-services">Loading services…</div> : <div className="nt-service-grid">
+                                {filteredServices.map((s) => <button type="button" className="nt-service-card" key={s.id} onClick={() => add(s)}>
+                                    <span className="nt-service-art">{serviceEmoji(s)}</span><strong>{s.name}</strong>
+                                    <span className="nt-service-price">₹{Number(s.sellingPrice || 0).toLocaleString("en-IN")} <small>/ {s.unit || "unit"}</small></span><span className="nt-add-service"><Plus /></span>
+                                </button>)}
+                                {!filteredServices.length && <div className="nt-empty-services">No services found.</div>}
+                            </div>}
+                            <div className="nt-popular"><div className="nt-popular-title"><Flame /><strong>Popular Services</strong></div><div className="nt-popular-list">{availableServices.slice(0, 6).map((s) => <button type="button" key={s.id} onClick={() => add(s)}>{s.name}</button>)}</div></div>
+                        </section>
+                    </div>
+                    <aside className="nt-bill-panel">
+                        <div className="nt-bill-heading"><div className="nt-section-heading"><span className="nt-heading-icon"><ShoppingCart /></span><h2>Current Bill</h2></div><button type="button" className="nt-clear-all" disabled={!cart.length} onClick={() => setCart([])}><Trash2 /> Clear All</button></div>
+                        <div className="nt-bill-items">{cart.map((item) => <div className="nt-bill-row" key={item.id}>
+                            <div className="nt-bill-item-art">{serviceEmoji(item)}</div><div className="nt-bill-item-info"><strong>{item.name}</strong><span>₹{Number(item.sellingPrice || 0).toLocaleString("en-IN")} / {item.unit || "unit"}</span></div>
+                            <div className="nt-qty-control"><button type="button" onClick={() => qty(item.id, -1)}><Minus /></button><span>{item.quantity}</span><button type="button" onClick={() => qty(item.id, 1)}><Plus /></button></div>
+                            <strong className="nt-line-total">₹{(Number(item.sellingPrice || 0) * item.quantity).toLocaleString("en-IN")}</strong><button type="button" className="nt-remove-item" onClick={() => removeItem(item.id)}><Trash2 /></button>
+                        </div>)}{!cart.length && <div className="nt-empty-cart"><ShoppingCart /><strong>Your bill is empty</strong><span>Add a service to begin</span></div>}</div>
+                        <section className="nt-customer-panel nt-customer-panel-bill">
+                            <div className="nt-section-heading"><span className="nt-heading-icon"><UserRound /></span><h2>Customer Details</h2></div>
+                            <div className="nt-customer-fields"><label><span>Customer Name</span><input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Enter customer name" maxLength={60} /></label><label><span>Phone Number</span><input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Enter phone number" inputMode="tel" /></label><button type="button" className="nt-add-customer" onClick={() => document.querySelector(".nt-customer-panel-bill .nt-customer-fields input")?.focus()}><Plus /> Add</button></div>
+                        </section>
+                        <button type="button" className="nt-preview-button" disabled={!cart.length} onClick={() => setShowBillPreview(true)}><Eye /> Preview &amp; Print Bill</button>
+                        <div className="nt-payment"><div className="nt-payment-title"><UserRound /><strong>Payment Method</strong></div><div className="nt-payment-options">{paymentOptions.map(({ id, label, Icon }) => <button type="button" key={id} className={payment === id ? "active" : ""} onClick={() => setPayment(id)}><Icon /><span>{label}</span></button>)}<button type="button" className="nt-checkout-button" disabled={!cart.length || saving} onClick={complete}><ShoppingCart />{saving ? "Processing…" : "Checkout"}</button></div></div>
+                    </aside>
                 </div>
-
-                <div className="transaction-topbar-right">
-
-                    <div className="topbar-status">
-                        <span className="status-live" />
-                        Counter Active
-                    </div>
-
-                    <div className="topbar-user">
-                        <div className="topbar-avatar">
-                            {(
-                                profile?.name ||
-                                user?.email ||
-                                "A"
-                            )
-                                .charAt(0)
-                                .toUpperCase()}
-                        </div>
-
-                        <div>
-                            <strong>
-                                {profile?.name ||
-                                    user?.displayName ||
-                                    "Attendant"}
-                            </strong>
-
-                            <span>
-                                {role || "Attendant"}
-                            </span>
-                        </div>
-                    </div>
-
-                </div>
-
-            </header>
-
-
-            {/* =============================================
-                QUICK STATS
-            ============================================= */}
-
-            <div className="transaction-overview">
-
-                <div className="overview-card">
-
-                    <div className="overview-icon purple">
-                        <Zap size={19} />
-                    </div>
-
-                    <div>
-                        <span>
-                            Billing Mode
-                        </span>
-
-                        <strong>
-                            Fast Checkout
-                        </strong>
-                    </div>
-
-                </div>
-
-                <div className="overview-card">
-
-                    <div className="overview-icon blue">
-                        <ShoppingCart size={19} />
-                    </div>
-
-                    <div>
-                        <span>
-                            Current Items
-                        </span>
-
-                        <strong>
-                            {cart.reduce(
-                                (sum, item) =>
-                                    sum +
-                                    item.quantity,
-                                0
-                            )}
-                        </strong>
-                    </div>
-
-                </div>
-
-                <div className="overview-card">
-
-                    <div className="overview-icon green">
-                        <ReceiptText size={19} />
-                    </div>
-
-                    <div>
-                        <span>
-                            Current Total
-                        </span>
-
-                        <strong>
-                            ₹
-                            {Number(total).toLocaleString(
-                                "en-IN"
-                            )}
-                        </strong>
-                    </div>
-
-                </div>
-
-                <div className="overview-card">
-
-                    <div className="overview-icon orange">
-                        <ShieldCheck size={19} />
-                    </div>
-
-                    <div>
-                        <span>
-                            Payment
-                        </span>
-
-                        <strong>
-                            {payment === "cash"
-                                ? "Cash"
-                                : payment.toUpperCase()}
-                        </strong>
-                    </div>
-
-                </div>
-
             </div>
-
-
-            {/* =============================================
-                SERVICE ERROR
-            ============================================= */}
-
-            {!servicesLoading &&
-                servicesError && (
-                    <div className="service-alert">
-
-                        <div className="service-alert-icon">
-                            <AlertCircle size={19} />
-                        </div>
-
-                        <div className="service-alert-content">
-
-                            <strong>
-                                Using default services
-                            </strong>
-
-                            <p>
-                                Firebase services could not
-                                be loaded, so the available
-                                default shop services are
-                                being displayed.
-                            </p>
-
-                        </div>
-
-                    </div>
-                )}
-
-
-            {/* =============================================
-                MAIN BILLING AREA
-            ============================================= */}
-
-            <main className="transaction-workspace">
-
-                {/* =========================================
-                    LEFT — SERVICES
-                ========================================= */}
-
-                <section className="services-workspace">
-
-                    <div className="workspace-heading">
-
-                        <div>
-
-                            <div className="section-kicker">
-                                <Sparkles size={14} />
-                                SERVICES
-                            </div>
-
-                            <h2>
-                                Choose a service
-                            </h2>
-
-                            <p>
-                                Select a service below to
-                                instantly add it to the bill.
-                            </p>
-
-                        </div>
-
-                        <div className="service-count">
-                            <strong>
-                                {availableServices.length}
-                            </strong>
-
-                            <span>
-                                Available
-                            </span>
-                        </div>
-
-                    </div>
-
-
-                    <div className="service-selector-shell">
-
-                        <ServiceSelector
-                            services={
-                                availableServices
-                            }
-                            onAdd={add}
-                        />
-
-                    </div>
-
-
-                    {/* SERVICE FOOTER */}
-
-                    <div className="service-helper">
-
-                        <div className="helper-icon">
-                            <Zap size={17} />
-                        </div>
-
-                        <div>
-
-                            <strong>
-                                Quick billing
-                            </strong>
-
-                            <span>
-                                Tap any service to add it.
-                                Tap again to increase quantity.
-                            </span>
-
-                        </div>
-
-                        <ChevronRight
-                            size={17}
-                        />
-
-                    </div>
-
-                </section>
-
-
-                {/* =========================================
-                    RIGHT — BILL
-                ========================================= */}
-
-                <aside className="checkout-panel">
-
-                    <div className="checkout-header">
-
-                        <div>
-
-                            <div className="checkout-label">
-                                CURRENT ORDER
-                            </div>
-
-                            <h2>
-                                Your Bill
-                            </h2>
-
-                            <span>
-                                {cart.length
-                                    ? `${cart.length} service${cart.length >
-                                        1
-                                        ? "s"
-                                        : ""
-                                    } added`
-                                    : "No services added yet"}
-                            </span>
-
-                        </div>
-
-                        <div className="receipt-icon">
-                            <ReceiptText
-                                size={21}
-                            />
-                        </div>
-
-                    </div>
-
-
-                    <div className="checkout-divider" />
-
-
-                    {/* CART */}
-
-                    <div className="checkout-cart">
-
-                        {cart.map((item) => (
-                            <CartRow
-                                key={item.id}
-                                item={item}
-                                onQty={qty}
-                                onSetQty={setQty}
-                                onRemove={removeItem}
-                            />
-                        ))}
-
-                    </div>
-
-
-                    {/* PAYMENT */}
-
-                    <div className="checkout-payment">
-
-                        <div className="checkout-section-title">
-
-                            <span>
-                                Payment method
-                            </span>
-
-                            <small>
-                                Select one
-                            </small>
-
-                        </div>
-
-                        <PaymentSelector
-                            value={payment}
-                            onChange={
-                                setPayment
-                            }
-                        />
-
-                    </div>
-
-
-                    {/* CUSTOMER */}
-
-                    <div className="checkout-customer">
-
-                        <div className="checkout-section-title">
-
-                            <span>
-                                Customer name
-                            </span>
-
-                            <small>
-                                Shown on the bill
-                            </small>
-
-                        </div>
-
-                        <input
-                            type="text"
-                            className="customer-input"
-                            placeholder="Enter customer name"
-                            value={customerName}
-                            maxLength={60}
-                            onChange={(event) =>
-                                setCustomerName(
-                                    event.target.value
-                                )
-                            }
-                        />
-
-                    </div>
-
-
-                    {/* SUMMARY */}
-
-                    <div className="checkout-summary">
-
-                        <button
-                            type="button"
-                            className="bill-preview-trigger"
-                            disabled={!cart.length}
-                            onClick={() =>
-                                setShowBillPreview(true)
-                            }
-                        >
-                            <Eye size={15} />
-                            Preview &amp; Print Bill
-                        </button>
-
-                        <BillSummary
-                            total={total}
-                            disabled={
-                                !cart.length ||
-                                saving
-                            }
-                            onComplete={
-                                complete
-                            }
-                        />
-
-                    </div>
-
-
-                    {/* SECURE NOTE */}
-
-                    <div className="checkout-security">
-
-                        <ShieldCheck
-                            size={15}
-                        />
-
-                        <span>
-                            Secure transaction •
-                            Firebase protected
-                        </span>
-
-                    </div>
-
-                </aside>
-
-            </main>
-
 
             {/* =============================================
                 BILL PREVIEW / PRINT MODAL

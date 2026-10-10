@@ -25,6 +25,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../../../services/firebase";
 import { formatCurrency } from "../../../utils/currency";
 import "./MoneyTransfer.css";
+import "./AadhaarATM.css";
 
 const auth = getAuth();
 
