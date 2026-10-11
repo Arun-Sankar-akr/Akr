@@ -3963,3 +3963,18 @@
         width: 28px;
     }
 }
+
+/* Service images (replace emojis) */
+.nt-service-img {
+    display: block;
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
+.nt-bill-item-art .nt-service-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+}

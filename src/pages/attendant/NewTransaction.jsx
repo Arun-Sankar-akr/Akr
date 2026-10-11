@@ -251,6 +251,225 @@ function QtyInput({ value, onChange }) {
    PAGE
    ========================================================= */
 
+/* =====================================================
+   SERVICE IMAGES
+   ---------------------------------------------------
+   Every service card shows an image instead of an emoji.
+   If the service has its own picture (image / imageUrl in
+   the database) that picture is used. Otherwise a clean
+   illustration is picked from the service name.
+   ===================================================== */
+
+const SVG_PAPER = { fill: "#ffffff", stroke: "#d3d8e8", strokeWidth: 1.5 };
+
+function serviceImageKind(service) {
+    const t = `${service?.name || ""} ${service?.category || ""}`.toLowerCase();
+
+    if (/lamination/.test(t)) return "lamination";
+    if (/aadh?a?a?r/.test(t)) return "aadhar";
+    if (/\bpan\b/.test(t)) return "pan";
+    if (/ration/.test(t)) return "ration";
+    if (/birth|death|certificate/.test(t)) return "certificate";
+    if (/patta|chitta|fmb|land/.test(t)) return "land";
+    if (/bank|exam|application|form/.test(t)) return "form";
+    if (/photo/.test(t)) return "photo";
+    if (/color|colour/.test(t) && /xerox/.test(t)) return "printer-color";
+    if (/xerox|copy|b&w|black/.test(t)) return "printer";
+    if (/print/.test(t)) return "printout";
+    return "box";
+}
+
+function IdCard({ top, bottom, accent }) {
+    return (
+        <>
+            <rect x="6" y="14" width="52" height="36" rx="5" {...SVG_PAPER} />
+            <path d="M6 19a5 5 0 0 1 5-5h42a5 5 0 0 1 5 5v3H6z" fill={top} />
+            <path d="M6 45v0a5 5 0 0 0 5 5h42a5 5 0 0 0 5-5v-3H6z" fill={bottom} />
+            <circle cx="20" cy="32" r="5" fill={accent} />
+            <path d="M12 41c1-5 15-5 16 0z" fill={accent} />
+            <rect x="32" y="28" width="20" height="3" rx="1.5" fill="#cfd4e6" />
+            <rect x="32" y="34" width="14" height="3" rx="1.5" fill="#cfd4e6" />
+        </>
+    );
+}
+
+function ServiceImage({ service }) {
+    const picture = service?.image || service?.imageUrl || service?.imageURL;
+
+    if (picture) {
+        return (
+            <img
+                className="nt-service-img"
+                src={picture}
+                alt={service?.name || "Service"}
+                loading="lazy"
+            />
+        );
+    }
+
+    const kind = serviceImageKind(service);
+
+    let art;
+
+    switch (kind) {
+        case "printer":
+        case "printer-color":
+            art = (
+                <>
+                    <defs>
+                        <linearGradient id="svc-printer" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stopColor="#8a7fe0" />
+                            <stop offset="1" stopColor="#4b3f94" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="18" y="6" width="28" height="18" rx="2" {...SVG_PAPER} />
+                    <rect x="8" y="22" width="48" height="25" rx="6" fill="url(#svc-printer)" />
+                    <rect x="14" y="27" width="22" height="3" rx="1.5" fill="#ffffff55" />
+                    {kind === "printer-color" ? (
+                        <>
+                            <circle cx="42" cy="29" r="2.2" fill="#22d3ee" />
+                            <circle cx="47.5" cy="29" r="2.2" fill="#f43f5e" />
+                            <circle cx="53" cy="29" r="2.2" fill="#facc15" />
+                        </>
+                    ) : (
+                        <circle cx="49" cy="29" r="2.4" fill="#4ade80" />
+                    )}
+                    <rect x="16" y="38" width="32" height="19" rx="2" {...SVG_PAPER} />
+                    <rect x="21" y="43" width="22" height="2.5" rx="1.2" fill="#cfd4e6" />
+                    <rect x="21" y="49" width="15" height="2.5" rx="1.2" fill="#cfd4e6" />
+                </>
+            );
+            break;
+
+        case "aadhar":
+            art = <IdCard top="#f59e0b" bottom="#16a34a" accent="#6b7bd6" />;
+            break;
+
+        case "pan":
+            art = <IdCard top="#3b82f6" bottom="#1d4ed8" accent="#3b82f6" />;
+            break;
+
+        case "ration":
+            art = <IdCard top="#16a34a" bottom="#15803d" accent="#16a34a" />;
+            break;
+
+        case "certificate":
+            art = (
+                <>
+                    <rect x="10" y="8" width="44" height="40" rx="3" fill="#fffaf0" stroke="#d9b45a" strokeWidth="2" />
+                    <rect x="16" y="15" width="32" height="3.5" rx="1.7" fill="#d9b45a" />
+                    <rect x="19" y="23" width="26" height="2.5" rx="1.2" fill="#d6d9e8" />
+                    <rect x="19" y="29" width="26" height="2.5" rx="1.2" fill="#d6d9e8" />
+                    <path d="M24 46l-3 12 8-4 3 5 2-13z" fill="#ef4444" />
+                    <path d="M40 46l3 12-8-4-3 5-2-13z" fill="#dc2626" />
+                    <circle cx="32" cy="42" r="8" fill="#f5c542" stroke="#d9a21a" strokeWidth="2" />
+                    <circle cx="32" cy="42" r="3.5" fill="#fff3c4" />
+                </>
+            );
+            break;
+
+        case "form":
+            art = (
+                <>
+                    <rect x="12" y="8" width="40" height="50" rx="5" fill="#6b7bd6" />
+                    <rect x="17" y="14" width="30" height="40" rx="2" {...SVG_PAPER} />
+                    <rect x="23" y="5" width="18" height="9" rx="3" fill="#3f4aa8" />
+                    <path d="M21 25l3 3 5-6" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    <rect x="32" y="24" width="12" height="2.5" rx="1.2" fill="#cfd4e6" />
+                    <path d="M21 36l3 3 5-6" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    <rect x="32" y="35" width="12" height="2.5" rx="1.2" fill="#cfd4e6" />
+                    <rect x="21" y="46" width="22" height="2.5" rx="1.2" fill="#cfd4e6" />
+                </>
+            );
+            break;
+
+        case "land":
+            art = (
+                <>
+                    <rect x="10" y="8" width="44" height="48" rx="4" fill="#f2f8ee" stroke="#a6c99a" strokeWidth="1.5" />
+                    <path d="M16 22l12-6 14 5 6 12-8 11-16-3-8-9z" fill="#cfe8c1" stroke="#4d9a4a" strokeWidth="1.6" strokeLinejoin="round" />
+                    <path d="M28 16v20M16 28l26 8" stroke="#4d9a4a" strokeWidth="1" strokeDasharray="2 2" />
+                    <circle cx="42" cy="21" r="6" fill="#ef4444" />
+                    <circle cx="42" cy="21" r="2.2" fill="#ffffff" />
+                    <rect x="16" y="49" width="26" height="2.5" rx="1.2" fill="#c4d8bb" />
+                </>
+            );
+            break;
+
+        case "lamination":
+            art = (
+                <>
+                    <defs>
+                        <linearGradient id="svc-lam" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stopColor="#e6f4ff" />
+                            <stop offset="1" stopColor="#b9dcff" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="12" y="6" width="40" height="52" rx="5" fill="url(#svc-lam)" stroke="#6cb6f5" strokeWidth="2.5" />
+                    <rect x="19" y="14" width="26" height="3.5" rx="1.7" fill="#ffffff" />
+                    <rect x="19" y="22" width="26" height="3" rx="1.5" fill="#ffffffcc" />
+                    <rect x="19" y="29" width="18" height="3" rx="1.5" fill="#ffffffcc" />
+                    <path d="M42 6h10v10z" fill="#ffffff99" />
+                    <path d="M16 46L34 10h6L22 54z" fill="#ffffff66" />
+                </>
+            );
+            break;
+
+        case "photo":
+            art = (
+                <>
+                    <defs>
+                        <linearGradient id="svc-sky" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stopColor="#7dd3fc" />
+                            <stop offset="1" stopColor="#e0f2fe" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="6" y="10" width="52" height="44" rx="5" fill="#c98b4b" />
+                    <rect x="11" y="15" width="42" height="34" rx="2" fill="url(#svc-sky)" />
+                    <circle cx="42" cy="24" r="5" fill="#fbbf24" />
+                    <path d="M11 49V38l12-9 10 8 8-5 12 7v10z" fill="#4ade80" />
+                    <path d="M11 49V43l14-6 12 7 16-4v9z" fill="#16a34a" />
+                </>
+            );
+            break;
+
+        case "printout":
+            art = (
+                <>
+                    <path d="M14 6h28l10 10v40a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" {...SVG_PAPER} />
+                    <path d="M42 6v10h10z" fill="#d3d8e8" />
+                    <rect x="18" y="22" width="30" height="3" rx="1.5" fill="#6b7bd6" />
+                    <rect x="18" y="30" width="30" height="2.5" rx="1.2" fill="#cfd4e6" />
+                    <rect x="18" y="36" width="30" height="2.5" rx="1.2" fill="#cfd4e6" />
+                    <rect x="18" y="42" width="20" height="2.5" rx="1.2" fill="#cfd4e6" />
+                </>
+            );
+            break;
+
+        default:
+            art = (
+                <>
+                    <path d="M32 8l22 9v24l-22 9-22-9V17z" fill="#d6a05e" />
+                    <path d="M32 8l22 9-22 9-22-9z" fill="#e8bd82" />
+                    <path d="M32 26v24l-22-9V17z" fill="#b9823f" />
+                    <rect x="26" y="9" width="12" height="9" fill="#f3d9a8" transform="rotate(25 32 14)" />
+                </>
+            );
+    }
+
+    return (
+        <svg
+            className="nt-service-img"
+            viewBox="0 0 64 64"
+            role="img"
+            aria-label={service?.name || "Service"}
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            {art}
+        </svg>
+    );
+}
+
 export default function NewTransaction() {
     /* =====================================================
        AUTH
@@ -1161,15 +1380,6 @@ export default function NewTransaction() {
             (activeCategory === "Printing" && /print/i.test(s.name || ""))) &&
             text.includes(serviceSearch.toLowerCase());
     });
-    const serviceEmoji = (s) => {
-        const t = `${s.name || ""} ${s.category || ""}`.toLowerCase();
-        if (/xerox|black|b&w/.test(t)) return "🖨️";
-        if (/color|printout/.test(t)) return "🖼️";
-        if (/lamination/.test(t)) return "📄";
-        if (/photo/.test(t)) return "📸";
-        if (/pen/.test(t)) return "🖊️";
-        return "📦";
-    };
     const paymentOptions = [
         { id: "cash", label: "Cash", Icon: Banknote },
         { id: "upi", label: "UPI", Icon: Zap },
@@ -1192,7 +1402,7 @@ export default function NewTransaction() {
                             <div className="nt-category-tabs">{categories.map((c) => <button type="button" key={c} className={activeCategory === c ? "active" : ""} onClick={() => setActiveCategory(c)}>{c}</button>)}</div>
                             {servicesLoading ? <div className="nt-empty-services">Loading services…</div> : <div className="nt-service-grid">
                                 {filteredServices.map((s) => <button type="button" className="nt-service-card" key={s.id} onClick={() => add(s)}>
-                                    <span className="nt-service-art">{serviceEmoji(s)}</span><strong>{s.name}</strong>
+                                    <span className="nt-service-art"><ServiceImage service={s} /></span><strong>{s.name}</strong>
                                     <span className="nt-service-price">₹{Number(s.sellingPrice || 0).toLocaleString("en-IN")} <small>/ {s.unit || "unit"}</small></span><span className="nt-add-service"><Plus /></span>
                                 </button>)}
                                 {!filteredServices.length && <div className="nt-empty-services">No services found.</div>}
@@ -1202,7 +1412,7 @@ export default function NewTransaction() {
                     <aside className="nt-bill-panel">
                         <div className="nt-bill-heading"><div className="nt-section-heading"><span className="nt-heading-icon"><ShoppingCart /></span><h2>Current Bill</h2></div><button type="button" className="nt-clear-all" disabled={!cart.length} onClick={() => setCart([])}><Trash2 /> Clear All</button></div>
                         <div className="nt-bill-items">{cart.map((item) => <div className="nt-bill-row" key={item.id}>
-                            <div className="nt-bill-item-art">{serviceEmoji(item)}</div><div className="nt-bill-item-info"><strong>{item.name}</strong><span>₹{Number(item.sellingPrice || 0).toLocaleString("en-IN")} / {item.unit || "unit"}</span></div>
+                            <div className="nt-bill-item-art"><ServiceImage service={item} /></div><div className="nt-bill-item-info"><strong>{item.name}</strong><span>₹{Number(item.sellingPrice || 0).toLocaleString("en-IN")} / {item.unit || "unit"}</span></div>
                             <div className="nt-qty-control"><button type="button" onClick={() => qty(item.id, -1)}><Minus /></button><QtyInput value={item.quantity} onChange={(value) => setQty(item.id, value)} /><button type="button" onClick={() => qty(item.id, 1)}><Plus /></button></div>
                             <strong className="nt-line-total">₹{(Number(item.sellingPrice || 0) * item.quantity).toLocaleString("en-IN")}</strong><button type="button" className="nt-remove-item" onClick={() => removeItem(item.id)}><Trash2 /></button>
                         </div>)}{!cart.length && <div className="nt-empty-cart"><ShoppingCart /><strong>Your bill is empty</strong><span>Add a service to begin</span></div>}</div>
