@@ -732,7 +732,7 @@ export default function NewTransaction() {
         const totalInWords = amountInWords(total);
 
         const rowsHtml = cart
-            .map((item, index) => {
+            .map((item) => {
                 const rate =
                     Number(item.sellingPrice) || 0;
 
@@ -744,29 +744,17 @@ export default function NewTransaction() {
 
                 return `
                 <tr>
-                    <td class="item-number">
-                        ${String(index + 1).padStart(2, "0")}
-                    </td>
-
-                    <td class="item-name">
-                        ${escapeHtml(item.name)}
-                    </td>
-
-                    <td class="num">
-                        ${quantity}
-                    </td>
-
-                    <td class="num">
-                        ₹${rate.toLocaleString("en-IN")}
-                    </td>
-
-                    <td class="num amount">
-                        ₹${amount.toLocaleString("en-IN")}
-                    </td>
+                    <td class="name">${escapeHtml(item.name)}</td>
+                    <td class="c">₹${rate.toLocaleString("en-IN")}</td>
+                    <td class="c">${quantity}</td>
+                    <td class="r">₹${amount.toLocaleString("en-IN")}</td>
                 </tr>
             `;
             })
             .join("");
+
+        const customerPhoneLabel =
+            String(customerPhone || "").trim();
 
         const receiptHtml = `
         <!DOCTYPE html>
@@ -774,21 +762,19 @@ export default function NewTransaction() {
         <head>
             <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>AKR Communications - Sale Receipt</title>
+            <title>AKR Communications - Invoice</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
             <style>
                 :root {
-                    --navy: #1b1740;
-                    --navy-2: #2b2563;
-                    --indigo: #3b34a0;
-                    --gold: #c9a14a;
-                    --gold-soft: #f7efd9;
-                    --ink: #0f1222;
-                    --muted: #5d6479;
-                    --line: #e3e6ef;
-                    --tint: #f5f6fb;
-                    --green: #0f8a5f;
-                    --green-soft: #e6f6ee;
+                    --brand: #4b3f94;
+                    --brand-dark: #3a2f7a;
+                    --ink: #14142b;
+                    --muted: #5c6075;
+                    --line: #2a2a3d;
+                    --soft: #ecebf7;
                 }
 
                 * { box-sizing: border-box; }
@@ -798,447 +784,208 @@ export default function NewTransaction() {
                 body {
                     background: #ffffff;
                     color: var(--ink);
-                    font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+                    font-family: "Outfit", sans-serif;
+                    font-size: 12px;
+                    line-height: 1.45;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
                 }
 
-                .receipt-page {
-                    position: relative;
-                    width: 100%;
-                    max-width: 820px;
+                .watermark {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    width: 440px;
+                    max-width: 70%;
+                    height: auto;
+                    transform: translate(-50%, -50%);
+                    opacity: 0.07;
+                    z-index: 0;
+                    pointer-events: none;
+                }
+
+                .page {
+                    max-width: 794px;
                     margin: 0 auto;
-                    background: #ffffff;
-                    overflow: hidden;
+                    padding: 34px 40px 30px;
+                    position: relative;
+                    z-index: 1;
                 }
 
-                /* top accent band */
-                .top-band {
-                    height: 12px;
-                    background: linear-gradient(90deg, var(--navy) 0%, var(--indigo) 60%, var(--gold) 100%);
-                }
-
-                .receipt-inner { padding: 30px 38px 34px; }
-
-                /* ---------- brand ---------- */
-                .brand {
+                /* ---------- header ---------- */
+                .head {
                     display: flex;
-                    align-items: center;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 24px;
+                }
+
+                .brand { display: flex; align-items: center; }
+
+                .logo-wrap {
+                    width: 240px;
+                    max-width: 100%;
+                    background: transparent;
+                    border: 0;
+                    border-radius: 0;
+                    box-shadow: none;
+                    padding: 0;
+                }
+
+                .logo {
+                    display: block;
+                    width: 100%;
+                    height: auto;
+                    object-fit: contain;
+                    box-shadow: none;
+                }
+
+                .title { text-align: right; }
+
+                .title h2 {
+                    margin: 0;
+                    font-size: 38px;
+                    font-weight: 900;
+                    letter-spacing: 3px;
+                    line-height: 1;
+                    color: var(--brand);
+                }
+
+                .title p {
+                    margin: 8px 0 0;
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: var(--ink);
+                }
+
+                /* ---------- customer / bill details ---------- */
+                .info {
+                    display: flex;
                     justify-content: space-between;
                     gap: 24px;
-                    padding-bottom: 24px;
+                    margin: 30px 0 26px;
                 }
 
-                .brand-left { display: flex; align-items: center; gap: 18px; }
-
-                .brand-logo-wrap {
-                    width: 84px;
-                    height: 84px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 9px;
-                    background: #ffffff;
-                    border: 1px solid var(--line);
-                    border-radius: 22px;
-                    box-shadow: 0 10px 24px rgba(27, 23, 64, 0.10);
-                }
-
-                .brand-logo { width: 100%; height: 100%; object-fit: contain; }
-
-                .brand-name {
-                    margin: 0;
-                    color: var(--navy);
-                    font-size: 31px;
-                    line-height: 1.1;
-                    font-weight: 800;
-                    letter-spacing: -0.035em;
-                }
-
-                .brand-subtitle {
-                    margin-top: 7px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    color: var(--muted);
-                    font-size: 11.5px;
-                    font-weight: 700;
-                    letter-spacing: 0.16em;
-                    text-transform: uppercase;
-                }
-
-                .brand-subtitle::before {
-                    content: "";
-                    width: 22px;
-                    height: 2px;
-                    border-radius: 2px;
-                    background: var(--gold);
-                }
-
-                .receipt-label { text-align: right; }
-
-                .receipt-label span {
-                    display: inline-block;
-                    padding: 5px 13px;
-                    border-radius: 999px;
-                    background: var(--gold-soft);
-                    border: 1px solid #ecdcae;
-                    color: #8a6a1f;
-                    font-size: 10.5px;
-                    font-weight: 800;
-                    letter-spacing: 0.18em;
-                    text-transform: uppercase;
-                }
-
-                .receipt-label strong {
-                    display: block;
-                    margin-top: 10px;
-                    color: var(--navy);
-                    font-size: 24px;
-                    line-height: 1.05;
-                    font-weight: 800;
-                    letter-spacing: -0.02em;
-                }
-
-                .receipt-label small {
-                    display: block;
-                    margin-top: 6px;
-                    color: var(--muted);
+                .info-block h4 {
+                    margin: 0 0 4px;
                     font-size: 12px;
-                    font-weight: 600;
-                }
-
-                .divider {
-                    height: 1px;
-                    border: 0;
-                    margin: 0;
-                    background: linear-gradient(90deg, var(--navy-2), var(--line) 55%, transparent);
-                }
-
-                /* ---------- billed to / meta ---------- */
-                .receipt-meta {
-                    display: grid;
-                    grid-template-columns: 1.4fr 1fr 1fr 1fr;
-                    gap: 0;
-                    margin-top: 22px;
-                    border: 1px solid var(--line);
-                    border-radius: 18px;
-                    background: var(--tint);
-                    overflow: hidden;
-                }
-
-                .meta-card {
-                    padding: 14px 18px 15px;
-                    border-left: 1px solid var(--line);
-                }
-
-                .meta-card:first-child {
-                    border-left: 0;
-                    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
-                }
-
-                .meta-label {
-                    display: block;
-                    color: var(--muted);
-                    font-size: 9.5px;
                     font-weight: 800;
-                    letter-spacing: 0.15em;
-                    text-transform: uppercase;
-                }
-
-                .meta-value {
-                    display: block;
-                    margin-top: 6px;
                     color: var(--ink);
-                    font-size: 14.5px;
-                    font-weight: 750;
-                    word-break: break-word;
                 }
 
-                .meta-card:first-child .meta-label { color: #cdbfff; }
-                .meta-card:first-child .meta-value { color: #ffffff; font-size: 17px; }
+                .info-block .big {
+                    font-size: 15px;
+                    font-weight: 800;
+                    color: var(--ink);
+                }
+
+                .info-block p { margin: 2px 0 0; color: var(--ink); }
+
+                .info-block.right { min-width: 220px; }
+
+                .info-row { display: flex; gap: 8px; margin-top: 2px; }
+                .info-row span { width: 70px; color: var(--muted); }
+                .info-row strong { font-weight: 700; }
 
                 /* ---------- items ---------- */
-                .items-section { margin-top: 28px; }
+                table { width: 100%; border-collapse: collapse; }
 
-                .section-heading {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    margin-bottom: 11px;
-                }
-
-                .section-heading strong {
-                    color: var(--navy);
-                    font-size: 12px;
-                    font-weight: 800;
-                    letter-spacing: 0.16em;
-                    text-transform: uppercase;
-                }
-
-                .section-heading span {
-                    padding: 3px 11px;
-                    border-radius: 999px;
-                    background: var(--tint);
-                    border: 1px solid var(--line);
-                    color: var(--muted);
-                    font-size: 11px;
-                    font-weight: 700;
-                }
-
-                .items-table {
-                    width: 100%;
-                    border-collapse: separate;
-                    border-spacing: 0;
-                    border: 1px solid var(--line);
-                    border-radius: 18px;
-                    overflow: hidden;
-                }
-
-                .items-table thead th {
-                    padding: 13px 16px;
-                    background: var(--navy);
+                thead th {
+                    padding: 13px 18px;
+                    background: var(--brand);
                     color: #ffffff;
-                    font-size: 10px;
-                    font-weight: 800;
-                    letter-spacing: 0.14em;
+                    font-size: 12px;
+                    font-weight: 600;
                     text-align: left;
-                    text-transform: uppercase;
                 }
 
-                .items-table th.num,
-                .items-table td.num { text-align: right; }
+                thead th.c { text-align: center; }
+                thead th.r { text-align: right; }
 
-                .items-table tbody td {
-                    padding: 14px 16px;
-                    border-top: 1px solid var(--line);
-                    font-size: 13.5px;
+                tbody td {
+                    padding: 14px 18px;
+                    border-bottom: 1.5px solid var(--line);
+                    font-size: 12px;
+                    font-weight: 600;
+                    vertical-align: middle;
+                }
+
+                tbody tr:last-child td { border-bottom: 1.5px solid var(--line); }
+
+                td.c { text-align: center; }
+                td.r { text-align: right; }
+                td.name { font-weight: 800; font-size: 13px; }
+                td.name small {
+                    display: block;
+                    margin-top: 2px;
+                    font-size: 10px;
+                    font-weight: 500;
+                    color: var(--muted);
+                }
+
+                tbody tr { page-break-inside: avoid; }
+
+                /* ---------- totals ---------- */
+                .bottom {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                    gap: 30px;
+                    margin-top: 22px;
+                    page-break-inside: avoid;
+                }
+
+                .note { flex: 1; max-width: 300px; }
+
+                .note b {
+                    display: block;
+                    margin-bottom: 4px;
+                    font-size: 11px;
                     color: var(--ink);
                 }
 
-                .items-table tbody tr:first-child td { border-top: 0; }
-                .items-table tbody tr:nth-child(even) td { background: #fafbfe; }
-
-                .item-number {
-                    width: 46px;
-                    color: var(--gold);
-                    font-size: 12px;
-                    font-weight: 800;
-                    letter-spacing: 0.04em;
-                }
-
-                .item-name { font-weight: 700; }
-
-                td.amount { font-weight: 800; color: var(--navy); }
-
-                /* ---------- summary ---------- */
-                .summary-area {
-                    display: flex;
-                    align-items: stretch;
-                    justify-content: space-between;
-                    gap: 18px;
-                    margin-top: 22px;
-                }
-
-                .words-box {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    gap: 8px;
-                    padding: 18px 20px;
-                    border-radius: 20px;
-                    border: 1px solid #ecdcae;
-                    background: linear-gradient(135deg, var(--gold-soft), #fffdf6);
-                }
-
-                .words-label {
-                    color: #8a6a1f;
-                    font-size: 10px;
-                    font-weight: 800;
-                    letter-spacing: 0.16em;
-                    text-transform: uppercase;
-                }
-
-                .words-value {
-                    color: var(--navy);
-                    font-size: 15px;
+                .note p {
+                    margin: 0;
+                    font-size: 11px;
                     line-height: 1.5;
-                    font-weight: 800;
+                    color: var(--ink);
                 }
 
-                .words-note {
-                    color: var(--muted);
-                    font-size: 11px;
-                    font-weight: 600;
-                }
+                .totals { width: 290px; }
 
-                .summary-box {
-                    width: 50%;
-                    min-width: 270px;
-                    border-radius: 20px;
-                    overflow: hidden;
-                    border: 1px solid var(--line);
-                    background: #ffffff;
-                }
-
-                .summary-row {
+                .totals .line {
                     display: flex;
-                    align-items: center;
                     justify-content: space-between;
-                    padding: 12px 20px;
-                    border-bottom: 1px solid var(--line);
-                    color: var(--muted);
-                    font-size: 12.5px;
-                    font-weight: 600;
+                    padding: 5px 4px;
+                    font-size: 12px;
+                    font-weight: 700;
                 }
 
-                .summary-row strong { color: var(--ink); font-weight: 800; }
+                .totals .line.sub { color: var(--brand); }
 
-                .summary-total {
+                .totals .due {
                     display: flex;
-                    align-items: center;
                     justify-content: space-between;
-                    gap: 16px;
-                    padding: 18px 20px;
-                    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
-                    color: #ffffff;
-                }
-
-                .summary-total span {
-                    font-size: 11px;
-                    font-weight: 800;
-                    letter-spacing: 0.18em;
-                    color: #d9d2ff;
-                }
-
-                .summary-total strong {
-                    color: #f2cf7a;
-                    font-size: 30px;
-                    line-height: 1;
-                    font-weight: 800;
-                    letter-spacing: -0.03em;
-                }
-
-                /* ---------- paid badge ---------- */
-                .payment-status {
-                    display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 10px;
-                    margin-top: 24px;
-                    padding: 12px 16px;
-                    border-radius: 14px;
-                    border: 1px solid #bfe8d2;
-                    background: var(--green-soft);
-                    color: var(--green);
-                    font-size: 11.5px;
-                    font-weight: 800;
-                    letter-spacing: 0.16em;
-                    text-transform: uppercase;
-                }
-
-                .payment-dot {
-                    width: 18px;
-                    height: 18px;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 50%;
-                    background: var(--green);
+                    margin-top: 10px;
+                    padding: 16px 20px;
+                    background: var(--brand);
                     color: #ffffff;
-                    font-size: 11px;
-                    line-height: 1;
+                    font-weight: 800;
                 }
 
-                .payment-dot::before { content: "✓"; }
+                .totals .due span { font-size: 14px; letter-spacing: 0.5px; }
+                .totals .due strong { font-size: 20px; }
 
                 /* ---------- footer ---------- */
-                .receipt-footer {
-                    margin-top: 30px;
-                    padding-top: 22px;
-                    border-top: 1px dashed #c3c8d8;
+                .foot-line { height: 1.5px; margin-top: 34px; background: var(--brand); }
+
+                .thanks {
+                    margin-top: 16px;
                     text-align: center;
-                }
-
-                .footer-thanks {
-                    color: var(--navy);
-                    font-size: 16px;
+                    font-size: 15px;
                     font-weight: 800;
-                    letter-spacing: -0.01em;
-                }
-
-                .footer-sub {
-                    margin-top: 7px;
-                    color: var(--muted);
-                    font-size: 11.5px;
-                    line-height: 1.6;
-                }
-
-                .footer-brand {
-                    display: inline-block;
-                    margin-top: 14px;
-                    padding: 5px 16px;
-                    border-radius: 999px;
-                    background: var(--tint);
-                    border: 1px solid var(--line);
-                    color: var(--indigo);
-                    font-size: 10px;
-                    font-weight: 800;
-                    letter-spacing: 0.2em;
-                    text-transform: uppercase;
-                }
-
-                .sign-row {
-                    display: flex;
-                    align-items: flex-end;
-                    justify-content: space-between;
-                    gap: 40px;
-                    margin-top: 38px;
-                }
-
-                .sign-box {
-                    width: 44%;
-                    text-align: center;
-                }
-
-                .sign-box small {
-                    display: block;
-                    margin-bottom: 30px;
-                    color: var(--navy);
-                    font-size: 11px;
-                    font-weight: 800;
-                    letter-spacing: 0.06em;
-                }
-
-                .sign-box:not(.right) { padding-top: 41px; }
-
-                .sign-line {
-                    height: 1px;
-                    background: #9aa1b5;
-                }
-
-                .sign-box span {
-                    display: block;
-                    margin-top: 7px;
-                    color: var(--muted);
-                    font-size: 10.5px;
-                    font-weight: 700;
-                    letter-spacing: 0.12em;
-                    text-transform: uppercase;
-                }
-
-                .footer-eoe {
-                    margin-top: 12px;
-                    color: #8a90a4;
-                    font-size: 10px;
-                    font-weight: 600;
-                    letter-spacing: 0.08em;
-                }
-
-                .bottom-band {
-                    height: 6px;
-                    background: linear-gradient(90deg, var(--gold), var(--indigo) 40%, var(--navy));
+                    color: var(--brand);
                 }
 
                 /* ---------- print ---------- */
@@ -1246,156 +993,91 @@ export default function NewTransaction() {
 
                 @media print {
                     html, body { width: 100%; margin: 0; padding: 0; background: #ffffff; }
-                    .receipt-page { max-width: none; margin: 0; }
-                    .items-table tr,
-                    .summary-box,
-                    .words-box,
-                    .sign-row,
-                    .payment-status,
-                    .receipt-footer { page-break-inside: avoid; }
+                    .page { max-width: none; padding: 0; }
                 }
             </style>
         </head>
 
         <body>
-            <main class="receipt-page">
+            <img class="watermark" src="${logos}" alt="" />
 
-                <div class="top-band"></div>
+            <main class="page">
 
-                <div class="receipt-inner">
-
-                    <!-- BRAND HEADER -->
-                    <section class="brand">
-                        <div class="brand-left">
-                            <div class="brand-logo-wrap">
-                                <img class="brand-logo" src="${logos}" alt="AKR Communications" />
-                            </div>
-
-                            <div>
-                                <h1 class="brand-name">AKR Communications</h1>
-                                <div class="brand-subtitle">Digital Services &amp; Printing</div>
-                            </div>
+                <!-- HEADER -->
+                <section class="head">
+                    <div class="brand">
+                        <div class="logo-wrap">
+                            <img class="logo" src="${logos}" alt="AKR Communications" />
                         </div>
-
-                        <div class="receipt-label">
-                            <span>Original for Customer</span>
-                            <strong>Cash Bill</strong>
-                            <small>${dateStr} &middot; ${timeStr}</small>
-                        </div>
-                    </section>
-
-                    <hr class="divider" />
-
-                    <!-- META -->
-                    <section class="receipt-meta">
-                        <div class="meta-card">
-                            <span class="meta-label">Billed To</span>
-                            <span class="meta-value">${escapeHtml(customerLabel)}</span>
-                        </div>
-
-                        <div class="meta-card">
-                            <span class="meta-label">Date</span>
-                            <span class="meta-value">${dateStr}</span>
-                        </div>
-
-                        <div class="meta-card">
-                            <span class="meta-label">Time</span>
-                            <span class="meta-value">${timeStr}</span>
-                        </div>
-
-                        <div class="meta-card">
-                            <span class="meta-label">Attendant</span>
-                            <span class="meta-value">${escapeHtml(attendantName)}</span>
-                        </div>
-                    </section>
-
-                    <!-- ITEMS -->
-                    <section class="items-section">
-                        <div class="section-heading">
-                            <strong>Transaction Details</strong>
-                            <span>${itemCount} item${itemCount !== 1 ? "s" : ""}</span>
-                        </div>
-
-                        <table class="items-table">
-                            <thead>
-                                <tr>
-                                    <th>Sl.</th>
-                                    <th>Item / Service</th>
-                                    <th class="num">Qty</th>
-                                    <th class="num">Rate</th>
-                                    <th class="num">Amount</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                ${rowsHtml}
-                            </tbody>
-                        </table>
-                    </section>
-
-                    <!-- SUMMARY -->
-                    <section class="summary-area">
-                        <div class="words-box">
-                            <span class="words-label">Amount in Words</span>
-                            <strong class="words-value">${totalInWords}</strong>
-                            <span class="words-note">Paid by ${paymentLabel}</span>
-                        </div>
-
-                        <div class="summary-box">
-                            <div class="summary-row">
-                                <span>Total Items</span>
-                                <strong>${itemCount}</strong>
-                            </div>
-
-                            <div class="summary-row">
-                                <span>Payment Method</span>
-                                <strong>${paymentLabel}</strong>
-                            </div>
-
-                            <div class="summary-total">
-                                <span>GRAND TOTAL</span>
-                                <strong>₹${Number(total).toLocaleString("en-IN")}</strong>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- PAYMENT -->
-                    <div class="payment-status">
-                        <span class="payment-dot"></span>
-                        Payment received &middot; ${paymentLabel}
                     </div>
 
-                    <!-- SIGNATURES -->
-                    <section class="sign-row">
-                        <div class="sign-box">
-                            <div class="sign-line"></div>
-                            <span>Customer Signature</span>
+                    <div class="title">
+                        <h2>INVOICE</h2>
+                        <p>${dateStr}</p>
+                    </div>
+                </section>
+
+                <!-- CUSTOMER / BILL DETAILS -->
+                <section class="info">
+                    <div class="info-block">
+                        <h4>Customer Details</h4>
+                        <div class="big">${escapeHtml(customerLabel)}</div>
+                        ${customerPhoneLabel ? `<p>Phone: ${escapeHtml(customerPhoneLabel)}</p>` : ""}
+                    </div>
+
+                    <div class="info-block right">
+                        <h4>Bill Details</h4>
+                        <div class="info-row"><span>Time</span><strong>${timeStr}</strong></div>
+                        <div class="info-row"><span>Attendant</span><strong>${escapeHtml(attendantName)}</strong></div>
+                        <div class="info-row"><span>Payment</span><strong>${paymentLabel}</strong></div>
+                    </div>
+                </section>
+
+                <!-- ITEMS -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Items Description</th>
+                            <th class="c">Unit Price</th>
+                            <th class="c">Qnt</th>
+                            <th class="r">Total</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+
+                <!-- NOTE + TOTALS -->
+                <section class="bottom">
+                    <div class="note">
+                        <b>Amount in Words:</b>
+                        <p>${totalInWords}</p>
+                    </div>
+
+                    <div class="totals">
+                        <div class="line sub">
+                            <span>TOTAL ITEMS :</span>
+                            <span>${itemCount}</span>
                         </div>
 
-                        <div class="sign-box right">
-                            <small>For AKR Communications</small>
-                            <div class="sign-line"></div>
-                            <span>Authorised Signatory</span>
-                        </div>
-                    </section>
-
-                    <!-- FOOTER -->
-                    <footer class="receipt-footer">
-                        <div class="footer-thanks">Thank you for choosing AKR Communications</div>
-
-                        <div class="footer-sub">
-                            We appreciate your business.<br />
-                            Please retain this receipt for your records.
+                        <div class="line sub">
+                            <span>PAYMENT :</span>
+                            <span>${paymentLabel}</span>
                         </div>
 
-                        <div class="footer-brand">AKR Communications</div>
+                        <div class="due">
+                            <span>GRAND TOTAL :</span>
+                            <strong>₹${Number(total).toLocaleString("en-IN")}</strong>
+                        </div>
+                    </div>
+                </section>
 
-                        <div class="footer-eoe">E. &amp; O.E. &middot; Thank you, visit again</div>
-                    </footer>
+                <div class="foot-line"></div>
 
-                </div>
-
-                <div class="bottom-band"></div>
+                <!-- FOOTER -->
+                <div class="thanks">Thank you for choosing AKR Communications</div>
 
             </main>
         </body>
@@ -1443,7 +1125,15 @@ export default function NewTransaction() {
 
         iframe.onload = () => {
 
-            setTimeout(() => {
+            const fontsReady =
+                iframe.contentDocument?.fonts?.ready ||
+                Promise.resolve();
+
+            // Wait for the Outfit font to load before printing
+            Promise.race([
+                fontsReady,
+                new Promise((resolve) => setTimeout(resolve, 2500)),
+            ]).then(() => setTimeout(() => {
 
                 iframe.contentWindow?.focus();
 
@@ -1454,7 +1144,7 @@ export default function NewTransaction() {
                     1500
                 );
 
-            }, 250);
+            }, 250));
 
         };
     }

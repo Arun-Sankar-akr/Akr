@@ -337,6 +337,33 @@ function getCarryForwardCredits(registers, todayKey) {
     .map((item) => ({ ...item, carriedOver: true }));
 }
 
+// The most recent CLOSED register (by date, then time). Its closing
+// notes / coins / digital money become the next opening values.
+function getLastClosedRegister(registers, todayKey) {
+  const list = (Array.isArray(registers) ? registers : []).filter(
+    (item) =>
+      item?.status === "closed" &&
+      item?.dateKey &&
+      item.dateKey <= todayKey
+  );
+
+  if (list.length === 0) return null;
+
+  const stamp = (item) =>
+    getTimestampValue(item.closedAt) ||
+    getTimestampValue(item.updatedAt) ||
+    getTimestampValue(item.createdAt) ||
+    0;
+
+  return [...list].sort((a, b) =>
+    a.dateKey === b.dateKey
+      ? stamp(b) - stamp(a)
+      : a.dateKey < b.dateKey
+        ? 1
+        : -1
+  )[0];
+}
+
 function getDateKey(date = new Date()) {
   const year = date.getFullYear();
 
@@ -1311,6 +1338,27 @@ export default function CashRegister() {
   // Opening a new day pre-fills every credit that is still unpaid
   // from the previous register, so loans show on all days.
   const openOpenModal = () => {
+    // Pre-fill cash + digital money with the last closing values.
+    const lastClosed = getLastClosedRegister(registers, getDateKey());
+
+    if (lastClosed) {
+      setOpeningDenominations(
+        DENOMINATIONS.reduce((acc, item) => {
+          acc[item.value] = getDenominationCount(
+            lastClosed.closingDenominations,
+            item
+          );
+          return acc;
+        }, {})
+      );
+      setOpeningDigital(
+        digitalToInputs(getClosingDigital(lastClosed))
+      );
+    } else {
+      setOpeningDenominations(emptyDenominations());
+      setOpeningDigital(emptyDigital());
+    }
+
     setOpeningCredits(
       getCarryForwardCredits(registers, getDateKey())
     );
