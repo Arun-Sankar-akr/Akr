@@ -16,6 +16,7 @@ import {
   where,
   serverTimestamp,
   arrayUnion,
+  writeBatch,
 } from "firebase/firestore";
 
 import {
@@ -182,10 +183,11 @@ function addPaymentToCredit(item, payment) {
 // before history tracking existed are shown as one "earlier" line.
 function getCreditPayments(item) {
   const list = (Array.isArray(item?.payments) ? item.payments : [])
-    .map((entry) => ({
+    .map((entry, idx) => ({
       amount: Number(entry?.amount) || 0,
       atMs: entry?.atMs || 0,
       note: entry?.note || "",
+      idx,
     }));
 
   const logged = list.reduce((sum, entry) => sum + entry.amount, 0);
@@ -196,6 +198,7 @@ function getCreditPayments(item) {
       amount: missing,
       atMs: item?.createdAtMs || 0,
       note: "Earlier payment",
+      idx: -1,
     });
   }
 
@@ -211,15 +214,12 @@ function calculateCreditTotal(credits) {
 }
 
 // Effect of credit on every overall total:
-//   amount given  -> deducted from the overall total
-//   paid / update -> added back to the overall total
-// i.e. overall = cash + digital - (credit given - credit paid).
+//   amount given  -> only shown, NOT deducted from any total
+//   paid / update -> added to the overall total
+// i.e. overall = cash + digital + credit paid.
 function calculateCreditEffect(credits) {
   return (Array.isArray(credits) ? credits : []).reduce(
-    (total, item) =>
-      total -
-      (Number(item?.amount) || 0) +
-      getCreditPaid(item),
+    (total, item) => total + getCreditPaid(item),
     0
   );
 }
@@ -279,9 +279,8 @@ function getDayTotals(register) {
 
   const totalMoney = cash + digital;
 
-  // Day total = total money - expenses
-  //             - credit given (amount)
-  //             + credit paid (paid / update).
+  // Day total = total money - expenses + credit paid (paid / update).
+  // Credit given is only displayed, it is not deducted.
   return {
     cash,
     digital,
@@ -292,8 +291,7 @@ function getDayTotals(register) {
     totalMoney,
     net:
       totalMoney -
-      expenses -
-      creditGiven +
+      expenses +
       creditPaid,
   };
 }
@@ -429,7 +427,7 @@ function getDenominationCount(denominations, item) {
   return Number(denominations?.[item.value]) || 0;
 }
 
-// Opening total = opening cash + opening digital - credit given + credit paid.
+// Opening total = opening cash + opening digital + credit paid.
 // Credits are read live, so a deleted credit drops out of the total.
 // Opening / closing snapshots of digital money and credit (loan).
 // Older records that have no snapshot fall back to the live values.
@@ -479,7 +477,7 @@ function getOpeningTotal(register) {
   );
 }
 
-// Closing total = counted cash + digital - credit given + credit paid
+// Closing total = counted cash + digital + credit paid
 // (closed registers only).
 function getClosingTotal(register) {
   if (!register || register.status !== "closed") return null;
@@ -494,7 +492,7 @@ function getClosingTotal(register) {
 }
 
 // Overall difference = closing total - opening total
-// (cash + digital money - credit given + credit paid, at close minus open).
+// (cash + digital money + credit paid, at close minus open).
 function getOverallDifference(register) {
   const closingTotal = getClosingTotal(register);
 
@@ -503,13 +501,15 @@ function getOverallDifference(register) {
   return closingTotal - getOpeningTotal(register);
 }
 
-// Total money = cash (counted when closed, expected when open) + digital money.
+// Total money = total amount of the day (net) + credit NOT paid yet.
+// Credit that was already paid is inside the net total (paid / update),
+// so only the unpaid balance is added - otherwise it would be counted twice.
 function getTotalMoney(register) {
   if (!register) return 0;
 
   const totals = getDayTotals(register);
 
-  return totals.cash + totals.digital;
+  return totals.net + totals.credits;
 }
 
 function getTimestampValue(value) {
@@ -701,6 +701,14 @@ export default function CashRegister() {
   const [creditDetailSaving, setCreditDetailSaving] =
     useState(false);
 
+  // Edit mode inside the credit box: { reason, amount } | null
+  const [creditEdit, setCreditEdit] =
+    useState(null);
+
+  // Payment being edited inside the credit box: { idx, value } | null
+  const [creditPayEdit, setCreditPayEdit] =
+    useState(null);
+
   const [savingCredit, setSavingCredit] =
     useState(false);
 
@@ -737,6 +745,8 @@ export default function CashRegister() {
   const [entryOpenDigital, setEntryOpenDigital] = useState(emptyDigital());
   const [entryCloseDen, setEntryCloseDen] = useState(emptyDenominations());
   const [entryCloseDigital, setEntryCloseDigital] = useState(emptyDigital());
+  // Credit / loan rows of the entry: { key, reason, amount, paid, orig }
+  const [entryCredits, setEntryCredits] = useState([]);
   const [deletingId, setDeletingId] = useState(null);
 
   // ----------------------------------------------------------
@@ -998,7 +1008,7 @@ export default function CashRegister() {
       : storedExpectedCash;
 
   // Overall register balance = drawer cash + digital balances
-  // - credit given + credit paid (like-for-like opening/closing view).
+  // + credit paid (credit given is only shown).
   const currentOverallTotal =
     currentRegister?.status === "closed"
       ? Number(getClosingTotal(currentRegister) || 0)
@@ -1895,6 +1905,8 @@ export default function CashRegister() {
 
   const openCreditDetail = (source, item) => {
     setCreditDetailPay("");
+    setCreditEdit(null);
+    setCreditPayEdit(null);
     setCreditDetail(
       source === "history" || source === "all"
         ? { source, id: item.id, item }
@@ -2065,6 +2077,234 @@ export default function CashRegister() {
       }
     };
 
+
+  // ----------------------------------------------------------
+  // CREDIT  -  EDIT / DELETE  (inside the credit box)
+  // Works on today's open register, where every unpaid credit lives.
+  // ----------------------------------------------------------
+
+  const closeCreditDetail = () => {
+    setCreditDetail(null);
+    setCreditEdit(null);
+    setCreditPayEdit(null);
+  };
+
+  // Applies `transform` to the open credit shown in the box and saves it.
+  const saveOpenCredit = async (transform) => {
+    if (!openRegister || !creditDetail) return false;
+
+    setCreditDetailSaving(true);
+
+    try {
+      await updateDoc(
+        doc(db, "cashRegisters", openRegister.id),
+        {
+          credits: getCreditList(openRegister).map((item) =>
+            item.id === creditDetail.id ? transform(item) : item
+          ),
+          updatedAt: serverTimestamp(),
+        }
+      );
+
+      return true;
+    } catch (firebaseError) {
+      console.error("Update credit error:", firebaseError);
+
+      alert(
+        firebaseError.message ||
+        "Unable to update credit."
+      );
+
+      return false;
+    } finally {
+      setCreditDetailSaving(false);
+    }
+  };
+
+  // UPDATE: change the name / reason and the total credit amount.
+  // Opens the credit box straight in edit mode (from the history table).
+  const startCreditEditFromTable = (item) => {
+    const inOpen =
+      Boolean(openRegister) &&
+      getCreditList(openRegister).some(
+        (entry) => entry.id === item.id
+      );
+
+    if (!inOpen) {
+      alert("Open today's register to edit this credit.");
+      return;
+    }
+
+    openCreditDetail("all", item);
+    setCreditEdit({
+      reason: item.reason || "",
+      amount: String(Number(item.amount) || 0),
+    });
+  };
+
+  const handleSaveCreditEdit = async () => {
+    if (!creditEdit || !creditDetailItem) return;
+
+    const reason = creditEdit.reason.trim();
+    const amount = Number(creditEdit.amount);
+    const paid = getCreditPaid(creditDetailItem);
+
+    if (!reason) {
+      alert("Please enter the reason / person name.");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid credit amount.");
+      return;
+    }
+
+    if (amount < paid) {
+      alert(
+        `Credit amount cannot be less than what is already paid (${formatCurrency(paid)}).`
+      );
+      return;
+    }
+
+    const ok = await saveOpenCredit((item) => ({
+      ...item,
+      reason,
+      amount,
+    }));
+
+    if (ok) setCreditEdit(null);
+  };
+
+  // UPDATE: change the amount of one payment.
+  const handleSavePaymentEdit = async () => {
+    if (!creditPayEdit || !creditDetailItem) return;
+
+    const value = Number(creditPayEdit.value);
+    const payments = Array.isArray(creditDetailItem.payments)
+      ? creditDetailItem.payments
+      : [];
+    const current = Number(payments[creditPayEdit.idx]?.amount) || 0;
+
+    if (!value || value <= 0) {
+      alert("Please enter a valid payment amount.");
+      return;
+    }
+
+    const newPaid = getCreditPaid(creditDetailItem) - current + value;
+
+    if (newPaid > (Number(creditDetailItem.amount) || 0)) {
+      alert("Total paid cannot be more than the credit amount.");
+      return;
+    }
+
+    const ok = await saveOpenCredit((item) => ({
+      ...item,
+      paid: newPaid,
+      payments: (Array.isArray(item.payments) ? item.payments : []).map(
+        (entry, index) =>
+          index === creditPayEdit.idx
+            ? { ...entry, amount: value }
+            : entry
+      ),
+    }));
+
+    if (ok) setCreditPayEdit(null);
+  };
+
+  // DELETE: remove one payment (the amount goes back to "Not paid").
+  const handleDeleteCreditPayment = async (entry) => {
+    if (!creditDetailItem) return;
+
+    if (
+      !window.confirm(
+        `Remove this payment of ${formatCurrency(entry.amount)}? It will be added back to "Not paid".`
+      )
+    ) {
+      return;
+    }
+
+    await saveOpenCredit((item) => {
+      const payments = Array.isArray(item.payments) ? item.payments : [];
+
+      // Payment made before history tracking existed ("Earlier payment")
+      if (entry.idx < 0) {
+        const logged = payments.reduce(
+          (sum, row) => sum + (Number(row?.amount) || 0),
+          0
+        );
+
+        return { ...item, paid: logged };
+      }
+
+      return {
+        ...item,
+        paid: Math.max(0, getCreditPaid(item) - entry.amount),
+        payments: payments.filter((_, index) => index !== entry.idx),
+      };
+    });
+  };
+
+  // DELETE: remove the whole credit from every day it appears in.
+  const handleDeleteCreditEverywhere = async (target = creditDetailItem) => {
+    if (!target) return;
+
+    if (
+      !window.confirm(
+        `Delete the credit "${target.reason}" (${formatCurrency(
+          Number(target.amount) || 0
+        )}) and all its payments? This also removes it from earlier days and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    const id = target.id;
+    const fields = ["credits", "openingCredits", "closingCredits"];
+
+    setCreditDetailSaving(true);
+
+    try {
+      const batch = writeBatch(db);
+      let touched = 0;
+
+      registers.forEach((register) => {
+        const patch = {};
+
+        fields.forEach((field) => {
+          if (
+            Array.isArray(register?.[field]) &&
+            register[field].some((item) => item?.id === id)
+          ) {
+            patch[field] = register[field].filter(
+              (item) => item?.id !== id
+            );
+          }
+        });
+
+        if (Object.keys(patch).length > 0) {
+          batch.update(doc(db, "cashRegisters", register.id), {
+            ...patch,
+            updatedAt: serverTimestamp(),
+          });
+          touched += 1;
+        }
+      });
+
+      if (touched > 0) await batch.commit();
+
+      if (creditDetail?.id === id) closeCreditDetail();
+    } catch (firebaseError) {
+      console.error("Delete credit error:", firebaseError);
+
+      alert(
+        firebaseError.message ||
+        "Unable to delete credit."
+      );
+    } finally {
+      setCreditDetailSaving(false);
+    }
+  };
+
   // ----------------------------------------------------------
   // EXPORT  (PDF / EXCEL)
   //
@@ -2225,7 +2465,7 @@ export default function CashRegister() {
     pdf.setFontSize(9);
     pdf.setTextColor(100, 100, 110);
     pdf.text(
-      `Amounts in Rs.  |  Total = Cash + Digital - Credit not paid  |  Total Money = Cash + Digital  |  ${rows.length} record(s)  |  Generated ${new Date().toLocaleString()}`,
+      `Amounts in Rs.  |  Total = Cash + Digital - Credit not paid  |  Total Money = Total amount of the day + Credit not paid  |  ${rows.length} record(s)  |  Generated ${new Date().toLocaleString()}`,
       40,
       58
     );
@@ -2818,7 +3058,96 @@ export default function CashRegister() {
       return acc;
     }, {});
 
+  const makeCreditRow = (orig = null) => ({
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    reason: orig?.reason || "",
+    amount: orig ? String(Number(orig.amount) || 0) : "",
+    paid: orig ? String(getCreditPaid(orig) || "") : "",
+    orig,
+  });
+
+  const updateEntryCredit = (key, field, value) =>
+    setEntryCredits((rows) =>
+      rows.map((row) =>
+        row.key === key ? { ...row, [field]: value } : row
+      )
+    );
+
+  // Turns the form rows into credit records. Returns { error } when a row
+  // is invalid. Existing credits keep their id, date and payment history.
+  const buildEntryCredits = (rows, stampMs) => {
+    const list = [];
+
+    for (const row of rows) {
+      const reason = row.reason.trim();
+      const amount = Number(row.amount);
+      const paid = Number(row.paid) || 0;
+
+      // completely empty row -> ignore
+      if (!reason && !row.amount && !row.paid) continue;
+
+      if (!reason) {
+        return { error: "Please enter the name / reason for every credit." };
+      }
+
+      if (!amount || amount <= 0) {
+        return { error: `Please enter a valid credit amount for "${reason}".` };
+      }
+
+      if (paid < 0 || paid > amount) {
+        return {
+          error: `Paid amount for "${reason}" cannot be more than the credit amount.`,
+        };
+      }
+
+      if (row.orig) {
+        const paidChanged = paid !== getCreditPaid(row.orig);
+
+        list.push({
+          ...row.orig,
+          reason,
+          amount,
+          paid,
+          ...(paidChanged
+            ? {
+              payments:
+                paid > 0
+                  ? [
+                    {
+                      amount: paid,
+                      atMs: row.orig.createdAtMs || stampMs,
+                      note: "Edited entry",
+                    },
+                  ]
+                  : [],
+            }
+            : {}),
+        });
+      } else {
+        list.push({
+          id: row.key,
+          reason,
+          amount,
+          paid,
+          payments:
+            paid > 0
+              ? [{ amount: paid, atMs: stampMs, note: "Paid at entry" }]
+              : [],
+          createdAtMs: stampMs,
+          addedBy:
+            profile?.name ||
+            user?.displayName ||
+            user?.email ||
+            "Attendant",
+        });
+      }
+    }
+
+    return { list };
+  };
+
   const openCreateEntry = () => {
+    setEntryCredits([]);
     setEntryDate(getDateKey());
     setEntryOpenDen(emptyDenominations());
     setEntryOpenDigital(emptyDigital());
@@ -2828,6 +3157,7 @@ export default function CashRegister() {
   };
 
   const openEditEntry = (item) => {
+    setEntryCredits(getCreditList(item).map((credit) => makeCreditRow(credit)));
     setEntryDate(item.dateKey || getDateKey());
     setEntryOpenDen(denominationsToInputs(item.openingDenominations));
     setEntryOpenDigital(digitalToInputs(getOpeningDigital(item)));
@@ -2875,6 +3205,19 @@ export default function CashRegister() {
       return;
     }
 
+    const [entryYear, entryMonth, entryDay] = entryDate.split("-").map(Number);
+    const credited = buildEntryCredits(
+      entryCredits,
+      new Date(entryYear, entryMonth - 1, entryDay, 12, 0, 0).getTime()
+    );
+
+    if (credited.error) {
+      alert(credited.error);
+      return;
+    }
+
+    const entryCreditList = credited.list;
+
     setSaving(true);
 
     try {
@@ -2909,9 +3252,9 @@ export default function CashRegister() {
           closingDigital: cleanDigital(entryCloseDigital),
 
           expenses: [],
-          credits: [],
+          credits: entryCreditList,
           openingCredits: [],
-          closingCredits: [],
+          closingCredits: entryCreditList,
 
           cashAdded: 0,
           cashRemoved: 0,
@@ -2924,7 +3267,10 @@ export default function CashRegister() {
 
           cashDifference: closeCash - openCash,
           difference:
-            closeCash + closeDigitalAmount - (openCash + openDigitalAmount),
+            closeCash +
+            closeDigitalAmount +
+            calculateCreditEffect(entryCreditList) -
+            (openCash + openDigitalAmount),
 
           status: "closed",
 
@@ -2954,10 +3300,12 @@ export default function CashRegister() {
           openingDenominations: { ...entryOpenDen },
           openingDigital: newOpeningDigital,
           expectedCash,
+          credits: entryCreditList,
           updatedAt: serverTimestamp(),
         };
 
         if (hasClosing) {
+          payload.closingCredits = entryCreditList;
           const newClosingDigital = cleanDigital(entryCloseDigital);
 
           payload.closingCash = closeCash;
@@ -2968,7 +3316,7 @@ export default function CashRegister() {
           payload.difference =
             closeCash +
             closeDigitalAmount +
-            calculateCreditEffect(getClosingCredits(item) || []) -
+            calculateCreditEffect(entryCreditList) -
             (openCash +
               openDigitalAmount +
               calculateCreditEffect(getOpeningCredits(item)));
@@ -3440,7 +3788,7 @@ export default function CashRegister() {
           </strong>
 
           <small>
-            Cash + digital - credit given + paid
+            Cash + digital + credit paid
           </small>
         </div>
 
@@ -3497,8 +3845,8 @@ export default function CashRegister() {
           <small>
             {currentRegister?.status ===
               "closed"
-              ? "Cash + digital - credit given + paid"
-              : "Expected cash + digital - credit given + paid"}
+              ? "Cash + digital + credit paid"
+              : "Expected cash + digital + credit paid"}
           </small>
         </div>
 
@@ -3966,10 +4314,8 @@ export default function CashRegister() {
                 </div>
                 <strong>
                   {formatCurrency(
-                    dayTotals.cash +
-                    (openRegister
-                      ? digitalDraftTotal
-                      : dayTotals.digital)
+                    dayTotals.net +
+                    dayTotals.credits
                   )}
                 </strong>
                 <span>
@@ -4032,9 +4378,9 @@ export default function CashRegister() {
 
               <div className="cash-credit-split">
                 <div className="given">
-                  <span>Credit given (deducted)</span>
+                  <span>Credit given (shown only)</span>
                   <strong>
-                    −{formatCurrency(
+                    {formatCurrency(
                       dayTotals.creditGiven
                     )}
                   </strong>
@@ -4118,6 +4464,7 @@ export default function CashRegister() {
                   <th>Amount Credit</th>
                   <th>Amount Paid</th>
                   <th>Amount Not Paid</th>
+                  <th className="cash-credit-actions-th">Actions</th>
                 </tr>
               </thead>
 
@@ -4174,6 +4521,38 @@ export default function CashRegister() {
 
                       <td className="cash-credit-due-cell">
                         <strong>{formatCurrency(balance)}</strong>
+                      </td>
+
+                      <td className="cash-credit-actions-cell">
+                        <div className="cash-credit-row-tools">
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn"
+                            title="Edit credit"
+                            disabled={creditDetailSaving}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startCreditEditFromTable(item);
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <Pencil size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn danger"
+                            title="Delete credit"
+                            disabled={creditDetailSaving}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteCreditEverywhere(item);
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -4685,7 +5064,7 @@ export default function CashRegister() {
               </div>
               <div>
                 <span>Credit (not paid)</span>
-                <strong>−{formatCurrency(openingCreditTotal)}</strong>
+                <strong>{formatCurrency(openingCreditTotal)}</strong>
               </div>
               <div className="sum">
                 <span>Total</span>
@@ -5068,7 +5447,7 @@ export default function CashRegister() {
                 <div>
                   <span>Credit (not paid)</span>
                   <strong>
-                    −{formatCurrency(
+                    {formatCurrency(
                       closingCreditTotal
                     )}
                   </strong>
@@ -5228,6 +5607,98 @@ export default function CashRegister() {
                   )}
                 </>
               )}
+
+            <div className="cash-entry-section-title">
+              <WalletCards size={14} />
+              Credit / Loan
+            </div>
+
+            <div className="cash-entry-credit">
+              {entryCredits.length === 0 ? (
+                <div className="cash-expense-empty">
+                  <Receipt size={16} />
+                  No credit on this day
+                </div>
+              ) : (
+                <>
+                  <div className="cash-entry-credit-head">
+                    <span>Name / reason</span>
+                    <span>Credit</span>
+                    <span>Paid</span>
+                    <span />
+                  </div>
+
+                  {entryCredits.map((row) => (
+                    <div className="cash-entry-credit-row" key={row.key}>
+                      <div className="cash-expense-money">
+                        <input
+                          type="text"
+                          placeholder="Name / reason"
+                          value={row.reason}
+                          onChange={(event) =>
+                            updateEntryCredit(row.key, "reason", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="cash-expense-money">
+                        <b>₹</b>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          placeholder="Amount"
+                          value={row.amount}
+                          onChange={(event) =>
+                            updateEntryCredit(row.key, "amount", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="cash-expense-money">
+                        <b>₹</b>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          placeholder="Paid"
+                          value={row.paid}
+                          onChange={(event) =>
+                            updateEntryCredit(row.key, "paid", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="cash-credit-icon-btn danger"
+                        title="Remove credit"
+                        onClick={() =>
+                          setEntryCredits((rows) =>
+                            rows.filter((entry) => entry.key !== row.key)
+                          )
+                        }
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <button
+                type="button"
+                className="cash-credit-action-btn cash-entry-credit-add"
+                onClick={() =>
+                  setEntryCredits((rows) => [...rows, makeCreditRow()])
+                }
+              >
+                <Plus size={14} />
+                Add credit
+              </button>
+            </div>
 
             <div className="cash-modal-actions">
               <button
@@ -5502,8 +5973,8 @@ export default function CashRegister() {
                 <strong>−{formatCurrency(getDayTotals(selectedHistoryRegister).expenses)}</strong>
               </div>
               <div>
-                <span>Credit Given (−)</span>
-                <strong>−{formatCurrency(getDayTotals(selectedHistoryRegister).creditGiven)}</strong>
+                <span>Credit Given</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).creditGiven)}</strong>
               </div>
               <div>
                 <span>Credit Paid (+)</span>
@@ -5661,12 +6132,18 @@ export default function CashRegister() {
             ? inOpenRegister
             : creditDetail.source !== "history");
 
+        // Edit / delete only for credits that live in today's open register
+        const canManage =
+          inOpenRegister &&
+          (creditDetail.source === "all" ||
+            creditDetail.source === "live");
+
         return (
           <div
             className="cash-modal-overlay cash-credit-overlay"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
-                setCreditDetail(null);
+                closeCreditDetail();
               }
             }}
           >
@@ -5690,7 +6167,7 @@ export default function CashRegister() {
                 <button
                   type="button"
                   className="cash-modal-close"
-                  onClick={() => setCreditDetail(null)}
+                  onClick={closeCreditDetail}
                 >
                   <X size={17} />
                 </button>
@@ -5714,6 +6191,108 @@ export default function CashRegister() {
               <div className="cash-credit-progress">
                 <i style={{ width: `${percent}%` }} />
               </div>
+
+              {canManage && !creditEdit && (
+                <div className="cash-credit-actions">
+                  <button
+                    type="button"
+                    className="cash-credit-action-btn"
+                    disabled={creditDetailSaving}
+                    onClick={() =>
+                      setCreditEdit({
+                        reason: creditDetailItem.reason || "",
+                        amount: String(total),
+                      })
+                    }
+                  >
+                    <Pencil size={14} />
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="cash-credit-action-btn danger"
+                    disabled={creditDetailSaving}
+                    onClick={() => handleDeleteCreditEverywhere()}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              )}
+
+              {canManage && creditEdit && (
+                <div className="cash-credit-update cash-credit-edit">
+                  <span className="cash-section-label">
+                    EDIT CREDIT
+                  </span>
+
+                  <div className="cash-credit-edit-form">
+                    <div className="cash-expense-money">
+                      <input
+                        type="text"
+                        placeholder="Name / reason"
+                        value={creditEdit.reason}
+                        onChange={(event) =>
+                          setCreditEdit((prev) => ({
+                            ...prev,
+                            reason: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Credit amount"
+                        value={creditEdit.amount}
+                        onChange={(event) =>
+                          setCreditEdit((prev) => ({
+                            ...prev,
+                            amount: event.target.value,
+                          }))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleSaveCreditEdit();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="cash-credit-edit-buttons">
+                      <button
+                        type="button"
+                        className="cash-expense-add"
+                        onClick={handleSaveCreditEdit}
+                        disabled={creditDetailSaving}
+                      >
+                        {creditDetailSaving ? (
+                          <RefreshCw size={14} className="spin" />
+                        ) : (
+                          <CheckCircle2 size={14} />
+                        )}
+                        Save
+                      </button>
+
+                      <button
+                        type="button"
+                        className="cash-credit-action-btn"
+                        onClick={() => setCreditEdit(null)}
+                        disabled={creditDetailSaving}
+                      >
+                        <X size={14} />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {canPay ? (
                 <div className="cash-credit-update">
@@ -5793,7 +6372,91 @@ export default function CashRegister() {
                           {entry.atMs ? formatDateTime(entry.atMs) : "—"}
                         </span>
                       </div>
-                      <b>{formatCurrency(entry.amount)}</b>
+
+                      {canManage &&
+                        creditPayEdit &&
+                        creditPayEdit.idx === entry.idx &&
+                        entry.idx >= 0 ? (
+                        <div className="cash-credit-pay-tools">
+                          <div className="cash-expense-money">
+                            <b>₹</b>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              inputMode="decimal"
+                              value={creditPayEdit.value}
+                              onChange={(event) =>
+                                setCreditPayEdit((prev) => ({
+                                  ...prev,
+                                  value: event.target.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  handleSavePaymentEdit();
+                                }
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn ok"
+                            title="Save"
+                            disabled={creditDetailSaving}
+                            onClick={handleSavePaymentEdit}
+                          >
+                            <CheckCircle2 size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn"
+                            title="Cancel"
+                            onClick={() => setCreditPayEdit(null)}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="cash-credit-pay-tools">
+                          <b>{formatCurrency(entry.amount)}</b>
+
+                          {canManage && (
+                            <>
+                              {entry.idx >= 0 && (
+                                <button
+                                  type="button"
+                                  className="cash-credit-icon-btn"
+                                  title="Edit payment"
+                                  disabled={creditDetailSaving}
+                                  onClick={() =>
+                                    setCreditPayEdit({
+                                      idx: entry.idx,
+                                      value: String(entry.amount),
+                                    })
+                                  }
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                className="cash-credit-icon-btn danger"
+                                title="Delete payment"
+                                disabled={creditDetailSaving}
+                                onClick={() =>
+                                  handleDeleteCreditPayment(entry)
+                                }
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}

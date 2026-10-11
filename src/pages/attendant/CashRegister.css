@@ -8559,3 +8559,196 @@
         transition: none !important;
     }
 }
+
+/* ============================================================
+   CREDIT BOX  -  EDIT / DELETE
+   ============================================================ */
+
+.cash-credit-actions {
+    display: flex;
+    gap: 10px;
+    margin: 14px 18px 0;
+}
+
+.cash-credit-action-btn {
+    flex: 1;
+    min-height: 40px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--cr-border-2, #e1e6f0);
+    border-radius: 11px;
+    background: #ffffff;
+    color: var(--cr-text, #141b2b);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.cash-credit-action-btn:hover:not(:disabled) {
+    background: var(--t-surface-2, #f7f8fc);
+    transform: translateY(-1px);
+}
+
+.cash-credit-action-btn.danger {
+    border-color: rgba(216, 64, 76, .35);
+    color: #d8404c;
+}
+
+.cash-credit-action-btn.danger:hover:not(:disabled) {
+    background: rgba(216, 64, 76, .08);
+}
+
+.cash-credit-action-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.cash-credit-edit-form {
+    display: grid;
+    gap: 10px;
+}
+
+.cash-credit-edit-form .cash-expense-money {
+    height: 42px;
+}
+
+.cash-credit-edit-buttons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+}
+
+.cash-credit-edit-buttons .cash-expense-add,
+.cash-credit-edit-buttons .cash-credit-action-btn {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+}
+
+.cash-credit-pay-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.cash-credit-pay-tools .cash-expense-money {
+    width: 110px;
+    height: 34px;
+}
+
+.cash-credit-icon-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    border: 1px solid var(--cr-border-2, #e1e6f0);
+    border-radius: 9px;
+    background: #ffffff;
+    color: var(--cr-text-3, #8a93a6);
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.cash-credit-icon-btn:hover:not(:disabled) {
+    background: var(--t-surface-2, #f7f8fc);
+    color: var(--cr-text, #141b2b);
+}
+
+.cash-credit-icon-btn.danger:hover:not(:disabled) {
+    border-color: rgba(216, 64, 76, .4);
+    background: rgba(216, 64, 76, .08);
+    color: #d8404c;
+}
+
+.cash-credit-icon-btn.ok {
+    border-color: rgba(18, 184, 134, .45);
+    color: #0b8a5a;
+}
+
+.cash-credit-icon-btn.ok:hover:not(:disabled) {
+    background: rgba(18, 184, 134, .12);
+    color: #0b8a5a;
+}
+
+.cash-credit-icon-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .cash-credit-pay-tools .cash-expense-money {
+        width: 88px;
+    }
+}
+
+/* ---------- CREDIT HISTORY TABLE : ACTIONS COLUMN ---------- */
+.cash-register-page .cash-credit-table th.cash-credit-actions-th,
+.cash-register-page .cash-credit-table td.cash-credit-actions-cell {
+    width: 92px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.cash-credit-row-tools {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* ---------- ADD / EDIT ENTRY : CREDIT / LOAN ---------- */
+.cash-entry-credit {
+    display: grid;
+    gap: 10px;
+    margin: 12px 24px 4px;
+}
+
+.cash-entry-credit-head,
+.cash-entry-credit-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 10px;
+}
+
+.cash-entry-credit-head span {
+    color: var(--cr-text-3, #8a93a6);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.cash-entry-credit-row .cash-expense-money {
+    height: 40px;
+}
+
+.cash-entry-credit-add {
+    flex: none;
+    justify-self: start;
+}
+
+@media (max-width: 640px) {
+    .cash-entry-credit {
+        margin: 12px 14px 4px;
+    }
+
+    .cash-entry-credit-head {
+        display: none;
+    }
+
+    .cash-entry-credit-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px;
+    }
+
+    .cash-entry-credit-row .cash-expense-money:first-child {
+        grid-column: 1 / -1;
+    }
+}
