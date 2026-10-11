@@ -7,13 +7,139 @@ import {
   applyDrag,
 } from "./idCardGeometry";
 
+import {
+  DEFAULT_ADJUST,
+  applyAdjustments,
+  autoAdjust,
+  autoPhotoAdjust,
+  detectPhotoRect,
+} from "./idCardEnhance";
+
 // The Word builder (and the `docx` package) loads only on download.
 const loadDocxBuilder = () => import("./idCardDocx");
 
 const MAX_IMAGE_SIDE = 4200;
 const PDF_TARGET_WIDTH = 2400;
 
-const BOX_LABEL = { front: "FRONT", back: "BACK" };
+const BOX_LABEL = { front: "FRONT", back: "BACK", photo: "PHOTO" };
+
+// run "Auto enhance" on every new upload (user can still press Original)
+const AUTO_ENHANCE_ON_UPLOAD = true;
+
+const BASIC_SLIDERS = [
+  ["exposure", "Exposure", -100, 100],
+  ["brightness", "Brightness", -100, 100],
+  ["contrast", "Contrast", -100, 100],
+  ["highlights", "Highlights", -100, 100],
+  ["shadows", "Shadows", -100, 100],
+  ["saturation", "Saturation", -100, 100],
+  ["sharpness", "Sharpness", 0, 100],
+];
+
+const MORE_SLIDERS = [
+  ["warmth", "Warmth", -100, 100],
+  ["black", "Black point", 0, 50],
+  ["white", "White point", 50, 100],
+];
+
+const PHOTO_SLIDERS = [
+  ["brightness", "Brightness", -100, 100],
+  ["contrast", "Contrast", -100, 100],
+  ["sharpness", "Clarity", 0, 100],
+  ["smooth", "Smoothing", 0, 100],
+];
+
+const NO_ADJUST = { front: DEFAULT_ADJUST, back: DEFAULT_ADJUST };
+
+const ICONS = {
+  spark: ["M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"],
+  undo: ["M3 12a9 9 0 1 0 3-6.7L3 8", "M3 3v5h5"],
+  download: ["M12 4v12", "m7 11 5 5 5-5", "M5 20h14"],
+  trash: ["M4 7h16", "M10 11v6", "M14 11v6", "M6 7l1 12h10l1-12", "M9 7V4h6v3"],
+  find: ["M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z", "m20 20-4-4"],
+  eye: [
+    "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z",
+    "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  ],
+  expand: ["M4 9V4h5", "M20 9V4h-5", "M4 15v5h5", "M20 15v5h-5"],
+  close: ["M6 6l12 12", "M18 6 6 18"],
+};
+
+const Icon = ({ name, size = 15 }) => (
+  <svg
+    className="idc-icon"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {ICONS[name].map((d) => (
+      <path key={d} d={d} />
+    ))}
+  </svg>
+);
+
+// find the person's photo on a front card (page coordinates)
+const findPhotoBox = (source, frontBox) => {
+  const rect = detectPhotoRect(cropCanvas(source, frontBox));
+
+  return {
+    x: frontBox.x + rect.x * frontBox.w,
+    y: frontBox.y + rect.y * frontBox.h,
+    w: rect.w * frontBox.w,
+    h: rect.h * frontBox.h,
+  };
+};
+
+// enhance only the photo part of the cropped front card
+const applyPhotoAdjust = (canvas, frontBox, photoBox, adjustment) => {
+  const fx = (photoBox.x - frontBox.x) / frontBox.w;
+  const fy = (photoBox.y - frontBox.y) / frontBox.h;
+
+  const left = Math.max(0, Math.round(fx * canvas.width));
+  const top = Math.max(0, Math.round(fy * canvas.height));
+  const right = Math.min(
+    canvas.width,
+    Math.round((fx + photoBox.w / frontBox.w) * canvas.width)
+  );
+  const bottom = Math.min(
+    canvas.height,
+    Math.round((fy + photoBox.h / frontBox.h) * canvas.height)
+  );
+
+  if (right - left < 4 || bottom - top < 4) return;
+
+  applyAdjustments(canvas, adjustment, {
+    x: left,
+    y: top,
+    w: right - left,
+    h: bottom - top,
+  });
+};
+
+// cut one box (fractions of the page) out of a full-resolution canvas
+const cropCanvas = (source, box) => {
+  const sx = Math.round(box.x * source.width);
+  const sy = Math.round(box.y * source.height);
+  const sw = Math.max(1, Math.round(box.w * source.width));
+  const sh = Math.max(1, Math.round(box.h * source.height));
+
+  const out = document.createElement("canvas");
+  out.width = sw;
+  out.height = sh;
+
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, sw, sh);
+  ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  return out;
+};
 
 // ------------------------------------------------------------
 // File readers  ->  one canvas holding the whole page
@@ -136,6 +262,30 @@ export default function AadhaarCardPrinter() {
   const backInputRef = useRef(null);
   const [separate, setSeparate] = useState({ front: null, back: null });
 
+  // enhance settings for each card + which card the sliders edit
+  const [adjust, setAdjust] = useState(NO_ADJUST);
+  const [editSide, setEditSide] = useState("both");
+  const [panel, setPanel] = useState("enhance"); // enhance | photo | print
+  const [activeSlot, setActiveSlot] = useState("front"); // merge tool
+  const [viewSide, setViewSide] = useState("front"); // which card the big preview shows
+  const [compare, setCompare] = useState(""); // original image while holding "compare"
+  const [zoom, setZoom] = useState(null); // full-screen before / after
+  const photoBeforeRef = useRef(null);
+  const photoAfterRef = useRef(null);
+
+  // person's photo on the front card
+  const [photoOn, setPhotoOn] = useState(true);
+  const [photoAdjust, setPhotoAdjust] = useState(DEFAULT_ADJUST);
+
+  // merge tool: editable crop box + preview image for each side
+  const [sepBoxes, setSepBoxes] = useState({ front: null, back: null });
+  const [sepUrls, setSepUrls] = useState({ front: "", back: "" });
+  const sepUrlRef = useRef({ front: "", back: "" });
+  const sepDefaultsRef = useRef({ front: null, back: null });
+  const frontStageRef = useRef(null);
+  const backStageRef = useRef(null);
+  const sepStageRefs = { front: frontStageRef, back: backStageRef };
+
   const [status, setStatus] = useState("idle"); // idle | loading | ready
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
@@ -180,10 +330,26 @@ export default function AadhaarCardPrinter() {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, sw, sh);
       ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
-    });
-  }, [boxes, pageUrl, tool, status]);
 
-  // draw the two uploaded images (merge tool)
+      applyAdjustments(canvas, adjust[key]);
+
+      if (key === "front" && photoOn && boxes.photo) {
+        applyPhotoAdjust(canvas, box, boxes.photo, photoAdjust);
+      }
+    });
+  }, [boxes, pageUrl, tool, status, adjust, photoOn, photoAdjust]);
+
+  // free the merge-tool preview images when leaving the page
+  useEffect(
+    () => () => {
+      Object.values(sepUrlRef.current).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    },
+    []
+  );
+
+  // draw the two cropped images (merge tool, full resolution)
   useEffect(() => {
     if (tool !== "separate") return;
 
@@ -192,19 +358,104 @@ export default function AadhaarCardPrinter() {
       ["back", backCanvasRef],
     ].forEach(([key, ref]) => {
       const source = separateRef.current[key];
+      const box = sepBoxes[key];
       const canvas = ref.current;
 
-      if (!source || !canvas) return;
+      if (!source || !box || !canvas) return;
 
-      canvas.width = source.width;
-      canvas.height = source.height;
+      const sx = Math.round(box.x * source.width);
+      const sy = Math.round(box.y * source.height);
+      const sw = Math.max(1, Math.round(box.w * source.width));
+      const sh = Math.max(1, Math.round(box.h * source.height));
+
+      canvas.width = sw;
+      canvas.height = sh;
 
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(source, 0, 0);
+      ctx.fillRect(0, 0, sw, sh);
+      ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      applyAdjustments(canvas, adjust[key]);
+
+      if (key === "front" && photoOn && sepBoxes.photo) {
+        applyPhotoAdjust(canvas, box, sepBoxes.photo, photoAdjust);
+      }
     });
-  }, [tool, separate]);
+  }, [tool, separate, sepBoxes, adjust, photoOn, photoAdjust]);
+
+  // before / after strip for the person's photo (Photo tab)
+  useEffect(() => {
+    if (panel !== "photo" || !photoOn) return;
+
+    const before = photoBeforeRef.current;
+    const after = photoAfterRef.current;
+    const frontCanvas = frontCanvasRef.current;
+    const source =
+      tool === "letter" ? sourceRef.current : separateRef.current.front;
+    const frontBox = tool === "letter" ? boxes?.front : sepBoxes.front;
+    const photo = tool === "letter" ? boxes?.photo : sepBoxes.photo;
+
+    if (!before || !after || !frontCanvas || !source || !frontBox || !photo) {
+      return;
+    }
+
+    const px = Math.round(photo.x * source.width);
+    const py = Math.round(photo.y * source.height);
+    const pw = Math.max(1, Math.round(photo.w * source.width));
+    const ph = Math.max(1, Math.round(photo.h * source.height));
+
+    before.width = pw;
+    before.height = ph;
+    before.getContext("2d").drawImage(source, px, py, pw, ph, 0, 0, pw, ph);
+
+    const fx = (photo.x - frontBox.x) / frontBox.w;
+    const fy = (photo.y - frontBox.y) / frontBox.h;
+    const left = Math.max(0, Math.round(fx * frontCanvas.width));
+    const top = Math.max(0, Math.round(fy * frontCanvas.height));
+    const width = Math.max(
+      1,
+      Math.min(
+        frontCanvas.width - left,
+        Math.round((photo.w / frontBox.w) * frontCanvas.width)
+      )
+    );
+    const height = Math.max(
+      1,
+      Math.min(
+        frontCanvas.height - top,
+        Math.round((photo.h / frontBox.h) * frontCanvas.height)
+      )
+    );
+
+    after.width = pw;
+    after.height = ph;
+    after
+      .getContext("2d")
+      .drawImage(frontCanvas, left, top, width, height, 0, 0, pw, ph);
+  }, [
+    panel,
+    photoOn,
+    tool,
+    boxes,
+    sepBoxes,
+    adjust,
+    photoAdjust,
+    status,
+    separate,
+  ]);
+
+  // Esc closes the full-screen preview
+  useEffect(() => {
+    if (!zoom) return undefined;
+
+    const onKey = (event) => {
+      if (event.key === "Escape") setZoom(null);
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoom]);
 
   // ----------------------------------------------------------
   // Upload
@@ -247,6 +498,7 @@ export default function AadhaarCardPrinter() {
       );
 
       const found = defaultBoxes(content);
+      found.photo = findPhotoBox(canvas, found.front);
 
       const previewBlob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/jpeg", 0.9)
@@ -254,6 +506,21 @@ export default function AadhaarCardPrinter() {
 
       sourceRef.current = canvas;
       defaultsRef.current = found;
+
+      setAdjust(
+        AUTO_ENHANCE_ON_UPLOAD
+          ? {
+              front: autoAdjust(cropCanvas(canvas, found.front)),
+              back: autoAdjust(cropCanvas(canvas, found.back)),
+            }
+          : NO_ADJUST
+      );
+
+      setPhotoAdjust(
+        AUTO_ENHANCE_ON_UPLOAD
+          ? autoPhotoAdjust(cropCanvas(canvas, found.photo))
+          : DEFAULT_ADJUST
+      );
 
       setPageUrl(URL.createObjectURL(previewBlob));
       setBoxes(found);
@@ -277,6 +544,8 @@ export default function AadhaarCardPrinter() {
     defaultsRef.current = null;
 
     setPageUrl("");
+    setAdjust(NO_ADJUST);
+    setPhotoAdjust(DEFAULT_ADJUST);
     setBoxes(null);
     setFileName("");
     setStatus("idle");
@@ -288,46 +557,132 @@ export default function AadhaarCardPrinter() {
   // ----------------------------------------------------------
   // Merge tool: front image + back image
   // ----------------------------------------------------------
+  // find the card on a small copy of the image (fast)
+  const detectCardBox = (canvas) => {
+    const longest = Math.max(canvas.width, canvas.height);
+    const ratio = longest > 900 ? 900 / longest : 1;
+    const small = document.createElement("canvas");
+    small.width = Math.max(1, Math.round(canvas.width * ratio));
+    small.height = Math.max(1, Math.round(canvas.height * ratio));
+
+    const ctx = small.getContext("2d");
+    ctx.drawImage(canvas, 0, 0, small.width, small.height);
+
+    const pixels = ctx.getImageData(0, 0, small.width, small.height);
+    return detectContentBox(pixels.data, small.width, small.height);
+  };
+
+  // store a page canvas for one side, with its preview + default crop
+  const prepareSeparate = async (which, canvas, name) => {
+    const box = detectCardBox(canvas);
+    const photoBox = which === "front" ? findPhotoBox(canvas, box) : null;
+
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9)
+    );
+    const url = URL.createObjectURL(blob);
+
+    if (sepUrlRef.current[which]) {
+      URL.revokeObjectURL(sepUrlRef.current[which]);
+    }
+    sepUrlRef.current = { ...sepUrlRef.current, [which]: url };
+
+    separateRef.current = { ...separateRef.current, [which]: canvas };
+    sepDefaultsRef.current = { ...sepDefaultsRef.current, [which]: box };
+
+    // a new file (not a rotate) starts with fresh enhance settings
+    if (name) {
+      setAdjust((current) => ({
+        ...current,
+        [which]: AUTO_ENHANCE_ON_UPLOAD
+          ? autoAdjust(cropCanvas(canvas, box))
+          : DEFAULT_ADJUST,
+      }));
+    }
+
+    setSepUrls((current) => ({ ...current, [which]: url }));
+    setSepBoxes((current) => ({
+      ...current,
+      [which]: box,
+      ...(photoBox ? { photo: photoBox } : {}),
+    }));
+    sepDefaultsRef.current = {
+      ...sepDefaultsRef.current,
+      ...(photoBox ? { photo: photoBox } : {}),
+    };
+
+    if (photoBox && name) {
+      setPhotoAdjust(
+        AUTO_ENHANCE_ON_UPLOAD
+          ? autoPhotoAdjust(cropCanvas(canvas, photoBox))
+          : DEFAULT_ADJUST
+      );
+    }
+
+    setSeparate((current) => ({
+      ...current,
+      [which]: { name: name || current[which]?.name || "" },
+    }));
+  };
+
   const handleSeparateFile = async (which, file) => {
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image (JPG / PNG) for the card.");
+    const isPdf =
+      file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
+    if (!isPdf && !file.type.startsWith("image/")) {
+      setError("Please upload an image (JPG / PNG) or a PDF for the card.");
       return;
     }
 
     setError("");
 
     try {
-      const canvas = await readImageFile(file);
+      const canvas = isPdf
+        ? await readPdfFile(file)
+        : await readImageFile(file);
 
-      separateRef.current = { ...separateRef.current, [which]: canvas };
-      setSeparate((current) => ({
-        ...current,
-        [which]: { name: file.name, turn: 0 },
-      }));
+      await prepareSeparate(which, canvas, file.name);
     } catch (readError) {
-      setError(readError.message || "Could not read this image.");
+      setError(
+        isPdf
+          ? "Could not open this PDF. Check the password and try again."
+          : readError.message || "Could not read this image."
+      );
     }
   };
 
-  const rotateSeparate = (which) => {
+  const rotateSeparate = async (which) => {
     const source = separateRef.current[which];
     if (!source) return;
 
-    separateRef.current = {
-      ...separateRef.current,
-      [which]: rotateCanvas(source),
-    };
+    await prepareSeparate(which, rotateCanvas(source));
+  };
 
-    setSeparate((current) => ({
+  const resetSeparateCrop = (which) => {
+    setSepBoxes((current) => ({
       ...current,
-      [which]: { ...current[which], turn: (current[which].turn || 0) + 1 },
+      [which]: sepDefaultsRef.current[which],
+      ...(which === "front" ? { photo: sepDefaultsRef.current.photo } : {}),
     }));
   };
 
   const removeSeparate = (which) => {
+    if (sepUrlRef.current[which]) {
+      URL.revokeObjectURL(sepUrlRef.current[which]);
+    }
+    sepUrlRef.current = { ...sepUrlRef.current, [which]: "" };
     separateRef.current = { ...separateRef.current, [which]: null };
+    sepDefaultsRef.current = { ...sepDefaultsRef.current, [which]: null };
+
+    setSepUrls((current) => ({ ...current, [which]: "" }));
+    setAdjust((current) => ({ ...current, [which]: DEFAULT_ADJUST }));
+    setSepBoxes((current) => ({
+      ...current,
+      [which]: null,
+      ...(which === "front" ? { photo: null } : {}),
+    }));
     setSeparate((current) => ({ ...current, [which]: null }));
 
     const input = which === "front" ? frontInputRef : backInputRef;
@@ -342,26 +697,16 @@ export default function AadhaarCardPrinter() {
   // ----------------------------------------------------------
   // Crop box drag / resize
   // ----------------------------------------------------------
-  const startDrag = (which, mode) => (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const stage = stageRef.current;
-    if (!stage || !boxes) return;
-
+  const trackPointer = (event, stage, onDelta) => {
     const rect = stage.getBoundingClientRect();
     const startX = event.clientX;
     const startY = event.clientY;
-    const startBox = { ...boxes[which] };
 
     const onMove = (moveEvent) => {
-      const dx = (moveEvent.clientX - startX) / rect.width;
-      const dy = (moveEvent.clientY - startY) / rect.height;
-
-      setBoxes((current) => ({
-        ...current,
-        [which]: applyDrag(startBox, mode, dx, dy),
-      }));
+      onDelta(
+        (moveEvent.clientX - startX) / rect.width,
+        (moveEvent.clientY - startY) / rect.height
+      );
     };
 
     const onUp = () => {
@@ -373,6 +718,42 @@ export default function AadhaarCardPrinter() {
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+  };
+
+  const startDrag = (which, mode) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const stage = stageRef.current;
+    if (!stage || !boxes) return;
+
+    const startBox = { ...boxes[which] };
+
+    trackPointer(event, stage, (dx, dy) => {
+      setBoxes((current) => ({
+        ...current,
+        [which]: applyDrag(startBox, mode, dx, dy),
+      }));
+    });
+  };
+
+  // same drag / resize for the merge tool's crop box
+  const startSepDrag = (which, mode) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const stage = sepStageRefs[which === "photo" ? "front" : which].current;
+    const box = sepBoxes[which];
+    if (!stage || !box) return;
+
+    const startBox = { ...box };
+
+    trackPointer(event, stage, (dx, dy) => {
+      setSepBoxes((current) => ({
+        ...current,
+        [which]: applyDrag(startBox, mode, dx, dy),
+      }));
+    });
   };
 
   // ----------------------------------------------------------
@@ -444,81 +825,449 @@ export default function AadhaarCardPrinter() {
       ? status === "ready"
       : Boolean(separate.front && separate.back);
 
-  // ---- right column: previews + print options + download -------
-  const renderSide = () => (
-    <div className="idc-side">
-      <div className="idc-previews">
-        {["front", "back"].map((which) => {
-          const missing = tool === "separate" && !separate[which];
-          const ref = which === "front" ? frontCanvasRef : backCanvasRef;
+  // ----------------------------------------------------------
+  // Enhance (auto + manual)
+  // ----------------------------------------------------------
+  const sidesOf = (side) => (side === "both" ? ["front", "back"] : [side]);
 
-          return (
-            <figure key={which}>
-              {missing ? (
-                <div className="idc-empty-preview">
-                  Upload the {which} image
-                </div>
-              ) : (
-                <canvas ref={ref} />
-              )}
-              <figcaption>{which === "front" ? "Front" : "Back"}</figcaption>
-            </figure>
-          );
-        })}
-      </div>
+  const currentCrop = (which) => {
+    const source =
+      tool === "letter" ? sourceRef.current : separateRef.current[which];
+    const box = tool === "letter" ? boxes?.[which] : sepBoxes[which];
 
-      <div className="idc-options">
-        <div className="idc-option-title">Print layout</div>
+    return source && box ? cropCanvas(source, box) : null;
+  };
 
-        <div className="idc-segment">
-          <button
-            type="button"
-            className={layout === "stacked" ? "active" : ""}
-            onClick={() => setLayout("stacked")}
-          >
-            Front above back
+  const autoEnhance = () => {
+    const updates = {};
+
+    sidesOf(editSide).forEach((which) => {
+      const crop = currentCrop(which);
+      if (crop) updates[which] = autoAdjust(crop);
+    });
+
+    setAdjust((current) => ({ ...current, ...updates }));
+  };
+
+  const resetEnhance = () => {
+    const updates = {};
+    sidesOf(editSide).forEach((which) => {
+      updates[which] = DEFAULT_ADJUST;
+    });
+
+    setAdjust((current) => ({ ...current, ...updates }));
+  };
+
+  const setAdjustValue = (key, value) => {
+    setAdjust((current) => {
+      const next = { ...current };
+
+      sidesOf(editSide).forEach((which) => {
+        next[which] = { ...current[which], [key]: value };
+      });
+
+      return next;
+    });
+  };
+
+  // ---- person's photo ----
+  const photoBoxOf = () => (tool === "letter" ? boxes?.photo : sepBoxes.photo);
+  const frontBoxOf = () => (tool === "letter" ? boxes?.front : sepBoxes.front);
+  const frontSourceOf = () =>
+    tool === "letter" ? sourceRef.current : separateRef.current.front;
+
+  const setPhotoBox = (box) => {
+    if (tool === "letter") setBoxes((current) => ({ ...current, photo: box }));
+    else setSepBoxes((current) => ({ ...current, photo: box }));
+  };
+
+  const findPhoto = () => {
+    const source = frontSourceOf();
+    const front = frontBoxOf();
+    if (!source || !front) return null;
+
+    const box = findPhotoBox(source, front);
+    setPhotoBox(box);
+
+    return box;
+  };
+
+  const autoPhoto = () => {
+    const source = frontSourceOf();
+    const box = photoBoxOf();
+
+    if (source && box) setPhotoAdjust(autoPhotoAdjust(cropCanvas(source, box)));
+  };
+
+  // ---- big preview: hold to compare / full-screen zoom ----
+  const originalUrlOf = (which) => {
+    const crop = currentCrop(which);
+    return crop ? crop.toDataURL("image/jpeg", 0.92) : "";
+  };
+
+  const startCompare = (event) => {
+    event.preventDefault();
+    setCompare(originalUrlOf(viewSide));
+  };
+
+  const stopCompare = () => setCompare("");
+
+  const openZoom = () => {
+    const canvas = (viewSide === "front" ? frontCanvasRef : backCanvasRef)
+      .current;
+    if (!canvas) return;
+
+    setZoom({
+      side: viewSide,
+      mode: "edited",
+      edited: canvas.toDataURL("image/png"),
+      original: originalUrlOf(viewSide),
+    });
+  };
+
+  const renderRange = (key, label, min, max, value, onChange, onReset) => (
+    <label key={key} className="idc-slider">
+      <span>
+        {label}
+        <b>{value}</b>
+      </span>
+
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={1}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        onDoubleClick={onReset}
+      />
+    </label>
+  );
+
+  const renderPhotoSlider = ([key, label, min, max]) =>
+    renderRange(
+      key,
+      label,
+      min,
+      max,
+      photoAdjust[key],
+      (value) => setPhotoAdjust((current) => ({ ...current, [key]: value })),
+      () =>
+        setPhotoAdjust((current) => ({
+          ...current,
+          [key]: DEFAULT_ADJUST[key],
+        }))
+    );
+
+  const renderSlider = ([key, label, min, max]) => {
+    const shown = adjust[editSide === "back" ? "back" : "front"];
+
+    return renderRange(
+      key,
+      label,
+      min,
+      max,
+      shown[key],
+      (value) => setAdjustValue(key, value),
+      () => setAdjustValue(key, DEFAULT_ADJUST[key])
+    );
+  };
+
+  const renderSwitch = (label, checked, onChange) => (
+    <label className="idc-switch">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <i aria-hidden="true" />
+      <span>{label}</span>
+    </label>
+  );
+
+  // ---- tab: Enhance ----
+  const renderEnhanceTab = () => {
+    const shown = adjust[editSide === "back" ? "back" : "front"];
+
+    return (
+      <div className="idc-tab-body">
+        <div className="idc-segment three small">
+          {[
+            ["both", "Both"],
+            ["front", "Front"],
+            ["back", "Back"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={editSide === value ? "active" : ""}
+              onClick={() => setEditSide(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="idc-enhance-actions">
+          <button type="button" className="idc-ghost primary" onClick={autoEnhance}>
+            <Icon name="spark" /> Auto enhance
           </button>
 
-          <button
-            type="button"
-            className={layout === "side" ? "active" : ""}
-            onClick={() => setLayout("side")}
-          >
-            Side by side
+          <button type="button" className="idc-ghost" onClick={resetEnhance}>
+            <Icon name="undo" /> Original
           </button>
         </div>
 
-        <label className="idc-select">
-          <span>Card size</span>
+        <div className="idc-slider-grid">
+          {BASIC_SLIDERS.map(renderSlider)}
 
-          <select
-            value={layout === "side" ? 1 : scale}
-            disabled={layout === "side"}
-            onChange={(event) => setScale(Number(event.target.value))}
-          >
-            <option value={1}>Actual card size (85.6 x 54 mm)</option>
-            <option value={1.25}>Larger (125%)</option>
-            <option value={1.5}>Extra large (150%)</option>
-          </select>
-        </label>
+          {renderSwitch("Black & white", shown.mono, (value) =>
+            setAdjustValue("mono", value)
+          )}
+        </div>
+
+        <details className="idc-more">
+          <summary>More adjustments</summary>
+
+          <div className="idc-slider-grid">{MORE_SLIDERS.map(renderSlider)}</div>
+        </details>
       </div>
+    );
+  };
 
-      <button
-        type="button"
-        className="idc-download"
-        onClick={handleDownload}
-        disabled={busy || !canDownload}
-      >
-        {busy ? "Creating file..." : "Download DOCX (A4)"}
-      </button>
+  // ---- tab: Photo ----
+  const renderPhotoTab = () => (
+    <div className="idc-tab-body">
+      {renderSwitch("Make the person's photo clear", photoOn, setPhotoOn)}
 
-      {tool === "letter" && (
-        <button type="button" className="idc-ghost wide" onClick={clearFile}>
-          Remove file
-        </button>
+      {photoOn ? (
+        <>
+          <p className="idc-hint">
+            Drag the orange PHOTO box on the front crop onto the photo.
+          </p>
+
+          <div className="idc-photo-compare">
+            <figure>
+              <canvas ref={photoBeforeRef} />
+              <figcaption>Before</figcaption>
+            </figure>
+
+            <figure>
+              <canvas ref={photoAfterRef} />
+              <figcaption>After</figcaption>
+            </figure>
+          </div>
+
+          <div className="idc-enhance-actions">
+            <button type="button" className="idc-ghost primary" onClick={autoPhoto}>
+              <Icon name="spark" /> Auto photo
+            </button>
+
+            <button type="button" className="idc-ghost" onClick={findPhoto}>
+              <Icon name="find" /> Find photo
+            </button>
+          </div>
+
+          <div className="idc-slider-grid">
+            {PHOTO_SLIDERS.map(renderPhotoSlider)}
+          </div>
+
+          <button
+            type="button"
+            className="idc-ghost wide"
+            onClick={() => setPhotoAdjust(DEFAULT_ADJUST)}
+          >
+            <Icon name="undo" /> Original photo
+          </button>
+        </>
+      ) : (
+        <p className="idc-hint">Photo enhance is off.</p>
       )}
     </div>
   );
+
+  // ---- tab: Print ----
+  const renderPrintTab = () => (
+    <div className="idc-tab-body">
+      <div className="idc-segment">
+        <button
+          type="button"
+          className={layout === "stacked" ? "active" : ""}
+          onClick={() => setLayout("stacked")}
+        >
+          Front above back
+        </button>
+
+        <button
+          type="button"
+          className={layout === "side" ? "active" : ""}
+          onClick={() => setLayout("side")}
+        >
+          Side by side
+        </button>
+      </div>
+
+      <label className="idc-select">
+        <span>Card size</span>
+
+        <select
+          value={layout === "side" ? 1 : scale}
+          disabled={layout === "side"}
+          onChange={(event) => setScale(Number(event.target.value))}
+        >
+          <option value={1}>Actual card size (85.6 x 54 mm)</option>
+          <option value={1.25}>Larger (125%)</option>
+          <option value={1.5}>Extra large (150%)</option>
+        </select>
+      </label>
+    </div>
+  );
+
+  // ---- right column: previews + tabs + download ----------------
+  const renderSide = () => {
+    const hasImage =
+      tool === "letter"
+        ? status === "ready"
+        : Boolean(separate.front || separate.back);
+
+    const showPhotoTab = tool === "letter" || Boolean(separate.front);
+
+    const tabs = [
+      ["enhance", "Enhance"],
+      ...(showPhotoTab ? [["photo", "Photo"]] : []),
+      ["print", "Print"],
+    ];
+
+    const active = tabs.some(([key]) => key === panel) ? panel : "enhance";
+
+    return (
+      <div className="idc-side">
+        <div className="idc-viewer">
+          <div className="idc-viewer-bar">
+            <div className="idc-segment small">
+              {[
+                ["front", "Front"],
+                ["back", "Back"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={viewSide === value ? "active" : ""}
+                  onClick={() => setViewSide(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="idc-viewer-tools">
+              <button
+                type="button"
+                className="idc-ghost"
+                title="Press and hold to see the original"
+                onPointerDown={startCompare}
+                onPointerUp={stopCompare}
+                onPointerLeave={stopCompare}
+                onPointerCancel={stopCompare}
+                onContextMenu={(event) => event.preventDefault()}
+                disabled={tool === "separate" && !separate[viewSide]}
+              >
+                <Icon name="eye" /> Hold: original
+              </button>
+
+              <button
+                type="button"
+                className="idc-ghost"
+                onClick={openZoom}
+                disabled={tool === "separate" && !separate[viewSide]}
+              >
+                <Icon name="expand" /> Zoom
+              </button>
+            </div>
+          </div>
+
+          <div className="idc-viewer-stage">
+            {["front", "back"].map((which) => {
+              const missing = tool === "separate" && !separate[which];
+              const ref = which === "front" ? frontCanvasRef : backCanvasRef;
+
+              return (
+                <figure
+                  key={which}
+                  className={viewSide === which ? "" : "hidden"}
+                >
+                  {missing ? (
+                    <div className="idc-empty-preview">
+                      Add the {which} image to see it here
+                    </div>
+                  ) : (
+                    <canvas ref={ref} />
+                  )}
+                </figure>
+              );
+            })}
+
+            {compare && (
+              <img className="idc-compare-img" src={compare} alt="Original" />
+            )}
+
+            <span className={`idc-badge${compare ? " original" : ""}`}>
+              {compare ? "ORIGINAL" : "EDITED"}
+            </span>
+          </div>
+        </div>
+
+        <div className="idc-panel">
+          <div className="idc-panel-tabs" role="tablist">
+            {tabs.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={active === key}
+                className={active === key ? "active" : ""}
+                onClick={() => setPanel(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {active === "print"
+            ? renderPrintTab()
+            : !hasImage
+            ? <p className="idc-hint pad">Upload a card image to start editing.</p>
+            : active === "photo"
+            ? renderPhotoTab()
+            : renderEnhanceTab()}
+        </div>
+
+        <div className={`idc-actions${tool === "letter" ? " two" : ""}`}>
+          <button
+            type="button"
+            className="idc-download"
+            onClick={handleDownload}
+            disabled={busy || !canDownload}
+          >
+            <Icon name="download" size={17} />
+            {busy ? "Creating file..." : "Download DOCX (A4)"}
+          </button>
+
+          {tool === "letter" && (
+            <button
+              type="button"
+              className="idc-ghost icon-only"
+              onClick={clearFile}
+              title="Remove file"
+              aria-label="Remove file"
+            >
+              <Icon name="trash" size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ---- one upload slot of the merge tool ----------------------
   const renderSlot = (which) => {
@@ -527,11 +1276,11 @@ export default function AadhaarCardPrinter() {
     const title = which === "front" ? "Front side" : "Back side";
 
     return (
-      <div className={`idc-slot ${which}${slot ? " filled" : ""}`}>
+      <div className={`idc-slot idc-side-${which}${slot ? " filled" : ""}`}>
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="application/pdf,image/*"
           hidden
           onChange={(event) =>
             handleSeparateFile(which, event.target.files?.[0])
@@ -575,7 +1324,7 @@ export default function AadhaarCardPrinter() {
           <div className="idc-drop-text">
             <strong>{title}</strong>
             <span>
-              {slot ? slot.name : "Click or drop the card image here"}
+              {slot ? slot.name : "Click or drop the card image (or PDF) here"}
             </span>
           </div>
         </div>
@@ -593,6 +1342,14 @@ export default function AadhaarCardPrinter() {
             <button
               type="button"
               className="idc-ghost"
+              onClick={() => resetSeparateCrop(which)}
+            >
+              Reset crop
+            </button>
+
+            <button
+              type="button"
+              className="idc-ghost"
               onClick={() => inputRef.current?.click()}
             >
               Replace
@@ -605,6 +1362,54 @@ export default function AadhaarCardPrinter() {
             >
               Remove
             </button>
+          </div>
+        )}
+
+        {slot && sepBoxes[which] && sepUrls[which] && (
+          <div className="idc-slot-editor">
+            <div className="idc-editor-head">
+              <div>
+                <strong>Check the {which} crop</strong>
+                <span>
+                  Drag the box, or its corners, to select the card area.
+                </span>
+              </div>
+            </div>
+
+            <div className="idc-stage" ref={sepStageRefs[which]}>
+              <img
+                src={sepUrls[which]}
+                alt={`Uploaded ${which} image`}
+                draggable={false}
+              />
+
+              {(which === "front" && photoOn && sepBoxes.photo
+                ? ["front", "photo"]
+                : [which]
+              ).map((key) => (
+                <div
+                  key={key}
+                  className={`idc-box idc-side-${key}`}
+                  style={{
+                    left: percent(sepBoxes[key].x),
+                    top: percent(sepBoxes[key].y),
+                    width: percent(sepBoxes[key].w),
+                    height: percent(sepBoxes[key].h),
+                  }}
+                  onPointerDown={startSepDrag(key, "move")}
+                >
+                  <span className="idc-box-label">{BOX_LABEL[key]}</span>
+
+                  {["nw", "n", "ne", "w", "e", "sw", "s", "se"].map((handle) => (
+                    <i
+                      key={handle}
+                      className={`idc-handle ${handle}`}
+                      onPointerDown={startSepDrag(key, handle)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -640,7 +1445,9 @@ export default function AadhaarCardPrinter() {
       {tool === "letter" && (
         <>
           <div
-            className={`idc-drop${dragOver ? " over" : ""}`}
+            className={`idc-drop${dragOver ? " over" : ""}${
+              status === "ready" ? " compact" : ""
+            }`}
             role="button"
             tabIndex={0}
             onClick={() => inputRef.current?.click()}
@@ -700,7 +1507,7 @@ export default function AadhaarCardPrinter() {
           </div>
 
           <p className="idc-privacy">
-            The file is processed inside your browser and is never uploaded.
+            Private: the file is processed in your browser, never uploaded.
           </p>
 
           {error && <div className="idc-error">{error}</div>}
@@ -733,10 +1540,13 @@ export default function AadhaarCardPrinter() {
                     draggable={false}
                   />
 
-                  {["front", "back"].map((which) => (
+                  {(photoOn && boxes.photo
+                    ? ["front", "back", "photo"]
+                    : ["front", "back"]
+                  ).map((which) => (
                     <div
                       key={which}
-                      className={`idc-box ${which}`}
+                      className={`idc-box idc-side-${which}`}
                       style={{
                         left: percent(boxes[which].x),
                         top: percent(boxes[which].y),
@@ -749,7 +1559,7 @@ export default function AadhaarCardPrinter() {
                         {BOX_LABEL[which]}
                       </span>
 
-                      {["nw", "ne", "sw", "se"].map((handle) => (
+                      {["nw", "n", "ne", "w", "e", "sw", "s", "se"].map((handle) => (
                         <i
                           key={handle}
                           className={`idc-handle ${handle}`}
@@ -770,21 +1580,99 @@ export default function AadhaarCardPrinter() {
       {tool === "separate" && (
         <>
           <p className="idc-privacy">
-            Upload the front and the back of the card. Both images are
-            processed inside your browser and are never uploaded.
+            Add the front and the back of the card. Private: processed in your
+            browser, never uploaded.
           </p>
 
           {error && <div className="idc-error">{error}</div>}
 
           <div className="idc-workspace">
             <div className="idc-editor idc-slots">
-              {renderSlot("front")}
-              {renderSlot("back")}
+              <div className="idc-slot-tabs" role="tablist">
+                {["front", "back"].map((which) => (
+                  <button
+                    key={which}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSlot === which}
+                    className={`idc-side-${which}${
+                      activeSlot === which ? " active" : ""
+                    }`}
+                    onClick={() => setActiveSlot(which)}
+                  >
+                    <i className="dot" aria-hidden="true" />
+                    {which === "front" ? "Front side" : "Back side"}
+                    <small>{separate[which] ? "Added ✓" : "Not added"}</small>
+                  </button>
+                ))}
+              </div>
+
+              {renderSlot(activeSlot)}
             </div>
 
             {renderSide()}
           </div>
         </>
+      )}
+
+      {zoom && (
+        <div
+          className="idc-lightbox"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setZoom(null)}
+        >
+          <div
+            className="idc-lightbox-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="idc-lightbox-bar">
+              <div className="idc-segment three small">
+                {[
+                  ["edited", "Edited"],
+                  ["original", "Original"],
+                  ["both", "Side by side"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={zoom.mode === value ? "active" : ""}
+                    onClick={() =>
+                      setZoom((current) => ({ ...current, mode: value }))
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="idc-ghost icon-only"
+                onClick={() => setZoom(null)}
+                aria-label="Close"
+              >
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+
+            <div className={`idc-lightbox-body${zoom.mode === "both" ? " both" : ""}`}>
+              {zoom.mode !== "original" && (
+                <figure>
+                  <img src={zoom.edited} alt="Edited card" />
+                  <figcaption>Edited</figcaption>
+                </figure>
+              )}
+
+              {zoom.mode !== "edited" && (
+                <figure>
+                  <img src={zoom.original} alt="Original card" />
+                  <figcaption>Original</figcaption>
+                </figure>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
