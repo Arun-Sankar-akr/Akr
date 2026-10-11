@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "docx": "^9.10.0",
     "firebase": "^10.8.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.47.0",
+    "pdfjs-dist": "^4.10.38",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",

@@ -4,6 +4,7 @@ import logo from "../../assets/logo.png"
 import "./Home.css";
 import { useTheme } from "../../context/ThemeContext";
 import CgpaPercentageCalculator from "./CgpaPercentageCalculator";
+import AadhaarCardPrinter from "./AadhaarCardPrinter";
 
 import Aadhar from "../../assets/aadhar1.png"
 import Pan from "../../assets/pan.png"
@@ -742,6 +743,21 @@ const Home = () => {
                             <div className="cgpa-home-tool-grid">
                                 <CgpaPercentageCalculator />
                             </div>
+                        </div>
+                    </section>
+
+                    <section className="idcard-home-tool-section" id="idcard">
+                        <div className="section-container">
+                            <div className="section-heading reveal-item">
+                                <div className="section-heading-left">
+                                    <h1>
+                                        ID Card
+                                        <span> Print</span>
+                                    </h1>
+                                </div>
+                            </div>
+
+                            <AadhaarCardPrinter />
                         </div>
                     </section>
 

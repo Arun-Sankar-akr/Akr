@@ -1,0 +1,466 @@
+/* =========================================================
+   ID CARD PRINT  (Home page tool)
+   Uses the --akr-* tokens of Home.css, so light / dark mode
+   work automatically.
+========================================================= */
+
+.idcard-home-tool-section {
+    position: relative;
+    padding: 12px 0 70px;
+}
+
+#idcard {
+    margin-top: 50px;
+}
+
+.idc {
+    display: grid;
+    gap: 14px;
+}
+
+/* ---------- upload box ---------- */
+.idc-drop {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px;
+    border: 2px dashed var(--akr-border-strong);
+    border-radius: var(--akr-radius-md);
+    background: var(--akr-surface);
+    color: var(--akr-text);
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.idc-drop:hover,
+.idc-drop:focus-visible,
+.idc-drop.over {
+    border-color: var(--akr-primary);
+    background: var(--akr-primary-soft);
+    outline: none;
+}
+
+.idc-drop-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 16px;
+    background: var(--akr-primary-soft);
+    color: var(--akr-primary);
+}
+
+.idc-drop-text {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.idc-drop-text strong {
+    overflow: hidden;
+    font-size: 16px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.idc-drop-text span {
+    color: var(--akr-text-soft);
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.idc-privacy {
+    margin: 0;
+    color: var(--akr-text-muted);
+    font-size: 12.5px;
+}
+
+.idc-error {
+    padding: 11px 14px;
+    border: 1px solid rgba(216, 64, 76, .35);
+    border-radius: 12px;
+    background: rgba(216, 64, 76, .08);
+    color: #d8404c;
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+/* ---------- workspace ---------- */
+.idc-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.idc-editor,
+.idc-side {
+    padding: 18px;
+    border: 1px solid var(--akr-border);
+    border-radius: var(--akr-radius-md);
+    background: var(--akr-surface);
+    box-shadow: var(--akr-shadow-sm);
+}
+
+.idc-editor-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.idc-editor-head strong {
+    display: block;
+    color: var(--akr-text);
+    font-size: 15px;
+}
+
+.idc-editor-head span {
+    display: block;
+    margin-top: 3px;
+    color: var(--akr-text-soft);
+    font-size: 12.5px;
+}
+
+.idc-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--akr-border-strong);
+    border-radius: 12px;
+    background: #ffffff;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.idc-stage img {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+}
+
+.idc-box {
+    position: absolute;
+    border: 2px solid var(--idc-color);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--idc-color) 14%, transparent);
+    cursor: move;
+    touch-action: none;
+}
+
+.idc-box.front {
+    --idc-color: #4f6bff;
+}
+
+.idc-box.back {
+    --idc-color: #12b886;
+}
+
+.idc-box-label {
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    padding: 2px 7px;
+    border-radius: 3px 0 6px 0;
+    background: var(--idc-color);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    pointer-events: none;
+}
+
+.idc-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--idc-color);
+    border-radius: 50%;
+    background: #ffffff;
+    touch-action: none;
+}
+
+.idc-handle.nw { top: -8px; left: -8px; cursor: nwse-resize; }
+.idc-handle.ne { top: -8px; right: -8px; cursor: nesw-resize; }
+.idc-handle.sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
+.idc-handle.se { bottom: -8px; right: -8px; cursor: nwse-resize; }
+
+/* ---------- right column ---------- */
+.idc-side {
+    display: grid;
+    gap: 16px;
+}
+
+.idc-previews {
+    display: grid;
+    gap: 12px;
+}
+
+.idc-previews figure {
+    margin: 0;
+}
+
+.idc-previews canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--akr-border-strong);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.idc-previews figcaption {
+    margin-top: 5px;
+    color: var(--akr-text-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.idc-options {
+    display: grid;
+    gap: 10px;
+}
+
+.idc-option-title {
+    color: var(--akr-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.idc-segment {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--akr-border);
+    border-radius: 12px;
+    background: var(--akr-surface-soft);
+}
+
+.idc-segment button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--akr-text-soft);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+
+.idc-segment button.active {
+    background: var(--akr-surface);
+    box-shadow: var(--akr-shadow-sm);
+    color: var(--akr-primary);
+}
+
+.idc-select {
+    display: grid;
+    gap: 6px;
+}
+
+.idc-select span {
+    color: var(--akr-text-soft);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.idc-select select {
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--akr-border-strong);
+    border-radius: 10px;
+    background: var(--akr-surface);
+    color: var(--akr-text);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.idc-select select:disabled {
+    opacity: .55;
+}
+
+.idc-download {
+    min-height: 46px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--akr-primary);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, transform .18s ease;
+}
+
+.idc-download:hover:not(:disabled) {
+    background: var(--akr-primary-dark);
+    transform: translateY(-1px);
+}
+
+.idc-download:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+.idc-ghost {
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--akr-border-strong);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--akr-text-soft);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.idc-ghost:hover {
+    border-color: var(--akr-primary);
+    color: var(--akr-primary);
+}
+
+.idc-ghost.wide {
+    width: 100%;
+}
+
+/* ---------- dark mode: keep the white page readable ---------- */
+[data-theme="dark"] .idc-download {
+    color: #111111;
+}
+
+/* ---------- mobile ---------- */
+@media (max-width: 900px) {
+    .idc-workspace {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .idcard-home-tool-section {
+        padding-bottom: 50px;
+    }
+
+    .idc-drop {
+        padding: 16px;
+    }
+
+    .idc-editor,
+    .idc-side {
+        padding: 14px;
+    }
+}
+
+/* ---------- tool tabs (letter / merge images) ---------- */
+.idc-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 5px;
+    border: 1px solid var(--akr-border);
+    border-radius: 16px;
+    background: var(--akr-surface-soft);
+}
+
+.idc-tabs button {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--akr-text-soft);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+
+.idc-tabs button small {
+    color: var(--akr-text-muted);
+    font-size: 11.5px;
+    font-weight: 500;
+}
+
+.idc-tabs button.active {
+    background: var(--akr-surface);
+    box-shadow: var(--akr-shadow-sm);
+    color: var(--akr-primary);
+}
+
+/* ---------- merge tool: two upload slots ---------- */
+.idc-slots {
+    display: grid;
+    gap: 14px;
+}
+
+.idc-slot {
+    display: grid;
+    gap: 10px;
+}
+
+.idc-slot-body {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    border: 2px dashed var(--akr-border-strong);
+    border-radius: 16px;
+    background: var(--akr-surface);
+    color: var(--akr-text);
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease;
+}
+
+.idc-slot-body:hover,
+.idc-slot-body:focus-visible {
+    border-color: var(--akr-primary);
+    background: var(--akr-primary-soft);
+    outline: none;
+}
+
+.idc-slot.front .idc-slot-body {
+    border-left: 5px solid #4f6bff;
+}
+
+.idc-slot.back .idc-slot-body {
+    border-left: 5px solid #12b886;
+}
+
+.idc-slot.filled .idc-slot-body {
+    border-style: solid;
+}
+
+.idc-slot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.idc-empty-preview {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 85.6 / 54;
+    border: 1px dashed var(--akr-border-strong);
+    border-radius: 8px;
+    background: var(--akr-surface-soft);
+    color: var(--akr-text-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+@media (max-width: 700px) {
+    .idc-tabs button small {
+        display: none;
+    }
+}
