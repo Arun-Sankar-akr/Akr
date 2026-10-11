@@ -589,6 +589,7 @@ const ToolCard = ({ tool, index }) => {
 
 const Home = () => {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [activePrintTool, setActivePrintTool] = useState(null);
     const { theme, toggleTheme } = useTheme();
     const isDark = theme === "dark";
 
@@ -747,35 +748,63 @@ const Home = () => {
                         </div>
                     </section>
 
-                    <section className="idcard-home-tool-section" id="idcard">
+                    <section className="print-tools-section" id="print-tools">
                         <div className="section-container">
                             <div className="section-heading reveal-item">
                                 <div className="section-heading-left">
-                                    <h1>
-                                        ID Card
-                                        <span> Print</span>
-                                    </h1>
+                                    <span className="eyebrow">
+                                        <span className="eyebrow-icon"><Icon name="sparkle" size={14} /></span>
+                                        Print utilities
+                                    </span>
+                                    <h1>Print <span>Tools</span></h1>
+                                    <p>Choose a tool to prepare your ID documents or passport photos for printing.</p>
                                 </div>
                             </div>
 
-                            <AadhaarCardPrinter />
-                        </div>
-                    </section>
-                    
-                    <section className="passport-home-tool-section" id="passport">
-                        <div className="section-container">
-                            <div className="section-heading reveal-item">
-                                <div className="section-heading-left">
-                                    <h1>
-                                        Passport Photo
-                                        <span> Print</span>
-                                    </h1>
-                                </div>
-                            </div>
+                            <div className="print-tools-grid">
+                                <button type="button" className="print-tool-card print-tool-aadhaar" onClick={() => setActivePrintTool("aadhaar")}>
+                                    <span className="print-tool-card-glow" />
+                                    <span className="print-tool-icon"><Icon name="aadhaar" size={30} /></span>
+                                    <span className="print-tool-label">DOCUMENT PRINTING</span>
+                                    <strong>ID Card Print</strong>
+                                    <span className="print-tool-description">Upload an Aadhaar letter and prepare the front and back for printing.</span>
+                                    <span className="print-tool-action">Open tool <Icon name="arrow" size={18} /></span>
+                                </button>
 
-                            <PassportPhotoPrinter />
+                                <button type="button" className="print-tool-card print-tool-passport" onClick={() => setActivePrintTool("passport")}>
+                                    <span className="print-tool-card-glow" />
+                                    <span className="print-tool-icon"><Icon name="image" size={30} /></span>
+                                    <span className="print-tool-label">PHOTO PRINTING</span>
+                                    <strong>Passport Photo Print</strong>
+                                    <span className="print-tool-description">Upload a photo and automatically crop and resize it to passport size.</span>
+                                    <span className="print-tool-action">Open tool <Icon name="arrow" size={18} /></span>
+                                </button>
+                            </div>
                         </div>
                     </section>
+
+                    {activePrintTool && (
+                        <div className="print-tool-modal-backdrop" onMouseDown={(event) => {
+                            if (event.target === event.currentTarget) setActivePrintTool(null);
+                        }}>
+                            <section className="print-tool-modal" role="dialog" aria-modal="true" aria-labelledby="print-tool-modal-title">
+                                <header className="print-tool-modal-header">
+                                    <div>
+                                        <span className="print-tool-modal-eyebrow">AKR PRINT TOOLS</span>
+                                        <h2 id="print-tool-modal-title">{activePrintTool === "aadhaar" ? "ID Card Print" : "Passport Photo Print"}</h2>
+                                        <p>{activePrintTool === "aadhaar" ? "Prepare your Aadhaar front and back for printing." : "Prepare a passport-size photo for printing."}</p>
+                                    </div>
+                                    <button type="button" className="print-tool-modal-close" onClick={() => setActivePrintTool(null)} aria-label="Close print tool">
+                                        <Icon name="close" size={22} />
+                                    </button>
+                                </header>
+                                <div className="print-tool-modal-content">
+                                    {activePrintTool === "aadhaar" ? <AadhaarCardPrinter /> : <PassportPhotoPrinter />}
+                                </div>
+                            </section>
+                        </div>
+                    )}
+
                     <div className="section-container" id="govt">
                         <div className="section-heading reveal-item">
                             <div className="section-heading-left">
