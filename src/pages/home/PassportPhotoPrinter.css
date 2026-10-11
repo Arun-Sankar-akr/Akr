@@ -188,30 +188,29 @@
   color: var(--akr-primary, #7e03dd);
 }
 
+.idc.ppp {
+  --ppp-max-h: clamp(300px, 56vh, 520px);
+}
+
+/* the stage hugs the photo (height capped), so the crop box lines up exactly */
 .idc.ppp .idc-stage {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  max-height: 590px;
-  overflow: hidden;
-  border: 1px solid #e4dfeb;
+  display: block;
+  width: min(100%, calc(var(--ppp-max-h) * var(--ppp-ratio, .75)));
+  margin-inline: auto;
+  padding: 0;
+  line-height: 0;
   border-radius: 11px;
-  background:
-    linear-gradient(45deg, #f2f0f6 25%, transparent 25%),
-    linear-gradient(-45deg, #f2f0f6 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #f2f0f6 75%),
-    linear-gradient(-45deg, transparent 75%, #f2f0f6 75%),
-    #faf9fc;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-  background-size: 16px 16px;
+  box-shadow: 0 0 0 1px #e4dfeb, 0 6px 18px rgba(25, 20, 45, .08);
+  user-select: none;
 }
 
 .idc.ppp .idc-stage > img {
   display: block;
   width: 100%;
-  max-height: 590px;
-  object-fit: contain;
+  height: auto;
+  max-height: none;
+  border-radius: inherit;
 }
 
 .idc.ppp .idc-box {
@@ -550,6 +549,96 @@
   border-radius: 50%;
 }
 
+
+/* Cut-lines checkbox (right above Download) */
+.idc.ppp .ppp-cut {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--akr-border, #e7e3ef);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--ppp-shadow);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.idc.ppp .ppp-cut:hover {
+  border-color: var(--akr-primary, #7e03dd);
+}
+
+.idc.ppp .ppp-cut.on {
+  border-color: #e0ccff;
+  background: #f7f1ff;
+}
+
+.idc.ppp .ppp-cut input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.idc.ppp .ppp-check {
+  position: relative;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--akr-border-strong, #d8d1e5);
+  border-radius: 6px;
+  background: #fff;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.idc.ppp .ppp-check::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform .15s ease;
+}
+
+.idc.ppp .ppp-cut input:checked + .ppp-check {
+  border-color: var(--akr-primary, #7e03dd);
+  background: var(--akr-primary, #7e03dd);
+}
+
+.idc.ppp .ppp-cut input:checked + .ppp-check::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.idc.ppp .ppp-cut input:focus-visible + .ppp-check {
+  outline: 2px solid var(--akr-primary, #7e03dd);
+  outline-offset: 2px;
+}
+
+.idc.ppp .ppp-cut-text {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.idc.ppp .ppp-cut-text b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--akr-text, #202033);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.idc.ppp .ppp-cut-text small {
+  color: var(--akr-text-muted, #777487);
+  font-size: 10px;
+}
+
 /* Bottom actions */
 .idc.ppp .idc-actions.two {
   display: grid;
@@ -609,9 +698,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .idc.ppp .idc-stage,
-  .idc.ppp .idc-stage > img {
-    max-height: 520px;
+  .idc.ppp {
+    --ppp-max-h: clamp(280px, 52vh, 460px);
   }
 
   .idc.ppp .idc-side {
@@ -692,9 +780,8 @@
     flex: 1;
   }
 
-  .idc.ppp .idc-stage,
-  .idc.ppp .idc-stage > img {
-    max-height: 430px;
+  .idc.ppp {
+    --ppp-max-h: clamp(260px, 50vh, 400px);
   }
 
   .idc.ppp .idc-side {

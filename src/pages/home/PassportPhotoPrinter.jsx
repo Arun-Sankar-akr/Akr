@@ -34,6 +34,19 @@ const loadDocxBuilder = () => import("./passportPhotoDocx");
 const MAX_IMAGE_SIDE = 4200;
 const SHEET_PREVIEW_PX_PER_MM = 2.4;
 
+// extra choices on top of the ones in passportLayout (6 mm gap, 16 copies)
+const GAPS = Array.from(new Set([...GAP_OPTIONS, 6])).sort((a, b) => a - b);
+
+const COPIES = COPY_OPTIONS.some((item) => item.id === 16)
+  ? COPY_OPTIONS
+  : (() => {
+      const list = [...COPY_OPTIONS];
+      // keep "Full A4" last; put 16 right after the biggest number
+      const at = list.findIndex((item) => typeof item.id !== "number");
+      list.splice(at === -1 ? list.length : at, 0, { id: 16, label: "16" });
+      return list;
+    })();
+
 const SLIDERS = [
   ["brightness", "Brightness", -100, 100],
   ["contrast", "Contrast", -100, 100],
@@ -691,8 +704,11 @@ export default function PassportPhotoPrinter() {
       <div className="ppp-field">
         <span className="idc-option-title">Number of copies</span>
 
-        <div className="idc-segment ppp-four">
-          {COPY_OPTIONS.map((item) => (
+        <div
+          className="idc-segment ppp-four"
+          style={{ gridTemplateColumns: `repeat(${COPIES.length}, minmax(0, 1fr))` }}
+        >
+          {COPIES.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -709,7 +725,7 @@ export default function PassportPhotoPrinter() {
         <span>Space between photos</span>
 
         <select value={gap} onChange={(event) => setGap(Number(event.target.value))}>
-          {GAP_OPTIONS.map((item) => (
+          {GAPS.map((item) => (
             <option key={item} value={item}>
               {item} mm
             </option>
