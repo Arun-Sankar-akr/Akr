@@ -5,6 +5,7 @@ import "./Home.css";
 import { useTheme } from "../../context/ThemeContext";
 import CgpaPercentageCalculator from "./CgpaPercentageCalculator";
 import AadhaarCardPrinter from "./AadhaarCardPrinter";
+import PassportPhotoPrinter from "./PassportPhotoPrinter";
 
 import Aadhar from "../../assets/aadhar1.png"
 import Pan from "../../assets/pan.png"
@@ -760,7 +761,21 @@ const Home = () => {
                             <AadhaarCardPrinter />
                         </div>
                     </section>
+                    
+                    <section className="passport-home-tool-section" id="passport">
+                        <div className="section-container">
+                            <div className="section-heading reveal-item">
+                                <div className="section-heading-left">
+                                    <h1>
+                                        Passport Photo
+                                        <span> Print</span>
+                                    </h1>
+                                </div>
+                            </div>
 
+                            <PassportPhotoPrinter />
+                        </div>
+                    </section>
                     <div className="section-container" id="govt">
                         <div className="section-heading reveal-item">
                             <div className="section-heading-left">
