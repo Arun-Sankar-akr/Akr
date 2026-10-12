@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 /* =========================================================
    CASH REGISTER
    PREMIUM MODERN POS / FINANCE UI
@@ -3221,7 +3222,7 @@
     gap: 7px;
 
     margin-top: 20px;
-    
+
     max-height: 260px;
 
     overflow-y: auto;
@@ -7251,7 +7252,7 @@
 }
 
 .cash-register-page.cash-register-page.cash-register-page .cash-modal-grand .sum strong {
-    color: #ac7e19  !important;
+    color: #ac7e19 !important;
 }
 
 .cash-register-page.cash-register-page.cash-register-page .cash-expected-box,
@@ -7584,6 +7585,7 @@
 .cash-register-page.cash-register-page.cash-register-page .cash-stat-top>span {
     color: var(--cr-text-2) !important;
 }
+
 /* ---------- CREDIT: Amount + Paid + Add, repayment box ---------- */
 .cash-expense-form.cash-credit-form {
     grid-template-columns: minmax(0, 1fr) 118px 118px auto !important;
@@ -7676,7 +7678,7 @@
     margin: 16px 18px 0;
 }
 
-.cash-credit-summary > div {
+.cash-credit-summary>div {
     padding: 12px;
     border: 1px solid var(--cr-border-2, #e1e6f0);
     border-radius: 14px;
@@ -7808,7 +7810,7 @@
     color: #ffffff !important;
 }
 
-.cash-credit-summary.settled > div {
+.cash-credit-summary.settled>div {
     border-color: #0b8a5a;
     background: rgba(18, 184, 134, .14);
 }
@@ -8075,10 +8077,12 @@
     font-size: 11.5px;
     line-height: 1.5;
 }
+
 /* day total: credit given (deducted) tile */
 .cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .given strong {
     color: var(--dt-minus) !important;
 }
+
 .cash-credit-history-card {
     margin-bottom: 18px;
 }
@@ -8151,13 +8155,25 @@
    ============================================================ */
 
 @keyframes crPremiumRise {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 @keyframes crPremiumSheen {
-    from { transform: translateX(-120%); }
-    to   { transform: translateX(120%); }
+    from {
+        transform: translateX(-120%);
+    }
+
+    to {
+        transform: translateX(120%);
+    }
 }
 
 /* ---------- page + typography ---------- */
@@ -8265,11 +8281,19 @@
     opacity: .75;
 }
 
-.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid > :nth-child(2) { animation-delay: .05s; }
-.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid > :nth-child(3) { animation-delay: .10s; }
-.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid > :nth-child(4) { animation-delay: .15s; }
+.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid> :nth-child(2) {
+    animation-delay: .05s;
+}
 
-.cash-register-page.cash-register-page.cash-register-page .cash-stat-card > strong {
+.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid> :nth-child(3) {
+    animation-delay: .10s;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stats-grid> :nth-child(4) {
+    animation-delay: .15s;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card>strong {
     font-weight: 800 !important;
     letter-spacing: -0.035em !important;
 }
@@ -8311,13 +8335,13 @@
     pointer-events: none;
 }
 
-.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines > div,
-.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines > .cash-credit-split > div {
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>.cash-credit-split>div {
     border-radius: 16px !important;
     transition: transform .2s ease, background .2s ease;
 }
 
-.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines > div:hover {
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div:hover {
     transform: translateY(-2px);
 }
 
@@ -8508,7 +8532,7 @@
 }
 
 /* ---------- credit popup ---------- */
-.cash-register-page.cash-register-page.cash-register-page .cash-credit-summary > div {
+.cash-register-page.cash-register-page.cash-register-page .cash-credit-summary>div {
     border-radius: 16px !important;
 }
 
@@ -8552,6 +8576,7 @@
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
+
     .cash-register-page.cash-register-page.cash-register-page *,
     .cash-register-page.cash-register-page.cash-register-page *::before,
     .cash-register-page.cash-register-page.cash-register-page *::after {
@@ -8751,4 +8776,981 @@
     .cash-entry-credit-row .cash-expense-money:first-child {
         grid-column: 1 / -1;
     }
+}
+
+/* =====================================================================
+   PREMIUM CREDIT / EXPENSE LIST  (fixes squashed rows + hard-to-handle list)
+   ===================================================================== */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px !important;
+    margin-top: 18px !important;
+    max-height: min(62vh, 560px) !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 6px 6px 2px !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(143, 101, 24, .35) transparent;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 8px, #000 calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 8px, #000 calc(100% - 14px), transparent 100%);
+}
+
+.cash-expense-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.cash-expense-list::-webkit-scrollbar-thumb {
+    background: rgba(143, 101, 24, .3);
+    border-radius: 999px;
+}
+
+.cash-expense-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(143, 101, 24, .55);
+}
+
+/* the card itself: never shrink, never clip */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "text amount remove chevron";
+    align-items: center;
+    column-gap: 12px;
+    flex: 0 0 auto !important;
+    min-height: 76px;
+    height: auto !important;
+    padding: 14px 14px 14px 22px !important;
+    border-radius: 18px !important;
+    overflow: hidden;
+    background:
+        radial-gradient(120% 140% at 0% 0%, rgba(255, 255, 255, .85) 0, rgba(255, 255, 255, 0) 55%),
+        linear-gradient(135deg, #f4fcf8, #e8f7ef) !important;
+    border: 1px solid #cfeadd !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 6px 16px -10px rgba(18, 130, 85, .35);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item::before {
+    top: 14px;
+    bottom: 14px;
+    width: 5px;
+    border-radius: 0 8px 8px 0;
+    background: linear-gradient(180deg, #22c08a, #0f8a5f) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item:hover {
+    transform: translateY(-2px) !important;
+    border-color: #e3c87f !important;
+    box-shadow: 0 14px 26px -14px rgba(143, 101, 24, .45) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item:active {
+    transform: translateY(0) scale(.995) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item:focus-visible {
+    outline: 3px solid rgba(214, 170, 70, .55);
+    outline-offset: 2px;
+}
+
+/* text block */
+.cash-expense-item .cash-expense-text {
+    grid-area: text;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.cash-expense-item .cash-expense-text strong {
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: .01em;
+    line-height: 1.25;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-expense-item .cash-expense-text span {
+    margin: 0 !important;
+    font-size: 11px;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-expense-item .cash-expense-text .cash-credit-detail {
+    display: inline-flex;
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(18, 130, 85, .1);
+    color: #0f7a50 !important;
+    font-weight: 600;
+    white-space: normal !important;
+}
+
+/* amount */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-credit-amount,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-expense-amount {
+    grid-area: amount;
+    justify-self: end;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .85);
+    border: 1px solid rgba(18, 130, 85, .18);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px -6px rgba(18, 130, 85, .5);
+}
+
+/* delete + chevron */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-expense-remove {
+    grid-area: remove;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px !important;
+}
+
+.cash-expense-item .cash-credit-chevron {
+    grid-area: chevron;
+    opacity: .55;
+    transition: transform .2s ease, opacity .2s ease;
+}
+
+.cash-expense-item:hover .cash-credit-chevron {
+    transform: translateX(3px);
+    opacity: 1;
+    color: #8f6518;
+}
+
+/* when there is no delete button, keep the grid tidy */
+.cash-expense-item:not(:has(.cash-expense-remove)) {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "text amount chevron";
+}
+
+/* fully paid = premium emerald */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled {
+    background: linear-gradient(135deg, #1bbd85, #0b8a5a) !important;
+    border-color: #0b8a5a !important;
+    box-shadow: 0 12px 24px -14px rgba(11, 138, 90, .8);
+}
+
+.cash-expense-item.settled .cash-credit-amount {
+    background: rgba(255, 255, 255, .18) !important;
+    border-color: rgba(255, 255, 255, .35) !important;
+}
+
+.cash-expense-item.settled .cash-credit-detail {
+    background: rgba(255, 255, 255, .2) !important;
+    color: #fff !important;
+}
+
+/* credit + expense add form: aligned, same height controls */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-form {
+    align-items: stretch;
+    gap: 10px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-form .cash-expense-add {
+    min-height: 46px;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 18px -10px rgba(216, 74, 83, .75);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-form .cash-expense-add:active {
+    transform: scale(.97);
+}
+
+/* tablet / mobile */
+@media (max-width: 760px) {
+    .cash-register-page.cash-register-page.cash-register-page .cash-expense-list {
+        max-height: 58vh !important;
+    }
+
+    .cash-register-page.cash-register-page.cash-register-page .cash-expense-item {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        grid-template-areas:
+            "text text chevron"
+            "amount amount remove";
+        row-gap: 10px;
+    }
+
+    .cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-credit-amount,
+    .cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-expense-amount {
+        justify-self: start;
+    }
+}
+
+/* =====================================================================
+   LAYOUT: Left column = Digital money + Today's expenses
+           Right column = Credit / Loan (full height)
+   (CSS only - no JSX change. The stack wrapper is dissolved so its two
+    panels become direct grid items.)
+   ===================================================================== */
+.cash-register-page.cash-register-page.cash-register-page .cash-money-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+        "digital credit"
+        "expenses credit";
+    align-items: stretch;
+}
+
+.cash-money-grid>.cash-panel-stack {
+    display: contents;
+}
+
+/* 1st panel in grid = digital */
+.cash-money-grid>.cash-panel {
+    grid-area: digital;
+}
+
+/* inside the dissolved stack: 1st = expenses, 2nd = credit */
+.cash-money-grid>.cash-panel-stack>.cash-panel:nth-child(1) {
+    grid-area: expenses;
+}
+
+.cash-money-grid>.cash-panel-stack>.cash-panel:nth-child(2) {
+    grid-area: credit;
+    min-height: 560px;
+    contain: size;
+    /* height follows the left column, not the list */
+}
+
+/* credit list fills the whole panel and scrolls inside it */
+.cash-money-grid>.cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-list {
+    flex: 1 1 0 !important;
+    min-height: 0;
+    max-height: none !important;
+}
+
+/* expenses list stays compact */
+.cash-money-grid>.cash-panel-stack>.cash-panel:nth-child(1) .cash-expense-list {
+    max-height: 300px !important;
+}
+
+/* tablet / mobile: single column, natural order */
+@media (max-width: 1000px) {
+    .cash-register-page.cash-register-page.cash-register-page .cash-money-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        grid-template-areas:
+            "digital"
+            "expenses"
+            "credit";
+    }
+
+    .cash-money-grid>.cash-panel-stack>.cash-panel:nth-child(2) {
+        contain: none;
+        min-height: 0;
+    }
+
+    .cash-money-grid>.cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-list {
+        flex: 0 1 auto !important;
+        max-height: 62vh !important;
+    }
+}
+
+/* =====================================================================
+   FINTECH LIME THEME  (soft grey canvas · white cards · lime + forest green)
+   Final layer: wins over every earlier rule. Light + Dark.
+   ===================================================================== */
+
+/* ---------- LIGHT TOKENS ---------- */
+.cash-register-page,
+.cash-register-page[data-theme="light"] {
+    --lime: #b4ec6f;
+    --lime-2: #c9f59a;
+    --lime-soft: #e9f9d3;
+    --forest: #123d17;
+    --forest-2: #0c2c10;
+
+    --cr-primary: #6fb82a;
+    --cr-primary-dark: #1d5a22;
+    --cr-primary-light: #e9f9d3;
+    --cr-green: #1b8a3a;
+    --cr-green-light: #e9f9d3;
+    --cr-orange: #f26a21;
+    --cr-orange-light: #fff0e6;
+    --cr-red: #e5484d;
+    --cr-red-light: #fff0f0;
+    --cr-blue: #3b82f6;
+    --cr-blue-light: #eef4ff;
+
+    --cr-text: #111411;
+    --cr-text-2: #5c625c;
+    --cr-text-3: #9aa09a;
+    --cr-ink: #111411;
+    --cr-bg: #f1f1f1;
+    --cr-white: #ffffff;
+    --cr-border: #ececec;
+    --cr-border-2: #e0e2e0;
+
+    --cr-shadow-1: 0 1px 2px rgba(17, 20, 17, .03), 0 8px 24px -12px rgba(17, 20, 17, .08);
+    --cr-shadow-2: 0 2px 4px rgba(17, 20, 17, .04), 0 18px 36px -16px rgba(17, 20, 17, .14);
+    --cr-shadow-3: 0 30px 80px rgba(17, 20, 17, .22);
+
+    --t-page: #f1f1f1;
+    --t-surface: #ffffff;
+    --t-surface-2: #f6f6f6;
+    --t-surface-3: #eeeeee;
+    --t-hover: #f3f6ee;
+    --t-overlay: rgba(14, 22, 14, .55);
+    --t-glow: rgba(180, 236, 111, .30);
+
+    --t-gold-bg: #e9f9d3;
+    --t-gold-bg-2: #f3fbe6;
+    --t-gold-border: #d3ecb0;
+    --t-gold-text: #2f6b1c;
+    --t-blue-bg: #eef4ff;
+    --t-blue-border: #d6e4ff;
+    --t-blue-text: #2f6fdf;
+    --t-green-bg: #e9f9d3;
+    --t-green-border: #d3ecb0;
+    --t-green-text: #1d6a2a;
+    --t-orange-bg: #fff0e6;
+    --t-orange-border: #ffd9bf;
+    --t-orange-text: #d1530f;
+    --t-red-bg: #fff0f0;
+    --t-red-border: #ffd6d6;
+    --t-red-text: #d83a3f;
+
+    --t-accent-grad: linear-gradient(135deg, #17481d, #0c2c10);
+    --t-accent-border: #0c2c10;
+    --t-on-accent: #c9f59a;
+    --t-red-grad: linear-gradient(135deg, #e5484d, #cf3439);
+    --t-hero: linear-gradient(135deg, #b9ef76, #a6e45e);
+    --t-hero-shadow: 0 22px 44px -22px rgba(95, 160, 30, .55);
+    --t-focus: rgba(111, 184, 42, .28);
+
+    /* day-total hero = lime card */
+    --dt-bg:
+        radial-gradient(circle at 92% 8%, rgba(255, 255, 255, .38), transparent 38%),
+        linear-gradient(135deg, #bdf27a 0%, #a9e763 100%);
+    --dt-border: rgba(18, 61, 23, .08);
+    --dt-shadow: 0 24px 48px -26px rgba(80, 150, 25, .65);
+    --dt-label: #2f5a1f;
+    --dt-sub: rgba(18, 61, 23, .72);
+    --dt-num: linear-gradient(180deg, #0c2c10, #123d17);
+    --dt-icon-bg: #123d17;
+    --dt-icon-border: #123d17;
+    --dt-icon: #c9f59a;
+    --dt-tile-bg: rgba(255, 255, 255, .45);
+    --dt-tile-border: rgba(255, 255, 255, .6);
+    --dt-tile-hover: rgba(255, 255, 255, .68);
+    --dt-sum-bg: #123d17;
+    --dt-sum-border: #123d17;
+    --dt-strong: #0c2c10;
+    --dt-credit: #1d5a22;
+    --dt-paid: #1d5a22;
+    --dt-due: #b4531a;
+    --dt-minus: #c8343a;
+}
+
+/* ---------- DARK TOKENS (deep green-black + lime) ---------- */
+.dark .cash-register-page,
+.dark-mode .cash-register-page,
+.dark-theme .cash-register-page,
+.theme-dark .cash-register-page,
+[data-theme="dark"] .cash-register-page,
+[data-bs-theme="dark"] .cash-register-page,
+[data-mode="dark"] .cash-register-page,
+.cash-register-page[data-theme="dark"],
+.cash-register-page.dark-mode {
+    --cr-primary: #b4ec6f;
+    --cr-primary-dark: #c9f59a;
+    --cr-primary-light: #1d2a17;
+    --cr-green: #7ddc6a;
+    --cr-green-light: #15261a;
+    --cr-orange: #ff8a4c;
+    --cr-red: #ff7378;
+
+    --cr-text: #eef5e8;
+    --cr-text-2: #b7c2b0;
+    --cr-text-3: #7f8b78;
+    --cr-ink: #f3faec;
+    --cr-bg: #0d130e;
+    --cr-white: #151d16;
+    --cr-border: #243026;
+    --cr-border-2: #2f3d31;
+    --cr-gold: #b4ec6f;
+
+    --cr-shadow-1: 0 8px 24px -12px rgba(0, 0, 0, .55);
+    --cr-shadow-2: 0 18px 40px -16px rgba(0, 0, 0, .7);
+
+    --t-page: #0d130e;
+    --t-surface: #151d16;
+    --t-surface-2: #1b251c;
+    --t-surface-3: #223024;
+    --t-hover: #1f2b21;
+    --t-glow: rgba(180, 236, 111, .12);
+
+    --t-gold-bg: #1f2d19;
+    --t-gold-bg-2: #19241a;
+    --t-gold-border: #34502a;
+    --t-gold-text: #c9f59a;
+    --t-green-bg: #1b2a1a;
+    --t-green-border: #2f4a2a;
+    --t-green-text: #b4ec6f;
+    --t-orange-bg: #33211a;
+    --t-orange-border: #5a3a28;
+    --t-orange-text: #ffa070;
+
+    --t-accent-grad: linear-gradient(135deg, #c4f58c, #a6e45e);
+    --t-accent-border: #a6e45e;
+    --t-on-accent: #0c2c10;
+    --t-focus: rgba(180, 236, 111, .30);
+
+    --dt-bg:
+        radial-gradient(circle at 92% 0%, rgba(180, 236, 111, .22), transparent 42%),
+        linear-gradient(135deg, #16301b 0%, #0e2012 100%);
+    --dt-border: rgba(180, 236, 111, .25);
+    --dt-shadow: 0 24px 48px -24px rgba(0, 0, 0, .8);
+    --dt-label: #b4ec6f;
+    --dt-sub: rgba(233, 245, 222, .72);
+    --dt-num: linear-gradient(180deg, #ffffff, #c9f59a);
+    --dt-icon-bg: rgba(180, 236, 111, .16);
+    --dt-icon-border: rgba(180, 236, 111, .4);
+    --dt-icon: #c9f59a;
+    --dt-tile-bg: rgba(180, 236, 111, .07);
+    --dt-tile-border: rgba(180, 236, 111, .18);
+    --dt-tile-hover: rgba(180, 236, 111, .14);
+    --dt-sum-bg: linear-gradient(135deg, #b4ec6f, #96d94f);
+    --dt-sum-border: #b4ec6f;
+    --dt-strong: #ffffff;
+    --dt-credit: #c9f59a;
+    --dt-paid: #b4ec6f;
+    --dt-due: #ffb07a;
+    --dt-minus: #ff9a9e;
+}
+
+/* ---------- BASE ---------- */
+.cash-register-page.cash-register-page,
+.cash-register-page.cash-register-page button,
+.cash-register-page.cash-register-page input,
+.cash-register-page.cash-register-page select,
+.cash-register-page.cash-register-page textarea {
+    font-family: "Plus Jakarta Sans", "Inter", "SF Pro Display", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+
+.cash-register-page.cash-register-page {
+    background: var(--t-page) !important;
+}
+
+/* ---------- CARDS: flat white, big radius, no gold hairline ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-card,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-card {
+    background: var(--t-surface) !important;
+    border: 1px solid transparent !important;
+    border-radius: 30px !important;
+    box-shadow: var(--cr-shadow-1) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card::before,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel::before,
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card::after {
+    display: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel:hover {
+    transform: translateY(-2px);
+    border-color: transparent !important;
+    box-shadow: var(--cr-shadow-2) !important;
+}
+
+/* big numbers: tight, confident */
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-card>strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-main-card strong {
+    font-weight: 700 !important;
+    letter-spacing: -0.04em !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-page-header h1,
+.cash-register-page.cash-register-page.cash-register-page .cash-title-wrap h1,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-head h3,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-head h2 {
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+}
+
+/* small labels: quiet grey, like "Active Balance" */
+.cash-register-page.cash-register-page.cash-register-page .cash-section-label:not(.light),
+.cash-register-page.cash-register-page.cash-register-page .cash-eyebrow {
+    color: var(--cr-text-3) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .12em !important;
+}
+
+/* ---------- ICONS: round white chip with hairline ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon,
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.purple,
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.blue,
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.green,
+.cash-register-page.cash-register-page.cash-register-page .cash-stat-icon.orange,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon.blue,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon.red,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-icon.green,
+.cash-register-page.cash-register-page.cash-register-page .cash-title-icon,
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-icon {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text) !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
+}
+
+/* ---------- PILLS / CHIPS (totals, status) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total.green,
+.cash-register-page.cash-register-page.cash-register-page .cash-status-pill.open,
+.cash-register-page.cash-register-page.cash-register-page .cash-table-status.open {
+    background: var(--lime) !important;
+    border: 0 !important;
+    color: var(--forest) !important;
+    border-radius: 999px !important;
+    font-weight: 700 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-total.red {
+    background: var(--t-red-bg) !important;
+    color: var(--t-red-text) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-status-pill.closed,
+.cash-register-page.cash-register-page.cash-register-page .cash-table-status.closed {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+    border-radius: 999px !important;
+}
+
+.dark .cash-register-page .cash-panel-total,
+[data-theme="dark"] .cash-register-page .cash-panel-total,
+.cash-register-page[data-theme="dark"] .cash-panel-total {
+    color: #0c2c10 !important;
+}
+
+/* ---------- BUTTONS: dark-forest pills with lime text ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-action-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-form .cash-expense-add,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-add {
+    background: var(--t-accent-grad) !important;
+    border: 1px solid var(--t-accent-border) !important;
+    color: var(--t-on-accent) !important;
+    border-radius: 999px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0;
+    box-shadow: 0 10px 20px -12px rgba(12, 44, 16, .7) !important;
+    transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-action-btn:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-add:hover {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-primary-btn.close,
+.cash-register-page.cash-register-page.cash-register-page .cash-action-btn.danger,
+.cash-register-page.cash-register-page.cash-register-page .cash-save-btn.danger {
+    background: var(--t-red-grad) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 10px 20px -12px rgba(229, 72, 77, .7) !important;
+}
+
+/* secondary = outlined pill ("Request Balance") */
+.cash-register-page.cash-register-page.cash-register-page .cash-cancel-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-view-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-export-btn {
+    background: transparent !important;
+    border: 1px solid var(--cr-text) !important;
+    color: var(--cr-text) !important;
+    border-radius: 999px !important;
+    font-weight: 600 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-cancel-btn:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-view-btn:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-export-btn:hover {
+    background: var(--lime) !important;
+    border-color: var(--lime) !important;
+    color: var(--forest) !important;
+}
+
+/* round icon buttons + the big lime arrow button feel */
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn,
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-close {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text) !important;
+    border-radius: 50% !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-icon-btn:hover:not(:disabled),
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-close:hover {
+    background: var(--lime) !important;
+    border-color: var(--lime) !important;
+    color: var(--forest) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-action-icon {
+    background: var(--lime) !important;
+    color: var(--forest) !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+}
+
+/* ---------- SEGMENTED FILTER (like USD | IDR | MYR) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-filter {
+    background: var(--t-surface-3) !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    padding: 4px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-filter button {
+    border-radius: 999px !important;
+    color: var(--cr-text-2) !important;
+    font-weight: 600 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-filter button.active {
+    background: var(--lime) !important;
+    color: var(--forest) !important;
+    box-shadow: none !important;
+}
+
+/* ---------- INPUTS: soft pill fields ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-search,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-reason,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-input,
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-control,
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date input,
+.cash-register-page.cash-register-page.cash-register-page .cash-entry-date-input {
+    background: var(--t-surface-2) !important;
+    border: 1px solid transparent !important;
+    border-radius: 999px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-search:focus-within,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-money:focus-within,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-reason:focus,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-input:focus-within {
+    background: var(--t-surface) !important;
+    border-color: var(--cr-primary) !important;
+    box-shadow: 0 0 0 4px var(--t-focus) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page input[type="text"],
+.cash-register-page.cash-register-page.cash-register-page input[type="number"],
+.cash-register-page.cash-register-page.cash-register-page input[type="date"],
+.cash-register-page.cash-register-page.cash-register-page input[type="search"],
+.cash-register-page.cash-register-page.cash-register-page select {
+    border-radius: 999px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-pcs-btn {
+    border-radius: 50% !important;
+    background: var(--t-surface) !important;
+}
+
+/* ---------- LIST ROWS (denominations, digital, mini tiles) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row.disabled,
+.cash-register-page.cash-register-page.cash-register-page .cash-mini-grid>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-closed-result>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-expected-box,
+.cash-register-page.cash-register-page.cash-register-page .cash-close-preview>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-block {
+    background: var(--t-surface-2) !important;
+    border: 1px solid transparent !important;
+    border-radius: 22px !important;
+    box-shadow: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-row:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-row:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-mini-grid>div:hover {
+    background: var(--t-hover) !important;
+    border-color: var(--lime) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-symbol.note,
+.cash-register-page.cash-register-page.cash-register-page .cash-denomination-symbol.coin,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-symbol.bank,
+.cash-register-page.cash-register-page.cash-register-page .cash-digital-symbol.wallet {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    color: var(--cr-text) !important;
+    border-radius: 50% !important;
+}
+
+/* ---------- EXPENSE + CREDIT ROWS (clean list, lime / red accent) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+    border-radius: 22px !important;
+    box-shadow: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item:hover {
+    transform: translateY(-1px) !important;
+    border-color: var(--lime) !important;
+    background: var(--t-hover) !important;
+    box-shadow: 0 12px 24px -16px rgba(80, 150, 25, .55) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item::before {
+    background: #e5484d !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item,
+.cash-register-page.cash-register-page.cash-register-page .cash-money-grid .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item {
+    background: var(--t-surface) !important;
+    border-color: var(--cr-border) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-money-grid .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item::before {
+    background: linear-gradient(180deg, var(--lime), #7cc12a) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-money-grid .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item:hover {
+    background: var(--t-hover) !important;
+}
+
+/* amount chips */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-credit-amount {
+    background: var(--lime) !important;
+    border: 0 !important;
+    color: var(--forest) !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-expense-amount {
+    background: var(--t-red-bg) !important;
+    border: 0 !important;
+    color: var(--t-red-text) !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+}
+
+.cash-expense-item .cash-expense-text .cash-credit-detail {
+    background: var(--t-surface-3) !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-expense-remove {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border-2) !important;
+    border-radius: 50% !important;
+    color: var(--cr-text-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item .cash-expense-remove:hover {
+    background: var(--t-red-bg) !important;
+    border-color: var(--t-red-border) !important;
+    color: var(--t-red-text) !important;
+}
+
+/* fully paid = solid lime card with dark text */
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled,
+.cash-register-page.cash-register-page.cash-register-page .cash-money-grid .cash-panel-stack>.cash-panel:nth-child(2) .cash-expense-item.settled {
+    background: linear-gradient(135deg, #c3f483, #a9e763) !important;
+    border-color: #a9e763 !important;
+    box-shadow: 0 14px 26px -18px rgba(80, 150, 25, .8) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-expense-text strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-expense-text span,
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-credit-chevron {
+    color: var(--forest) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-credit-amount {
+    background: var(--forest) !important;
+    color: var(--lime-2) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled::before {
+    background: var(--forest) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-credit-detail {
+    background: rgba(255, 255, 255, .5) !important;
+    color: var(--forest) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-item.settled .cash-expense-remove {
+    background: rgba(255, 255, 255, .55) !important;
+    border-color: transparent !important;
+    color: var(--forest) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-expense-empty {
+    background: var(--t-surface-2) !important;
+    border: 1.5px dashed var(--cr-border-2) !important;
+    border-radius: 22px !important;
+    color: var(--cr-text-3) !important;
+}
+
+.cash-expense-list {
+    scrollbar-color: rgba(111, 184, 42, .55) transparent !important;
+}
+
+.cash-expense-list::-webkit-scrollbar-thumb {
+    background: rgba(111, 184, 42, .5) !important;
+}
+
+/* ---------- DAY TOTAL HERO (lime card, dark text) ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total {
+    border-radius: 32px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total::after {
+    background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, .3), transparent 60%) !important;
+    animation: none !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-head strong {
+    font-weight: 700 !important;
+    letter-spacing: -0.045em !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-icon {
+    border-radius: 50% !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>div,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines>.cash-credit-split>div {
+    border-radius: 20px !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines strong {
+    color: var(--dt-strong) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .sum strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .sum span {
+    color: var(--lime-2) !important;
+}
+
+.dark .cash-register-page .cash-day-total-lines .sum strong,
+.dark .cash-register-page .cash-day-total-lines .sum span,
+[data-theme="dark"] .cash-register-page .cash-day-total-lines .sum strong,
+[data-theme="dark"] .cash-register-page .cash-day-total-lines .sum span,
+.cash-register-page[data-theme="dark"] .cash-day-total-lines .sum strong,
+.cash-register-page[data-theme="dark"] .cash-day-total-lines .sum span {
+    color: #0c2c10 !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .minus strong,
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .given strong {
+    color: var(--dt-minus) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .credit strong {
+    color: var(--dt-credit) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .paid strong {
+    color: var(--dt-paid) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-day-total-lines .cash-credit-split .due strong {
+    color: var(--dt-due) !important;
+}
+
+/* ---------- TABLES / HISTORY ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-table-wrap,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-table-wrap {
+    background: var(--t-surface) !important;
+    border: 1px solid var(--cr-border) !important;
+    border-radius: 26px !important;
+    overflow: hidden;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table th,
+.cash-register-page.cash-register-page.cash-register-page .cash-table thead th,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-table thead th {
+    background: var(--t-surface-2) !important;
+    color: var(--cr-text-3) !important;
+    font-weight: 600 !important;
+    letter-spacing: .08em;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody tr:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody tr.cash-row-clickable:hover,
+.cash-register-page.cash-register-page.cash-register-page .cash-table tbody tr.cash-row-clickable:focus-visible {
+    background: var(--t-hover) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-difference.positive {
+    color: #1b8a3a !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-difference.negative {
+    color: #e5484d !important;
+}
+
+/* ---------- MODALS ---------- */
+.cash-register-page.cash-register-page.cash-register-page .cash-modal,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-detail-modal {
+    background: var(--t-surface) !important;
+    border: 0 !important;
+    border-radius: 32px !important;
+    box-shadow: var(--cr-shadow-3) !important;
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-overlay {
+    background: var(--t-overlay) !important;
+    backdrop-filter: blur(6px);
+}
+
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-total,
+.cash-register-page.cash-register-page.cash-register-page .cash-modal-grand,
+.cash-register-page.cash-register-page.cash-register-page .cash-history-daytotal,
+.cash-register-page.cash-register-page.cash-register-page .cash-split-total {
+    border-radius: 24px !important;
+}
+
+/* focus ring */
+.cash-register-page.cash-register-page.cash-register-page button:focus-visible,
+.cash-register-page.cash-register-page.cash-register-page input:focus-visible {
+    outline: 3px solid var(--t-focus) !important;
+    outline-offset: 2px;
+}
+
+/* scrollbars */
+.cash-register-page ::-webkit-scrollbar-thumb {
+    background: rgba(111, 184, 42, .45) !important;
+    border-radius: 999px;
+}
+
+.cash-register-page ::-webkit-scrollbar-thumb:hover {
+    background: rgba(111, 184, 42, .75) !important;
 }
