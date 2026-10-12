@@ -594,6 +594,181 @@ function formatDateTime(value) {
 }
 
 // ============================================================
+// EXPORT STYLING  (shared by the PDF and Excel exports)
+// ============================================================
+
+const EXPORT_COLORS = {
+  ink: [30, 24, 48],
+  deep: [46, 16, 101],
+  violet: [76, 29, 149],
+  violetSoft: [109, 40, 217],
+  indigo: [55, 48, 163],
+  indigoSoft: [79, 70, 229],
+  pale: [237, 233, 254],
+  zebra: [250, 248, 255],
+  line: [232, 228, 244],
+  muted: [100, 100, 122],
+  faint: [160, 160, 182],
+  green: [4, 120, 87],
+  greenBg: [209, 250, 229],
+  amber: [180, 83, 9],
+  amberBg: [254, 243, 199],
+  red: [190, 18, 60],
+  redBg: [255, 228, 230],
+  blue: [29, 78, 216],
+  blueBg: [219, 234, 254],
+  white: [255, 255, 255],
+};
+
+const rgbToHex = (rgb) =>
+  rgb.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+
+// Colour + label for every status badge used in the exports.
+function getStatusPill(status) {
+  const C = EXPORT_COLORS;
+
+  switch (status) {
+    case "Closed":
+    case "Paid":
+      return { label: status.toUpperCase(), fg: C.green, bg: C.greenBg };
+    case "Open":
+      return { label: "OPEN", fg: C.blue, bg: C.blueBg };
+    case "Partial":
+      return { label: "PARTIAL", fg: C.amber, bg: C.amberBg };
+    default:
+      return { label: String(status).toUpperCase(), fg: C.red, bg: C.redBg };
+  }
+}
+
+// Credit status: Paid (settled) / Partial (some paid) / Unpaid.
+function getCreditStatusLabel(credit, paid) {
+  if (credit > 0 && paid >= credit) return "Paid";
+  if (paid > 0) return "Partial";
+  return "Unpaid";
+}
+
+// Coloured header band + summary cards. Returns the y position
+// where the table can start.
+function drawExportHeader(pdf, { title, subtitle, generated, cards, legend }) {
+  const C = EXPORT_COLORS;
+  const pageW = pdf.internal.pageSize.getWidth();
+  const margin = 40;
+
+  pdf.setFillColor(...C.deep);
+  pdf.rect(0, 0, pageW, 84, "F");
+  pdf.setFillColor(...C.violetSoft);
+  pdf.rect(0, 84, pageW, 3, "F");
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(21);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(title, margin, 40);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(221, 214, 254);
+  pdf.text(subtitle, margin, 60);
+
+  pdf.setFontSize(8.5);
+  pdf.text(`Generated ${generated}`, pageW - margin, 40, {
+    align: "right",
+  });
+
+  const gap = 14;
+  const top = 106;
+  const height = 48;
+  const width =
+    (pageW - margin * 2 - gap * (cards.length - 1)) / cards.length;
+
+  cards.forEach((card, index) => {
+    const x = margin + index * (width + gap);
+
+    pdf.setFillColor(...C.white);
+    pdf.setDrawColor(...C.line);
+    pdf.setLineWidth(0.8);
+    pdf.roundedRect(x, top, width, height, 6, 6, "FD");
+
+    pdf.setFillColor(...card.accent);
+    pdf.roundedRect(x, top, 4, height, 2, 2, "F");
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(...C.muted);
+    pdf.text(card.label.toUpperCase(), x + 16, top + 18);
+
+    pdf.setFontSize(15);
+    pdf.setTextColor(...C.ink);
+    pdf.text(String(card.value), x + 16, top + 38);
+  });
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8);
+  pdf.setTextColor(...C.muted);
+
+  const lines = pdf.splitTextToSize(legend, pageW - margin * 2);
+  pdf.text(lines, margin, top + height + 18);
+
+  return top + height + 18 + lines.length * 10;
+}
+
+// Footer line + "Page x of y" on every page.
+function drawExportFooter(pdf, label) {
+  const C = EXPORT_COLORS;
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const total = pdf.getNumberOfPages();
+
+  for (let page = 1; page <= total; page += 1) {
+    pdf.setPage(page);
+
+    pdf.setDrawColor(...C.line);
+    pdf.setLineWidth(0.8);
+    pdf.line(40, pageH - 32, pageW - 40, pageH - 32);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(...C.muted);
+    pdf.text(label, 40, pageH - 18);
+    pdf.text(`Page ${page} of ${total}`, pageW - 40, pageH - 18, {
+      align: "right",
+    });
+  }
+}
+
+// Rounded status badge with a small dot, centred inside a table cell.
+function drawStatusPill(pdf, cell, pill) {
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(7);
+
+  const textWidth = pdf.getTextWidth(pill.label);
+  const pillW = textWidth + 24;
+  const pillH = 14;
+  const x = cell.x + (cell.width - pillW) / 2;
+  const y = cell.y + (cell.height - pillH) / 2;
+
+  pdf.setFillColor(...pill.bg);
+  pdf.roundedRect(x, y, pillW, pillH, 7, 7, "F");
+
+  pdf.setFillColor(...pill.fg);
+  pdf.circle(x + 9, y + pillH / 2, 2, "F");
+
+  pdf.setTextColor(...pill.fg);
+  pdf.text(pill.label, x + 15, y + pillH / 2, { baseline: "middle" });
+}
+
+// Thin horizontal rule under a table cell (row separator).
+function drawCellRule(pdf, cell) {
+  pdf.setDrawColor(...EXPORT_COLORS.line);
+  pdf.setLineWidth(0.6);
+  pdf.line(
+    cell.x,
+    cell.y + cell.height,
+    cell.x + cell.width,
+    cell.y + cell.height
+  );
+}
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -2325,6 +2500,7 @@ export default function CashRegister() {
 
         return {
           date: formatDate(item.dateKey),
+          status: closed ? "Closed" : "Open",
           openCash: Number(item.openingCash || 0),
           openDigital: calculateDigitalTotal(
             getOpeningDigital(item)
@@ -2356,29 +2532,56 @@ export default function CashRegister() {
         };
       });
 
+  // ----------------------------------------------------------
+  // HISTORY  -  EXCEL
+  // Columns: Date | Status | Opening (4) | Closing (4)
+  //          | Difference | Total Money
+  // ----------------------------------------------------------
+
   const exportExcel = async (rows) => {
-    const XLSX = await import("xlsx");
+    const excelModule = await import("xlsx-js-style");
+    const XLSX = excelModule.default || excelModule;
+    const C = EXPORT_COLORS;
+
+    const COLS = 12;
+    const LAST = COLS - 1;
+    const HEAD_ROWS = 5;
+
+    const closedCount = rows.filter(
+      (row) => row.status === "Closed"
+    ).length;
+    const openCount = rows.length - closedCount;
 
     const money = (value) =>
       value === null ? "—" : Number(value);
 
+    const blank = (count) => Array(count).fill("");
+
+    const legend =
+      "Total = Cash + Digital - Credit not paid   |   Total Money = Total amount of the day + Credit not paid";
+
     const aoa = [
+      ["Cash Register History", ...blank(LAST)],
       [
-        "Date",
+        `Amounts in ₹   |   ${rows.length} record(s)   |   ${closedCount} closed, ${openCount} open   |   Generated ${formatDateTime(new Date())}`,
+        ...blank(LAST),
+      ],
+      blank(COLS),
+      [
+        "Date", "Status",
         "Opening", "", "", "",
         "Closing", "", "", "",
-        "Difference",
-        "Total Money",
+        "Difference", "Total Money",
       ],
       [
-        "",
+        "", "",
         "Cash", "Digital Money", "Credit (not paid)", "Total",
         "Cash", "Digital Money", "Credit (not paid)", "Total",
-        "",
-        "",
+        "", "",
       ],
       ...rows.map((row) => [
         row.date,
+        row.status,
         money(row.openCash),
         money(row.openDigital),
         money(row.openCredit),
@@ -2390,36 +2593,187 @@ export default function CashRegister() {
         money(row.difference),
         money(row.totalMoney),
       ]),
+      blank(COLS),
+      [legend, ...blank(LAST)],
     ];
 
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
 
+    // ---- style helpers ------------------------------------
+    const rgb = (color) => ({ rgb: rgbToHex(color) });
+    const solid = (color) => ({
+      patternType: "solid",
+      fgColor: rgb(color),
+    });
+    const thin = (color) => ({ style: "thin", color: rgb(color) });
+    const box = (color) => ({
+      top: thin(color),
+      bottom: thin(color),
+      left: thin(color),
+      right: thin(color),
+    });
+    const font = (color, extra = {}) => ({
+      name: "Calibri",
+      sz: 11,
+      color: rgb(color),
+      ...extra,
+    });
+
+    const put = (r, c, style) => {
+      const address = XLSX.utils.encode_cell({ r, c });
+
+      if (!sheet[address]) sheet[address] = { t: "s", v: "" };
+
+      sheet[address].s = style;
+
+      return sheet[address];
+    };
+
+    // ---- title band ---------------------------------------
+    for (let c = 0; c < COLS; c += 1) {
+      put(0, c, {
+        fill: solid(C.deep),
+        font: font(C.white, { sz: 20, bold: true }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+
+      put(1, c, {
+        fill: solid(C.deep),
+        font: font([221, 214, 254], { sz: 10 }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+    }
+
+    // ---- header -------------------------------------------
+    const headFill = (c, sub) => {
+      if (c >= 2 && c <= 5) return sub ? C.violetSoft : C.violet;
+      if (c >= 6 && c <= 9) return sub ? C.indigoSoft : C.indigo;
+      return C.deep;
+    };
+
+    for (let r = 3; r <= 4; r += 1) {
+      for (let c = 0; c < COLS; c += 1) {
+        put(r, c, {
+          fill: solid(headFill(c, r === 4)),
+          font: font(C.white, { bold: true }),
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: box(C.white),
+        });
+      }
+    }
+
+    // ---- body ---------------------------------------------
+    rows.forEach((row, index) => {
+      const r = HEAD_ROWS + index;
+      const band = index % 2 === 1 ? C.zebra : C.white;
+
+      for (let c = 0; c < COLS; c += 1) {
+        const value = aoa[r][c];
+        const isDash = value === "—";
+
+        let style = {
+          fill: solid(band),
+          font: font(C.ink, { bold: c === 5 || c === 9 }),
+          border: box(C.line),
+          alignment: { vertical: "center", horizontal: "right", indent: 1 },
+        };
+        let numFmt = "#,##0.00";
+
+        if (c === 0) {
+          style.font = font(C.ink, { bold: true });
+          style.alignment = {
+            vertical: "center",
+            horizontal: "left",
+            indent: 1,
+          };
+        } else if (c === 1) {
+          const pill = getStatusPill(row.status);
+
+          style = {
+            fill: solid(pill.bg),
+            font: font(pill.fg, { bold: true }),
+            border: box(C.white),
+            alignment: { vertical: "center", horizontal: "center" },
+          };
+        } else if (isDash) {
+          style.font = font(C.faint);
+          style.alignment = { vertical: "center", horizontal: "center" };
+        } else if (c === 10) {
+          const diffColor =
+            row.difference > 0
+              ? C.green
+              : row.difference < 0
+                ? C.red
+                : C.muted;
+
+          style.font = font(diffColor, { bold: true });
+          numFmt = "+#,##0.00;-#,##0.00;0.00";
+        } else if (c === 11) {
+          style.fill = solid(C.pale);
+          style.font = font(C.deep, { bold: true });
+        }
+
+        const cell = put(r, c, style);
+
+        if (typeof cell.v === "number") {
+          cell.t = "n";
+          cell.z = numFmt;
+        }
+      }
+    });
+
+    // ---- legend -------------------------------------------
+    const legendRow = HEAD_ROWS + rows.length + 1;
+
+    for (let c = 0; c < COLS; c += 1) {
+      put(legendRow, c, {
+        font: font(C.muted, { sz: 9, italic: true }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+    }
+
+    // ---- layout -------------------------------------------
     sheet["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
-      { s: { r: 0, c: 1 }, e: { r: 0, c: 4 } },
-      { s: { r: 0, c: 5 }, e: { r: 0, c: 8 } },
-      { s: { r: 0, c: 9 }, e: { r: 1, c: 9 } },
-      { s: { r: 0, c: 10 }, e: { r: 1, c: 10 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: LAST } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: LAST } },
+      { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } },
+      { s: { r: 3, c: 1 }, e: { r: 4, c: 1 } },
+      { s: { r: 3, c: 2 }, e: { r: 3, c: 5 } },
+      { s: { r: 3, c: 6 }, e: { r: 3, c: 9 } },
+      { s: { r: 3, c: 10 }, e: { r: 4, c: 10 } },
+      { s: { r: 3, c: 11 }, e: { r: 4, c: 11 } },
+      { s: { r: legendRow, c: 0 }, e: { r: legendRow, c: LAST } },
     ];
 
     sheet["!cols"] = [
+      { wch: 15 },
+      { wch: 12 },
       { wch: 14 },
-      ...Array(8).fill({ wch: 15 }),
+      { wch: 16 },
+      { wch: 19 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 19 },
+      { wch: 14 },
       { wch: 15 },
-      { wch: 15 },
+      { wch: 17 },
     ];
 
-    // Rupee number format on every amount cell
-    for (let r = 2; r < aoa.length; r += 1) {
-      for (let c = 1; c <= 10; c += 1) {
-        const cell = sheet[XLSX.utils.encode_cell({ r, c })];
-
-        if (cell && typeof cell.v === "number") {
-          cell.t = "n";
-          cell.z = "#,##0.00";
-        }
-      }
-    }
+    sheet["!rows"] = [
+      { hpt: 36 },
+      { hpt: 22 },
+      { hpt: 8 },
+      { hpt: 26 },
+      { hpt: 26 },
+      ...rows.map(() => ({ hpt: 24 })),
+      { hpt: 10 },
+      { hpt: 20 },
+    ];
 
     const book = XLSX.utils.book_new();
 
@@ -2435,11 +2789,16 @@ export default function CashRegister() {
     );
   };
 
+  // ----------------------------------------------------------
+  // HISTORY  -  PDF
+  // ----------------------------------------------------------
+
   const exportPdf = async (rows) => {
     const { jsPDF } = await import("jspdf");
     const autoTableModule = await import("jspdf-autotable");
     const autoTable =
       autoTableModule.default || autoTableModule.autoTable;
+    const C = EXPORT_COLORS;
 
     const pdf = new jsPDF({
       orientation: "landscape",
@@ -2456,26 +2815,38 @@ export default function CashRegister() {
           maximumFractionDigits: 2,
         });
 
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(16);
-    pdf.setTextColor(46, 16, 101);
-    pdf.text("Cash Register History", 40, 42);
+    const closedCount = rows.filter(
+      (row) => row.status === "Closed"
+    ).length;
+    const openCount = rows.length - closedCount;
+    const latest = rows[rows.length - 1];
 
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
-    pdf.setTextColor(100, 100, 110);
-    pdf.text(
-      `Amounts in Rs.  |  Total = Cash + Digital - Credit not paid  |  Total Money = Total amount of the day + Credit not paid  |  ${rows.length} record(s)  |  Generated ${new Date().toLocaleString()}`,
-      40,
-      58
-    );
+    const tableTop = drawExportHeader(pdf, {
+      title: "Cash Register History",
+      subtitle: "All amounts in Rs.",
+      generated: formatDateTime(new Date()),
+      cards: [
+        { label: "Records", value: rows.length, accent: C.violet },
+        { label: "Closed", value: closedCount, accent: C.green },
+        { label: "Open", value: openCount, accent: C.blue },
+        {
+          label: "Latest total money (Rs.)",
+          value: latest ? money(latest.totalMoney) : "—",
+          accent: C.violetSoft,
+        },
+      ],
+      legend:
+        "Total = Cash + Digital - Credit not paid   |   Total Money = Total amount of the day + Credit not paid",
+    });
 
     autoTable(pdf, {
-      startY: 74,
-      theme: "grid",
+      startY: tableTop + 6,
+      theme: "plain",
+      margin: { top: 40, left: 40, right: 40, bottom: 46 },
       head: [
         [
           { content: "Date", rowSpan: 2 },
+          { content: "Status", rowSpan: 2 },
           { content: "Opening", colSpan: 4 },
           { content: "Closing", colSpan: 4 },
           { content: "Difference", rowSpan: 2 },
@@ -2494,6 +2865,7 @@ export default function CashRegister() {
       ],
       body: rows.map((row) => [
         row.date,
+        "",
         money(row.openCash),
         money(row.openDigital),
         money(row.openCredit),
@@ -2508,44 +2880,85 @@ export default function CashRegister() {
         money(row.totalMoney),
       ]),
       styles: {
+        font: "helvetica",
         fontSize: 8.5,
-        cellPadding: 5,
+        cellPadding: { top: 8, bottom: 8, left: 6, right: 8 },
         halign: "right",
-        lineColor: [226, 222, 240],
-        lineWidth: 0.5,
-        textColor: [30, 24, 48],
+        valign: "middle",
+        lineWidth: 0,
+        textColor: C.ink,
       },
       headStyles: {
-        fillColor: [76, 29, 149],
-        textColor: [255, 255, 255],
+        fillColor: C.deep,
+        textColor: C.white,
         halign: "center",
         valign: "middle",
         fontStyle: "bold",
+        lineWidth: 0.6,
+        lineColor: C.white,
       },
+      alternateRowStyles: { fillColor: C.zebra },
       columnStyles: {
-        0: { halign: "left", fontStyle: "bold" },
+        0: { halign: "left", fontStyle: "bold", cellWidth: 66 },
+        1: { halign: "center", cellWidth: 66 },
+        5: { fontStyle: "bold" },
         9: { fontStyle: "bold" },
         10: { fontStyle: "bold" },
-      },
-      alternateRowStyles: {
-        fillColor: [247, 244, 255],
+        11: { fontStyle: "bold" },
       },
       didParseCell: (data) => {
-        if (data.section === "head" && data.row.index === 1) {
-          data.cell.styles.fillColor = [109, 40, 217];
+        const col = data.column.index;
+
+        if (data.section === "head") {
+          const sub = data.row.index === 1;
+
+          if (col >= 2 && col <= 5) {
+            data.cell.styles.fillColor = sub ? C.violetSoft : C.violet;
+          } else if (col >= 6 && col <= 9) {
+            data.cell.styles.fillColor = sub ? C.indigoSoft : C.indigo;
+          }
+
+          return;
         }
 
-        if (data.section === "body" && data.column.index === 9) {
+        if (data.section !== "body") return;
+
+        const row = rows[data.row.index];
+
+        if (data.cell.raw === "—") {
+          data.cell.styles.textColor = C.faint;
+          data.cell.styles.halign = "center";
+        }
+
+        if (col === 10 && row) {
+          if (row.difference > 0) {
+            data.cell.styles.textColor = C.green;
+          } else if (row.difference < 0) {
+            data.cell.styles.textColor = C.red;
+          } else if (row.difference === 0) {
+            data.cell.styles.textColor = C.muted;
+          }
+        }
+
+        if (col === 11) {
+          data.cell.styles.fillColor = C.pale;
+          data.cell.styles.textColor = C.deep;
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.section !== "body") return;
+
+        drawCellRule(pdf, data.cell);
+
+        if (data.column.index === 1) {
           const row = rows[data.row.index];
 
-          if (row && row.difference > 0) {
-            data.cell.styles.textColor = [11, 138, 90];
-          } else if (row && row.difference < 0) {
-            data.cell.styles.textColor = [216, 64, 76];
-          }
+          if (row) drawStatusPill(pdf, data.cell, getStatusPill(row.status));
         }
       },
     });
+
+    drawExportFooter(pdf, "Cash Register History");
 
     pdf.save(`cash-register-history-${todayKey}.pdf`);
   };
@@ -2553,12 +2966,13 @@ export default function CashRegister() {
   // ----------------------------------------------------------
   // CREDIT / LOAN HISTORY EXPORT (all days)
   //
-  // Columns: Date | Name / Reason | Amount Credit | Amount Paid
-  //          | Amount Not Paid   (+ a Total row)
+  // Columns: Date | Name / Reason | Status | Amount Credit
+  //          | Amount Paid | Amount Not Paid | Progress
+  //          (+ a Total row)
   // ----------------------------------------------------------
 
-  const buildCreditExportRows = () => {
-    const rows = [...allCreditHistory]
+  const buildCreditExportRows = () =>
+    [...allCreditHistory]
       .sort(
         (a, b) =>
           Number(a?.createdAtMs || 0) - Number(b?.createdAtMs || 0)
@@ -2570,6 +2984,7 @@ export default function CashRegister() {
         return {
           date: item.createdAtMs ? formatDate(item.createdAtMs) : "—",
           name: item.reason || "",
+          status: getCreditStatusLabel(credit, paid),
           credit,
           paid,
           notPaid: getCreditBalance(item),
@@ -2577,12 +2992,7 @@ export default function CashRegister() {
         };
       });
 
-    return rows;
-  };
-
-  const exportCreditExcel = async (rows) => {
-    const XLSX = await import("xlsx");
-
+  const sumCreditRows = (rows) => {
     const totals = rows.reduce(
       (sum, row) => ({
         credit: sum.credit + row.credit,
@@ -2592,44 +3002,211 @@ export default function CashRegister() {
       { credit: 0, paid: 0, notPaid: 0 }
     );
 
+    return {
+      ...totals,
+      percent: totals.credit > 0 ? Math.min(1, totals.paid / totals.credit) : 1,
+    };
+  };
+
+  const exportCreditExcel = async (rows) => {
+    const excelModule = await import("xlsx-js-style");
+    const XLSX = excelModule.default || excelModule;
+    const C = EXPORT_COLORS;
+
+    const COLS = 7;
+    const LAST = COLS - 1;
+    const HEAD_ROW = 3;
+    const FIRST = HEAD_ROW + 1;
+
+    const totals = sumCreditRows(rows);
+    const blank = (count) => Array(count).fill("");
+
+    const settled = rows.filter((row) => row.status === "Paid").length;
+
     const aoa = [
+      ["Credit / Loan History", ...blank(LAST)],
+      [
+        `Amounts in ₹   |   ${rows.length} record(s)   |   ${settled} settled   |   Generated ${formatDateTime(new Date())}`,
+        ...blank(LAST),
+      ],
+      blank(COLS),
       [
         "Date",
         "Name / Reason",
+        "Status",
         "Amount Credit",
         "Amount Paid",
         "Amount Not Paid",
+        "% Paid",
       ],
       ...rows.map((row) => [
         row.date,
         row.name,
+        row.status,
         row.credit,
         row.paid,
         row.notPaid,
+        row.percent,
       ]),
-      ["Total", "", totals.credit, totals.paid, totals.notPaid],
+      [
+        "Total",
+        "",
+        "",
+        totals.credit,
+        totals.paid,
+        totals.notPaid,
+        totals.percent,
+      ],
     ];
 
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
 
-    sheet["!cols"] = [
-      { wch: 14 },
-      { wch: 30 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-    ];
+    const rgb = (color) => ({ rgb: rgbToHex(color) });
+    const solid = (color) => ({
+      patternType: "solid",
+      fgColor: rgb(color),
+    });
+    const thin = (color) => ({ style: "thin", color: rgb(color) });
+    const box = (color) => ({
+      top: thin(color),
+      bottom: thin(color),
+      left: thin(color),
+      right: thin(color),
+    });
+    const font = (color, extra = {}) => ({
+      name: "Calibri",
+      sz: 11,
+      color: rgb(color),
+      ...extra,
+    });
 
-    for (let r = 1; r < aoa.length; r += 1) {
-      for (let c = 2; c <= 4; c += 1) {
-        const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+    const put = (r, c, style) => {
+      const address = XLSX.utils.encode_cell({ r, c });
 
-        if (cell && typeof cell.v === "number") {
+      if (!sheet[address]) sheet[address] = { t: "s", v: "" };
+
+      sheet[address].s = style;
+
+      return sheet[address];
+    };
+
+    for (let c = 0; c < COLS; c += 1) {
+      put(0, c, {
+        fill: solid(C.deep),
+        font: font(C.white, { sz: 20, bold: true }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+
+      put(1, c, {
+        fill: solid(C.deep),
+        font: font([221, 214, 254], { sz: 10 }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+
+      put(HEAD_ROW, c, {
+        fill: solid(C.violet),
+        font: font(C.white, { bold: true }),
+        alignment: {
+          horizontal: c <= 1 ? "left" : "center",
+          vertical: "center",
+          indent: c <= 1 ? 1 : 0,
+        },
+        border: box(C.white),
+      });
+    }
+
+    rows.forEach((row, index) => {
+      const r = FIRST + index;
+      const band = index % 2 === 1 ? C.zebra : C.white;
+
+      for (let c = 0; c < COLS; c += 1) {
+        let style = {
+          fill: solid(band),
+          font: font(C.ink),
+          border: box(C.line),
+          alignment: { vertical: "center", horizontal: "right", indent: 1 },
+        };
+        let numFmt = "#,##0.00";
+
+        if (c === 0) {
+          style.font = font(C.ink, { bold: true });
+          style.alignment = { vertical: "center", horizontal: "left", indent: 1 };
+        } else if (c === 1) {
+          style.alignment = { vertical: "center", horizontal: "left", indent: 1 };
+        } else if (c === 2) {
+          const pill = getStatusPill(row.status);
+
+          style = {
+            fill: solid(pill.bg),
+            font: font(pill.fg, { bold: true }),
+            border: box(C.white),
+            alignment: { vertical: "center", horizontal: "center" },
+          };
+        } else if (c === 4) {
+          style.font = font(C.green, { bold: true });
+        } else if (c === 5) {
+          style.font = font(row.notPaid > 0 ? C.red : C.green, { bold: true });
+        } else if (c === 6) {
+          style.alignment = { vertical: "center", horizontal: "center" };
+          style.font = font(
+            row.percent >= 1 ? C.green : row.percent > 0 ? C.amber : C.red,
+            { bold: true }
+          );
+          numFmt = "0%";
+        }
+
+        const cell = put(r, c, style);
+
+        if (typeof cell.v === "number") {
           cell.t = "n";
-          cell.z = "#,##0.00";
+          cell.z = numFmt;
         }
       }
+    });
+
+    const totalRow = FIRST + rows.length;
+
+    for (let c = 0; c < COLS; c += 1) {
+      const cell = put(totalRow, c, {
+        fill: solid(C.deep),
+        font: font(C.white, { bold: true, sz: 12 }),
+        border: box(C.deep),
+        alignment: {
+          vertical: "center",
+          horizontal: c === 0 ? "left" : c === 6 ? "center" : "right",
+          indent: c === 6 ? 0 : 1,
+        },
+      });
+
+      if (typeof cell.v === "number") {
+        cell.t = "n";
+        cell.z = c === 6 ? "0%" : "#,##0.00";
+      }
     }
+
+    sheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: LAST } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: LAST } },
+    ];
+
+    sheet["!cols"] = [
+      { wch: 15 },
+      { wch: 32 },
+      { wch: 13 },
+      { wch: 17 },
+      { wch: 17 },
+      { wch: 19 },
+      { wch: 11 },
+    ];
+
+    sheet["!rows"] = [
+      { hpt: 36 },
+      { hpt: 22 },
+      { hpt: 8 },
+      { hpt: 26 },
+      ...rows.map(() => ({ hpt: 24 })),
+      { hpt: 28 },
+    ];
 
     const book = XLSX.utils.book_new();
 
@@ -2643,6 +3220,7 @@ export default function CashRegister() {
     const autoTableModule = await import("jspdf-autotable");
     const autoTable =
       autoTableModule.default || autoTableModule.autoTable;
+    const C = EXPORT_COLORS;
 
     const pdf = new jsPDF({
       orientation: "landscape",
@@ -2656,117 +3234,162 @@ export default function CashRegister() {
         maximumFractionDigits: 2,
       });
 
-    const totals = rows.reduce(
-      (sum, row) => ({
-        credit: sum.credit + row.credit,
-        paid: sum.paid + row.paid,
-        notPaid: sum.notPaid + row.notPaid,
-      }),
-      { credit: 0, paid: 0, notPaid: 0 }
-    );
+    const totals = sumCreditRows(rows);
 
-    // Light row tint: red (nothing paid) -> green (fully paid)
-    const tint = (percent) => {
-      const hue = percent * 135;
-      const light = 0.93;
-      const sat = 0.85;
-      const a = sat * Math.min(light, 1 - light);
-      const channel = (n) => {
-        const k = (n + hue / 30) % 12;
-        return Math.round(
-          255 *
-          (light -
-            a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))
-        );
-      };
+    const tableTop = drawExportHeader(pdf, {
+      title: "Credit / Loan History",
+      subtitle: "All days  |  All amounts in Rs.",
+      generated: formatDateTime(new Date()),
+      cards: [
+        { label: "Total credit (Rs.)", value: money(totals.credit), accent: C.violet },
+        { label: "Amount paid (Rs.)", value: money(totals.paid), accent: C.green },
+        { label: "Not paid (Rs.)", value: money(totals.notPaid), accent: C.red },
+        {
+          label: "Recovered",
+          value: `${Math.round(totals.percent * 100)}%`,
+          accent: C.violetSoft,
+        },
+      ],
+      legend: `Not Paid = Credit - Paid   |   ${rows.length} record(s)`,
+    });
 
-      return [channel(0), channel(8), channel(4)];
-    };
-
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(16);
-    pdf.setTextColor(46, 16, 101);
-    pdf.text("Credit / Loan History (all days)", 40, 42);
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
-    pdf.setTextColor(100, 100, 110);
-    pdf.text(
-      `Amounts in Rs.  |  Not Paid = Credit - Paid  |  ${rows.length} record(s)  |  Generated ${new Date().toLocaleString()}`,
-      40,
-      58
-    );
+    const progressColor = (percent) =>
+      percent >= 1 ? C.green : percent > 0 ? [217, 119, 6] : C.red;
 
     autoTable(pdf, {
-      startY: 74,
-      theme: "grid",
+      startY: tableTop + 6,
+      theme: "plain",
+      margin: { top: 40, left: 40, right: 40, bottom: 46 },
       head: [
         [
           "Date",
           "Name / Reason",
+          "Status",
           "Amount Credit",
           "Amount Paid",
           "Amount Not Paid",
+          "Progress",
         ],
       ],
       body: [
         ...rows.map((row) => [
           row.date,
           row.name,
+          "",
           money(row.credit),
           money(row.paid),
           money(row.notPaid),
+          "",
         ]),
         [
           "Total",
           "",
+          "",
           money(totals.credit),
           money(totals.paid),
           money(totals.notPaid),
+          `${Math.round(totals.percent * 100)}%`,
         ],
       ],
       styles: {
-        fontSize: 8.5,
-        cellPadding: 5,
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: { top: 8, bottom: 8, left: 8, right: 10 },
         halign: "right",
-        lineColor: [226, 222, 240],
-        lineWidth: 0.5,
-        textColor: [30, 24, 48],
+        valign: "middle",
+        lineWidth: 0,
+        textColor: C.ink,
       },
       headStyles: {
-        fillColor: [76, 29, 149],
-        textColor: [255, 255, 255],
+        fillColor: C.violet,
+        textColor: C.white,
         halign: "center",
         valign: "middle",
         fontStyle: "bold",
+        lineWidth: 0.6,
+        lineColor: C.white,
       },
+      alternateRowStyles: { fillColor: C.zebra },
       columnStyles: {
-        0: { halign: "left", fontStyle: "bold" },
+        0: { halign: "left", fontStyle: "bold", cellWidth: 80 },
         1: { halign: "left" },
-        4: { fontStyle: "bold" },
+        2: { halign: "center", cellWidth: 84 },
+        5: { fontStyle: "bold" },
+        6: { halign: "center", cellWidth: 130 },
       },
       didParseCell: (data) => {
         if (data.section !== "body") return;
 
+        const col = data.column.index;
         const row = rows[data.row.index];
 
         if (!row) {
           // Total row
+          data.cell.styles.fillColor = C.deep;
+          data.cell.styles.textColor = C.white;
           data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [237, 233, 254];
           return;
         }
 
-        data.cell.styles.fillColor = tint(row.percent);
+        if (col === 4) {
+          data.cell.styles.textColor = C.green;
+        } else if (col === 5) {
+          data.cell.styles.textColor = row.notPaid > 0 ? C.red : C.green;
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.section !== "body") return;
 
-        if (data.column.index === 3) {
-          data.cell.styles.textColor = [11, 138, 90];
-        } else if (data.column.index === 4) {
-          data.cell.styles.textColor =
-            row.notPaid > 0 ? [216, 64, 76] : [11, 138, 90];
+        const row = rows[data.row.index];
+        const col = data.column.index;
+
+        if (row) drawCellRule(pdf, data.cell);
+
+        if (!row) return;
+
+        if (col === 2) {
+          drawStatusPill(pdf, data.cell, getStatusPill(row.status));
+        }
+
+        if (col === 6) {
+          const cell = data.cell;
+          const pad = 10;
+          const pctWidth = 28;
+          const barH = 5;
+          const barW = cell.width - pad * 2 - pctWidth;
+          const barX = cell.x + pad;
+          const barY = cell.y + (cell.height - barH) / 2;
+
+          pdf.setFillColor(226, 232, 240);
+          pdf.roundedRect(barX, barY, barW, barH, 2.5, 2.5, "F");
+
+          if (row.percent > 0) {
+            pdf.setFillColor(...progressColor(row.percent));
+            pdf.roundedRect(
+              barX,
+              barY,
+              Math.max(5, barW * row.percent),
+              barH,
+              2.5,
+              2.5,
+              "F"
+            );
+          }
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(...C.ink);
+          pdf.text(
+            `${Math.round(row.percent * 100)}%`,
+            cell.x + cell.width - pad,
+            cell.y + cell.height / 2,
+            { align: "right", baseline: "middle" }
+          );
         }
       },
     });
+
+    drawExportFooter(pdf, "Credit / Loan History");
 
     pdf.save(`credit-loan-history-${todayKey}.pdf`);
   };
@@ -2807,7 +3430,7 @@ export default function CashRegister() {
       console.error("Export error:", exportError);
 
       alert(
-        "Unable to create the file. Make sure the xlsx, jspdf and jspdf-autotable packages are installed."
+        "Unable to create the file. Make sure the xlsx-js-style, jspdf and jspdf-autotable packages are installed."
       );
     } finally {
       setExporting("");
@@ -6058,8 +6681,8 @@ export default function CashRegister() {
                   </strong>
                   <span>
                     {exportTarget === "credit"
-                      ? "Choose a file type. Date, name, credit, paid and not paid."
-                      : "Choose a file type. Date, opening, closing, total and difference."}
+                      ? "Choose a file type. Date, name, status, credit, paid and not paid."
+                      : "Choose a file type. Date, status, opening, closing, total and difference."}
                   </span>
                 </div>
               </div>
