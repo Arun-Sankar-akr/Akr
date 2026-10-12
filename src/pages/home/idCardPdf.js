@@ -1,9 +1,3 @@
-// ============================================================
-// ID CARD PRINT  -  PDF builder (no imports, no extra package)
-// Same A4 layout as the Word file: front + back at real card size.
-// front / back = { data: Uint8Array (JPEG), width, height }  (pixels)
-// ============================================================
-
 const CARD_WIDTH_MM = 85.6;
 const A4_W_MM = 210;
 const A4_H_MM = 297;

@@ -2,11 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./Passwordmodal.css";
 import "./AadhaarCardPrinter.css";
-import "./theme.css";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { detectContentBox, applyDrag } from "./idCardGeometry";
 import { detectLayout, DOC_TYPES } from "./idCardDetect";
-import "./idCardPdf"
 
 import {
   DEFAULT_ADJUST,
@@ -143,6 +141,43 @@ const cropCanvas = (source, box) => {
   return out;
 };
 
+// Is this upload a full-size e-PAN / e-Voter page (instead of one card)?
+// Returns { front, back, photoType } or null.
+const findPageCards = (canvas) => {
+  const longest = Math.max(canvas.width, canvas.height);
+  const ratio = longest > 900 ? 900 / longest : 1;
+  const small = document.createElement("canvas");
+  small.width = Math.max(1, Math.round(canvas.width * ratio));
+  small.height = Math.max(1, Math.round(canvas.height * ratio));
+
+  const ctx = small.getContext("2d");
+  ctx.drawImage(canvas, 0, 0, small.width, small.height);
+
+  const pixels = ctx.getImageData(0, 0, small.width, small.height);
+  const content = detectContentBox(pixels.data, small.width, small.height);
+  const layout = detectLayout(
+    pixels.data,
+    small.width,
+    small.height,
+    content,
+    "auto"
+  );
+
+  // the Aadhaar position is only a guess, so it is not used for a single image
+  if (layout.type === "aadhaar") return null;
+
+  return {
+    front: layout.front,
+    back: layout.back,
+    photoType:
+      layout.type === "cards"
+        ? "auto"
+        : layout.variant === "panel"
+        ? "pan2"
+        : layout.type,
+  };
+};
+
 const DOC_NAME = {
   aadhaar: "Aadhaar",
   pan: "e-PAN",
@@ -222,14 +257,14 @@ const readImageFile = (file) =>
 // ---- custom password dialog (the component registers itself here) ----
 let passwordRequester = null;
 
-const askPassword = (retry) =>
+const askPassword = (retry, label) =>
   new Promise((resolve) => {
     if (!passwordRequester) {
       resolve(window.prompt("This PDF is password protected. Enter the password:"));
       return;
     }
 
-    passwordRequester({ retry, resolve });
+    passwordRequester({ retry, label, resolve });
   });
 
 // Tell a password problem apart from any other PDF problem
@@ -241,7 +276,8 @@ const pdfErrorMessage = (error) => {
   return `Could not open this PDF: ${error?.message || "unknown error"}`;
 };
 
-const readPdfFile = async (file) => {
+// label = what the PDF is for, shown in the password popup ("Front", "Back")
+const readPdfFile = async (file, label = "") => {
   const pdfjs = await import("pdfjs-dist");
 
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -252,7 +288,10 @@ const readPdfFile = async (file) => {
   // e-Aadhaar / e-PAN PDFs are usually protected with a password
   task.onPassword = async (updatePassword, reason) => {
     const retry = reason === pdfjs.PasswordResponses.INCORRECT_PASSWORD;
-    const password = await askPassword(retry);
+    const password = await askPassword(
+      retry,
+      label ? `${label}: ${file.name}` : file.name
+    );
 
     if (password === null) {
       task.destroy();
@@ -735,9 +774,14 @@ export default function AadhaarCardPrinter() {
 
   // store a page canvas for one side, with its preview + default crop
   const prepareSeparate = async (which, canvas, name) => {
-    const box = detectCardBox(canvas);
+    // a full e-PAN / e-Voter page uploaded here: take the matching card
+    // from it (front slot = front card, back slot = back card)
+    const page = findPageCards(canvas);
+    const box = page ? page[which] : detectCardBox(canvas);
     const photoBox =
-      which === "front" ? findPhotoBox(canvas, box, "auto") : null;
+      which === "front"
+        ? findPhotoBox(canvas, box, page ? page.photoType : "auto")
+        : null;
 
     const blob = await new Promise((resolve) =>
       canvas.toBlob(resolve, "image/jpeg", 0.9)
@@ -802,7 +846,7 @@ export default function AadhaarCardPrinter() {
 
     try {
       const canvas = isPdf
-        ? await readPdfFile(file)
+        ? await readPdfFile(file, which === "front" ? "Front" : "Back")
         : await readImageFile(file);
 
       await prepareSeparate(which, canvas, file.name);
@@ -1003,21 +1047,20 @@ export default function AadhaarCardPrinter() {
     }
   };
 
-  // close the PDF / Word chooser on outside click or Esc
+  // PDF / Word popup: Esc closes it, page does not scroll behind it
   useEffect(() => {
     if (!dlMenu) return undefined;
 
-    const onDown = (event) => {
-      if (!event.target.closest?.(".idc-dl")) setDlMenu(false);
-    };
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const onKey = (event) => {
       if (event.key === "Escape") setDlMenu(false);
     };
 
-    document.addEventListener("pointerdown", onDown);
     window.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", onDown);
+      document.body.style.overflow = previous;
       window.removeEventListener("keydown", onKey);
     };
   }, [dlMenu]);
@@ -1324,6 +1367,25 @@ export default function AadhaarCardPrinter() {
           <option value={1.5}>Extra large (150%)</option>
         </select>
       </label>
+
+      <button
+        type="button"
+        className="idc-download idc-print-download"
+        onClick={() => setDlMenu(true)}
+        disabled={busy || !canDownload}
+        aria-haspopup="dialog"
+      >
+        <Icon name="download" size={17} />
+        {busy ? "Creating file..." : "Download (A4)"}
+      </button>
+
+      {!canDownload && (
+        <p className="idc-hint">
+          {tool === "letter"
+            ? "Upload a document to enable download."
+            : "Upload both the front and the back image to enable download."}
+        </p>
+      )}
     </div>
   );
 
@@ -1446,54 +1508,19 @@ export default function AadhaarCardPrinter() {
             : renderEnhanceTab()}
         </div>
 
-        <div className={`idc-actions${tool === "letter" ? " two" : ""}`}>
-          <div className="idc-dl">
+        {tool === "letter" && (
+          <div className="idc-actions">
             <button
               type="button"
-              className="idc-download"
-              onClick={() => setDlMenu((open) => !open)}
-              disabled={busy || !canDownload}
-              aria-haspopup="menu"
-              aria-expanded={dlMenu}
-            >
-              <Icon name="download" size={17} />
-              {busy ? "Creating file..." : "Download (A4)"}
-            </button>
-
-            {dlMenu && (
-              <div className="idc-dl-menu" role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handleDownload("pdf")}
-                >
-                  <strong>PDF</strong>
-                  <span>Best for printing, opens anywhere</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handleDownload("docx")}
-                >
-                  <strong>Word (.docx)</strong>
-                  <span>Editable, move the cards if needed</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {tool === "letter" && (
-            <button
-              type="button"
-              className="idc-ghost icon-only"
+              className="idc-ghost wide"
               onClick={clearFile}
               title="Remove file"
-              aria-label="Remove file"
             >
               <Icon name="trash" size={16} />
+              Remove file
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1671,6 +1698,12 @@ export default function AadhaarCardPrinter() {
               This PDF is protected. Enter its password to open it.
             </p>
 
+            {pwdAsk.label && (
+              <div className="pwd-file" title={pwdAsk.label}>
+                📄 {pwdAsk.label}
+              </div>
+            )}
+
             {pwdAsk.retry && (
               <div className="pwd-error">
                 That password did not work. Please check it and try again.
@@ -1725,9 +1758,57 @@ export default function AadhaarCardPrinter() {
       )
     : null;
 
+  const downloadModal = dlMenu
+    ? createPortal(
+        <div
+          className="dl-overlay"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setDlMenu(false);
+          }}
+        >
+          <div
+            className="dl-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dl-title"
+          >
+            <h2 id="dl-title">Download as</h2>
+            <p className="dl-sub">
+              Front and back on one A4 page, at the card size you chose.
+            </p>
+
+            <div className="dl-options">
+              <button type="button" onClick={() => handleDownload("pdf")}>
+                <span className="dl-badge pdf">PDF</span>
+                <strong>PDF file</strong>
+                <small>Best for printing. Opens on any phone or computer.</small>
+              </button>
+
+              <button type="button" onClick={() => handleDownload("docx")}>
+                <span className="dl-badge docx">DOCX</span>
+                <strong>Word file</strong>
+                <small>Editable. You can move the cards in Word.</small>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="dl-cancel"
+              onClick={() => setDlMenu(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="idc">
       {passwordModal}
+      {downloadModal}
       <div className="idc-tabs" role="tablist">
         <button
           type="button"
