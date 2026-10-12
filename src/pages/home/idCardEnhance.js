@@ -228,6 +228,30 @@ export function autoAdjust(canvas) {
 // ------------------------------------------------------------
 const PHOTO_FALLBACK = { x: 0.1, y: 0.21, w: 0.22, h: 0.42 };
 
+// where to look for the person's photo on each kind of card
+//   win      = search window [x0, x1, y0, y1] as fractions of the card
+//   fallback = used when nothing photo-like is found
+//   dark     = only treat dark pixels as "photo" (cards with a coloured background)
+const PHOTO_HINTS = {
+  aadhaar: { win: [0.04, 0.4, 0.16, 0.78], fallback: PHOTO_FALLBACK },
+  voter: {
+    win: [0.03, 0.4, 0.3, 0.98],
+    fallback: { x: 0.05, y: 0.42, w: 0.22, h: 0.5 },
+    dark: true,
+  },
+  // newer e-PAN: photo is on the left of the front card, QR on the right
+  pan2: {
+    win: [0, 1, 0, 1],
+    fallback: { x: 0.03, y: 0.2, w: 0.16, h: 0.3 },
+    fixed: true,
+  },
+  pan: {
+    win: [0.6, 1, 0.4, 1],
+    fallback: { x: 0.7, y: 0.575, w: 0.235, h: 0.36 },
+    fixed: true, // the photo sits in the same place on every e-PAN
+  },
+};
+
 const longestRun = (flags, maxGap) => {
   let best = null;
   let start = -1;
@@ -246,11 +270,12 @@ const longestRun = (flags, maxGap) => {
   return best;
 };
 
-export function findPhotoRect(data, w, h) {
-  const x0 = Math.round(w * 0.04);
-  const x1 = Math.round(w * 0.4);
-  const y0 = Math.round(h * 0.16);
-  const y1 = Math.round(h * 0.78);
+// returns { x, y, w, h } or null when no photo-like block is found
+function searchPhoto(data, w, h, hint) {
+  const x0 = Math.round(w * hint.win[0]);
+  const x1 = Math.round(w * hint.win[1]);
+  const y0 = Math.round(h * hint.win[2]);
+  const y1 = Math.round(h * hint.win[3]);
 
   const filled = (x, y) => {
     const i = (y * w + x) * 4;
@@ -258,6 +283,8 @@ export function findPhotoRect(data, w, h) {
     const g = data[i + 1];
     const b = data[i + 2];
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    if (hint.dark) return lum < 150;
 
     return lum < 215 || Math.max(r, g, b) - Math.min(r, g, b) > 30;
   };
@@ -267,11 +294,11 @@ export function findPhotoRect(data, w, h) {
   for (let x = x0; x < x1; x += 1) {
     let count = 0;
     for (let y = y0; y < y1; y += 1) if (filled(x, y)) count += 1;
-    cols.push(count / (y1 - y0) > 0.4);
+    cols.push(count / (y1 - y0) > (hint.dark ? 0.25 : 0.4));
   }
 
   const colRun = longestRun(cols, 2);
-  if (!colRun) return PHOTO_FALLBACK;
+  if (!colRun) return null;
 
   const left = x0 + colRun[0];
   const right = x0 + colRun[1] + 1;
@@ -280,11 +307,11 @@ export function findPhotoRect(data, w, h) {
   for (let y = y0; y < y1; y += 1) {
     let count = 0;
     for (let x = left; x < right; x += 1) if (filled(x, y)) count += 1;
-    rows.push(count / (right - left) > 0.5);
+    rows.push(count / (right - left) > (hint.dark ? 0.3 : 0.5));
   }
 
   const rowRun = longestRun(rows, 2);
-  if (!rowRun) return PHOTO_FALLBACK;
+  if (!rowRun) return null;
 
   const top = y0 + rowRun[0];
   const bottom = y0 + rowRun[1] + 1;
@@ -300,13 +327,28 @@ export function findPhotoRect(data, w, h) {
   const ratio = (rect.h * h) / (rect.w * w);
 
   if (rect.w < 0.1 || rect.w > 0.42 || rect.h < 0.22 || ratio < 1 || ratio > 1.8) {
-    return PHOTO_FALLBACK;
+    return null;
   }
 
   return rect;
 }
 
-export function detectPhotoRect(canvas) {
+// type = "aadhaar" | "voter" | "pan" | "auto" (try them one by one)
+export function findPhotoRect(data, w, h, type = "aadhaar") {
+  const order = type === "auto" ? ["aadhaar", "voter"] : [type];
+
+  for (const name of order) {
+    const hint = PHOTO_HINTS[name] || PHOTO_HINTS.aadhaar;
+    if (hint.fixed) return { ...hint.fallback };
+    const rect = searchPhoto(data, w, h, hint);
+    if (rect) return rect;
+  }
+
+  const hint = PHOTO_HINTS[order[0]] || PHOTO_HINTS.aadhaar;
+  return { ...hint.fallback };
+}
+
+export function detectPhotoRect(canvas, type = "aadhaar") {
   const longest = Math.max(canvas.width, canvas.height);
   const ratio = longest > 500 ? 500 / longest : 1;
 
@@ -319,7 +361,7 @@ export function detectPhotoRect(canvas) {
 
   const { data } = ctx.getImageData(0, 0, small.width, small.height);
 
-  return findPhotoRect(data, small.width, small.height);
+  return findPhotoRect(data, small.width, small.height, type);
 }
 
 export function autoPhotoAdjust(canvas) {
