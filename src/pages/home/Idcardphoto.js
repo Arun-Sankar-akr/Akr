@@ -1,17 +1,3 @@
-// ============================================================
-// ID CARD PRINT  -  phone photo clean-up
-//   * detectPhotoQuad    : finds the card (4 corners) in a camera photo
-//   * straightenWithQuad : flattens any 4 corners into a straight,
-//                          clean card (shadows + dark edges removed)
-//   * prepareCardPhoto   : detect + straighten in one step
-//   * fullQuad / isSingleCard : small helpers
-//
-// The maths works on plain RGBA arrays (testable without a
-// browser). Only the last block at the bottom touches <canvas>.
-//
-// A "quad" is [[x, y] x4] in pixels: top-left, top-right,
-// bottom-right, bottom-left of the card inside the photo.
-// ============================================================
 
 const CARD_RATIO = 85.6 / 53.98; // 1.586
 
