@@ -3649,9 +3649,6 @@
     }
 
     .nt-brand>div,
-    .nt-nav-link:not(.active) {}
-
-    .nt-brand>div,
     .nt-nav-link {
         font-size: 0;
     }
@@ -5238,5 +5235,91 @@
 
     .new-transaction-page .nt-bp-actions {
         grid-template-columns: 1fr;
+    }
+}
+
+
+/* ---------- Add Service button + dialog ---------- */
+
+.new-transaction-page .nt-services-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.new-transaction-page .nt-add-service-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    width: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 400px;
+    background: linear-gradient(135deg, #ff6b6b, #ff3b47);
+    color: #fff;
+    font-family: "Outfit", "Poppins", system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(255, 59, 71, 0.28);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.new-transaction-page .nt-add-service-btn svg {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    margin-left: -10px;
+}
+
+.new-transaction-page .nt-add-service-btn:hover {
+    transform: translateY(-1px);
+}
+
+.new-transaction-page .nt-service-remove {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    margin-left: 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--nt-tbl-dim, #5b6478);
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.new-transaction-page .nt-service-remove:hover {
+    background: rgba(255, 77, 86, 0.14);
+    color: #ff4d56;
+}
+
+.new-transaction-page .nt-service-remove svg {
+    width: 14px;
+    height: 14px;
+}
+
+.nt-day-modal.nt-day-modal-sm {
+    width: min(480px, 100%);
+}
+
+.nt-add-service-grid {
+    margin-top: 14px;
+}
+
+.nt-add-service-hint {
+    font-size: 14px;
+    color: var(--d-dim);
+    flex: 1;
+    min-width: 160px;
+}
+
+@media (max-width: 480px) {
+    .new-transaction-page .nt-add-service-btn {
+        padding: 0 14px;
+        font-size: 15px;
     }
 }

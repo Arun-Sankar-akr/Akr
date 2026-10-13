@@ -375,15 +375,38 @@ export default function NewTransaction() {
        SERVICES
        ===================================================== */
 
+    // Services added from the "Add Service" button (kept in this browser)
+    const CUSTOM_SERVICES_KEY = "nt-custom-services";
+    const [customServices, setCustomServices] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(CUSTOM_SERVICES_KEY) || "[]");
+            return Array.isArray(saved) ? saved : [];
+        } catch {
+            return [];
+        }
+    });
+    const [showAddService, setShowAddService] = useState(false);
+    const [newService, setNewService] = useState({ name: "", category: "General", costPrice: "" });
+
+    function saveCustomServices(next) {
+        setCustomServices(next);
+        try {
+            localStorage.setItem(CUSTOM_SERVICES_KEY, JSON.stringify(next));
+        } catch {
+            /* storage unavailable - the service still works for this session */
+        }
+    }
+
     // Normalize the Firebase service schema used by AdminDashboard.
     // Admin stores the live rate as `price` + `profit`; billing uses
     // `sellingPrice` + `costPrice`. Keeping this mapping here makes both
     // screens use the same Firebase service/rate source.
     const availableServices = useMemo(() => {
-        const source =
+        const base =
             Array.isArray(services) && services.length > 0
                 ? services
                 : defaultServices;
+        const source = [...base, ...customServices];
 
         return source
             .filter((service) => service?.active !== false)
@@ -425,7 +448,7 @@ export default function NewTransaction() {
                     active: service.active !== false,
                 };
             });
-    }, [services]);
+    }, [services, customServices]);
 
     /* =====================================================
        STATE
@@ -472,6 +495,49 @@ export default function NewTransaction() {
             setDayStats({ amount: 0, bills: 0, entries: [] });
         }
     }, [dayStorageKey]);
+
+    // ---- Add / remove a service from the table ----
+    function openAddService() {
+        setNewService({ name: "", category: "General", costPrice: "" });
+        setShowAddService(true);
+    }
+
+    function submitAddService() {
+        const name = newService.name.trim();
+        if (!name) {
+            alert("Please enter the service name.");
+            return;
+        }
+        const exists = availableServices.some((svc) => String(svc.name).trim().toLowerCase() === name.toLowerCase());
+        if (exists) {
+            alert("A service with this name already exists.");
+            return;
+        }
+        const costPrice = Number(newService.costPrice) || 0;
+        saveCustomServices([
+            ...customServices,
+            {
+                id: `custom-${Date.now()}`,
+                name,
+                serviceName: name,
+                category: newService.category,
+                unit: "unit",
+                sellingPrice: 0,
+                price: 0,
+                costPrice,
+                profit: 0,
+                active: true,
+                custom: true,
+            },
+        ]);
+        setShowAddService(false);
+    }
+
+    function removeCustomService(service) {
+        if (!window.confirm(`Remove "${service.name}" from the services list?`)) return;
+        saveCustomServices(customServices.filter((svc) => svc.id !== service.id));
+        setCart((current) => current.filter((item) => item.id !== service.id));
+    }
 
     // ---- CRUD for the bills listed in the day popup ----
     const [editor, setEditor] = useState(null);
@@ -1550,7 +1616,10 @@ export default function NewTransaction() {
                 <div className="nt-content-grid">
                     <div className="nt-left-column">
                         <section className="nt-services-panel">
-                            <div className="nt-section-heading"><span className="nt-heading-icon"><Printer /></span><h2>Services</h2></div>
+                            <div className="nt-services-head">
+                                <div className="nt-section-heading"><span className="nt-heading-icon"><Printer /></span><h2>Services</h2></div>
+                                <button type="button" className="nt-add-service-btn" onClick={openAddService}><Plus /></button>
+                            </div>
                             <div className="nt-category-tabs">{categories.map((c) => <button type="button" key={c} className={activeCategory === c ? "active" : ""} onClick={() => setActiveCategory(c)}>{c}</button>)}</div>
                             {servicesLoading ? <div className="nt-empty-services">Loading services…</div> : <div className="nt-service-table-wrap">
                                 <table className="nt-service-table">
@@ -1565,7 +1634,10 @@ export default function NewTransaction() {
                                             return (
                                                 <tr key={s.id} className={inCart ? "is-selected" : ""}>
                                                     <td className="col-sno">{index + 1}</td>
-                                                    <td className="col-service">{s.name}</td>
+                                                    <td className="col-service">
+                                                        {s.name}
+                                                        {s.custom && <button type="button" className="nt-service-remove" onClick={() => removeCustomService(s)} aria-label={`Remove ${s.name}`} title="Remove this service"><X /></button>}
+                                                    </td>
                                                     <td className="col-rate">
                                                         <div className="nt-table-input-wrap"><span>₹</span><input type="text" inputMode="decimal" autoComplete="off" aria-label={`Rate for ${s.name}`} className="nt-table-input" placeholder="0" value={rates[s.id] ?? ""} onChange={(e) => changeRate(s, e.target.value)} onFocus={(e) => e.target.select()} /></div>
                                                     </td>
@@ -1663,7 +1735,7 @@ export default function NewTransaction() {
                         <div className="nt-bp-actions">
                             {/* <button type="button" className="nt-bp-preview" disabled={!cart.length} onClick={() => setShowBillPreview(true)}><Eye /> Preview &amp; Print</button> */}
                             <button type="button" className="nt-bp-checkout" disabled={!cart.length || saving} onClick={complete}>
-                                <ShoppingCart />{saving ? "Processing…" : "Checkout"}
+                                <ShoppingCart />{saving ? "Processing…" : "Complete Bill"}
                             </button>
                         </div>
                     </aside>
@@ -1673,6 +1745,48 @@ export default function NewTransaction() {
             {/* =============================================
                 BILL PREVIEW / PRINT MODAL
             ============================================= */}
+
+            {showAddService && createPortal(
+                <div className={`nt-day-overlay theme-${theme}`} onClick={() => setShowAddService(false)}>
+                    <div className="nt-day-modal nt-day-modal-sm" role="dialog" aria-modal="true" aria-label="Add service" onClick={(e) => e.stopPropagation()}>
+                        <div className="nt-day-head">
+                            <div>
+                                <h3>Add Service</h3>
+                                <p>It will appear in the services table</p>
+                            </div>
+                            <button type="button" className="nt-day-close" onClick={() => setShowAddService(false)} aria-label="Close"><X /></button>
+                        </div>
+                        <div className="nt-day-body">
+                            <div className="nt-day-form">
+                                <label>
+                                    <span>Service Name</span>
+                                    <input autoFocus value={newService.name} maxLength={60} placeholder="e.g. Spiral Binding" onChange={(e) => setNewService({ ...newService, name: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") submitAddService(); }} />
+                                </label>
+                                <div className="nt-day-form-grid nt-add-service-grid">
+                                    <label>
+                                        <span>Category</span>
+                                        <select value={newService.category} onChange={(e) => setNewService({ ...newService, category: e.target.value })}>
+                                            {["General", "Xerox", "Printing", "Lamination", "Photo", "Stationery"].map((c) => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <span>Cost Price (optional)</span>
+                                        <input inputMode="decimal" value={newService.costPrice} placeholder="0" onChange={(e) => setNewService({ ...newService, costPrice: e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 8) })} onKeyDown={(e) => { if (e.key === "Enter") submitAddService(); }} />
+                                    </label>
+                                </div>
+                                <div className="nt-day-form-foot">
+                                    <span className="nt-add-service-hint">The rate is typed in the table for each bill.</span>
+                                    <div className="nt-day-form-buttons">
+                                        <button type="button" className="nt-day-btn" onClick={() => setShowAddService(false)}>Cancel</button>
+                                        <button type="button" className="nt-day-btn primary" onClick={submitAddService}>Add Service</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             {showDayPopup && createPortal(
                 <div className={`nt-day-overlay theme-${theme}`} onClick={() => setShowDayPopup(false)}>
