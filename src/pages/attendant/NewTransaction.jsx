@@ -19,6 +19,9 @@ import {
     Minus,
     Plus,
     Trash2,
+    Pencil,
+    Download,
+    Phone,
     CalendarDays, LayoutDashboard, ClipboardList, Users, BarChart3,
     Settings, FileText, Search, Flame, UserRound, Banknote, CreditCard, Wallet, Tag,
 } from "lucide-react";
@@ -30,6 +33,8 @@ import BillSummary from "../../components/billing/BillSummary";
 
 import useServices from "../../hooks/useServices";
 import { createTransaction } from "../../services/transactionService";
+import { collection, query, where, getDocs, deleteDoc, doc as firestoreDoc } from "firebase/firestore";
+import { db } from "../../services/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { calculateCart } from "../../utils/calculations";
@@ -197,277 +202,152 @@ function CartRow({ item, onQty, onSetQty, onRemove }) {
 }
 
 /* =========================================================
-   QUANTITY BOX — type the quantity directly, or use - / +
-   ========================================================= */
-
-function QtyInput({ value, onChange }) {
-    const [draft, setDraft] = useState(String(value));
-
-    // keep the box in sync when the +/- buttons change the quantity
-    useEffect(() => {
-        setDraft(String(value));
-    }, [value]);
-
-    function handleChange(event) {
-        const digits = event.target.value
-            .replace(/\D/g, "")
-            .slice(0, 5);
-
-        setDraft(digits);
-
-        const next = parseInt(digits, 10);
-
-        if (next > 0) {
-            onChange(next);
-        }
-    }
-
-    function handleBlur() {
-        // empty or 0 -> go back to the last valid quantity
-        setDraft(String(value));
-    }
-
-    return (
-        <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            aria-label="Quantity"
-            className="nt-qty-input"
-            value={draft}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            onFocus={(event) => event.target.select()}
-            onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                    event.currentTarget.blur();
-                }
-            }}
-        />
-    );
-}
-
-/* =========================================================
    PAGE
    ========================================================= */
 
-/* =====================================================
-   SERVICE IMAGES
-   ---------------------------------------------------
-   Every service card shows an image instead of an emoji.
-   If the service has its own picture (image / imageUrl in
-   the database) that picture is used. Otherwise a clean
-   illustration is picked from the service name.
-   ===================================================== */
+/* =========================================================
+   EXPORT / PRINT HELPERS FOR THE DAY'S BILLS
+   ========================================================= */
 
-const SVG_PAPER = { fill: "#ffffff", stroke: "#d3d8e8", strokeWidth: 1.5 };
+const esc = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
-function serviceImageKind(service) {
-    const t = `${service?.name || ""} ${service?.category || ""}`.toLowerCase();
+const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
-    if (/lamination/.test(t)) return "lamination";
-    if (/aadh?a?a?r/.test(t)) return "aadhar";
-    if (/\bpan\b/.test(t)) return "pan";
-    if (/ration/.test(t)) return "ration";
-    if (/birth|death|certificate/.test(t)) return "certificate";
-    if (/patta|chitta|fmb|land/.test(t)) return "land";
-    if (/bank|exam|application|form/.test(t)) return "form";
-    if (/photo/.test(t)) return "photo";
-    if (/color|colour/.test(t) && /xerox/.test(t)) return "printer-color";
-    if (/xerox|copy|b&w|black/.test(t)) return "printer";
-    if (/print/.test(t)) return "printout";
-    return "box";
+const timeOf = (entry) =>
+    new Date(entry.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+
+const dateOf = (entry) =>
+    new Date(entry.time).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+function downloadCsv(filename, rows) {
+    const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = "\uFEFF" + rows.map((row) => row.map(cell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function IdCard({ top, bottom, accent }) {
-    return (
-        <>
-            <rect x="6" y="14" width="52" height="36" rx="5" {...SVG_PAPER} />
-            <path d="M6 19a5 5 0 0 1 5-5h42a5 5 0 0 1 5 5v3H6z" fill={top} />
-            <path d="M6 45v0a5 5 0 0 0 5 5h42a5 5 0 0 0 5-5v-3H6z" fill={bottom} />
-            <circle cx="20" cy="32" r="5" fill={accent} />
-            <path d="M12 41c1-5 15-5 16 0z" fill={accent} />
-            <rect x="32" y="28" width="20" height="3" rx="1.5" fill="#cfd4e6" />
-            <rect x="32" y="34" width="14" height="3" rx="1.5" fill="#cfd4e6" />
-        </>
-    );
+function billsToCsvRows(entries, numberOf) {
+    const rows = [["Bill No", "Date", "Time", "Customer", "Phone", "Payment", "Service", "Rate", "Quantity", "Line Total", "Bill Total"]];
+    entries.forEach((entry) => {
+        (entry.items || []).forEach((it, i) => {
+            rows.push([
+                numberOf(entry),
+                dateOf(entry),
+                timeOf(entry),
+                entry.customer || "",
+                entry.phone || "",
+                String(entry.payment || "").toUpperCase(),
+                it.name,
+                it.rate,
+                it.quantity,
+                it.rate * it.quantity,
+                i === 0 ? entry.total : "",
+            ]);
+        });
+    });
+    if (entries.length > 1) {
+        rows.push([]);
+        rows.push(["", "", "", "", "", "", "", "", "", "Day Total", entries.reduce((sum, e) => sum + (Number(e.total) || 0), 0)]);
+    }
+    return rows;
 }
 
-function ServiceImage({ service }) {
-    const picture = service?.image || service?.imageUrl || service?.imageURL;
+function printHtmlDocument(html) {
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+    document.body.appendChild(iframe);
 
-    if (picture) {
-        return (
-            <img
-                className="nt-service-img"
-                src={picture}
-                alt={service?.name || "Service"}
-                loading="lazy"
-            />
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+        document.body.removeChild(iframe);
+        return;
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const cleanup = () => iframe.parentNode && iframe.parentNode.removeChild(iframe);
+
+    iframe.onload = () => {
+        const fontsReady = iframe.contentDocument?.fonts?.ready || Promise.resolve();
+        Promise.race([fontsReady, new Promise((resolve) => setTimeout(resolve, 2500))]).then(() =>
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(cleanup, 1500);
+            }, 250)
         );
-    }
+    };
+}
 
-    const kind = serviceImageKind(service);
+function billsToHtml(entries, numberOf, { title, subtitle, summary }) {
+    const billBlock = (entry) => `
+        <section class="bill">
+            <div class="bill-head">
+                <div><b>Bill #${numberOf(entry)}</b> <span>${esc(dateOf(entry))} · ${esc(timeOf(entry))}</span></div>
+                <div><span>${esc(String(entry.payment || "").toUpperCase())}${entry.customer ? " · " + esc(entry.customer) : ""}${entry.phone ? " · " + esc(entry.phone) : ""}</span></div>
+            </div>
+            <table>
+                <thead><tr><th>Service</th><th class="r">Rate</th><th class="r">Qty</th><th class="r">Total</th></tr></thead>
+                <tbody>
+                    ${(entry.items || []).map((it) => `<tr><td>${esc(it.name)}</td><td class="r">${inr(it.rate)}</td><td class="r">${it.quantity}</td><td class="r">${inr(it.rate * it.quantity)}</td></tr>`).join("")}
+                </tbody>
+            </table>
+            <div class="bill-total"><span>Bill Total</span><strong>${inr(entry.total)}</strong></div>
+        </section>`;
 
-    let art;
+    const grand = entries.reduce((sum, e) => sum + (Number(e.total) || 0), 0);
 
-    switch (kind) {
-        case "printer":
-        case "printer-color":
-            art = (
-                <>
-                    <defs>
-                        <linearGradient id="svc-printer" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0" stopColor="#8a7fe0" />
-                            <stop offset="1" stopColor="#4b3f94" />
-                        </linearGradient>
-                    </defs>
-                    <rect x="18" y="6" width="28" height="18" rx="2" {...SVG_PAPER} />
-                    <rect x="8" y="22" width="48" height="25" rx="6" fill="url(#svc-printer)" />
-                    <rect x="14" y="27" width="22" height="3" rx="1.5" fill="#ffffff55" />
-                    {kind === "printer-color" ? (
-                        <>
-                            <circle cx="42" cy="29" r="2.2" fill="#22d3ee" />
-                            <circle cx="47.5" cy="29" r="2.2" fill="#f43f5e" />
-                            <circle cx="53" cy="29" r="2.2" fill="#facc15" />
-                        </>
-                    ) : (
-                        <circle cx="49" cy="29" r="2.4" fill="#4ade80" />
-                    )}
-                    <rect x="16" y="38" width="32" height="19" rx="2" {...SVG_PAPER} />
-                    <rect x="21" y="43" width="22" height="2.5" rx="1.2" fill="#cfd4e6" />
-                    <rect x="21" y="49" width="15" height="2.5" rx="1.2" fill="#cfd4e6" />
-                </>
-            );
-            break;
+    const summaryHtml = summary && summary.length ? `
+        <h3>Service-wise summary</h3>
+        <table>
+            <thead><tr><th>S.No</th><th>Service</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead>
+            <tbody>${summary.map((row, i) => `<tr><td>${i + 1}</td><td>${esc(row.name)}</td><td class="r">${row.quantity}</td><td class="r">${inr(row.amount)}</td></tr>`).join("")}</tbody>
+        </table>
+        <h3>Bills</h3>` : "";
 
-        case "aadhar":
-            art = <IdCard top="#f59e0b" bottom="#16a34a" accent="#6b7bd6" />;
-            break;
-
-        case "pan":
-            art = <IdCard top="#3b82f6" bottom="#1d4ed8" accent="#3b82f6" />;
-            break;
-
-        case "ration":
-            art = <IdCard top="#16a34a" bottom="#15803d" accent="#16a34a" />;
-            break;
-
-        case "certificate":
-            art = (
-                <>
-                    <rect x="10" y="8" width="44" height="40" rx="3" fill="#fffaf0" stroke="#d9b45a" strokeWidth="2" />
-                    <rect x="16" y="15" width="32" height="3.5" rx="1.7" fill="#d9b45a" />
-                    <rect x="19" y="23" width="26" height="2.5" rx="1.2" fill="#d6d9e8" />
-                    <rect x="19" y="29" width="26" height="2.5" rx="1.2" fill="#d6d9e8" />
-                    <path d="M24 46l-3 12 8-4 3 5 2-13z" fill="#ef4444" />
-                    <path d="M40 46l3 12-8-4-3 5-2-13z" fill="#dc2626" />
-                    <circle cx="32" cy="42" r="8" fill="#f5c542" stroke="#d9a21a" strokeWidth="2" />
-                    <circle cx="32" cy="42" r="3.5" fill="#fff3c4" />
-                </>
-            );
-            break;
-
-        case "form":
-            art = (
-                <>
-                    <rect x="12" y="8" width="40" height="50" rx="5" fill="#6b7bd6" />
-                    <rect x="17" y="14" width="30" height="40" rx="2" {...SVG_PAPER} />
-                    <rect x="23" y="5" width="18" height="9" rx="3" fill="#3f4aa8" />
-                    <path d="M21 25l3 3 5-6" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    <rect x="32" y="24" width="12" height="2.5" rx="1.2" fill="#cfd4e6" />
-                    <path d="M21 36l3 3 5-6" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    <rect x="32" y="35" width="12" height="2.5" rx="1.2" fill="#cfd4e6" />
-                    <rect x="21" y="46" width="22" height="2.5" rx="1.2" fill="#cfd4e6" />
-                </>
-            );
-            break;
-
-        case "land":
-            art = (
-                <>
-                    <rect x="10" y="8" width="44" height="48" rx="4" fill="#f2f8ee" stroke="#a6c99a" strokeWidth="1.5" />
-                    <path d="M16 22l12-6 14 5 6 12-8 11-16-3-8-9z" fill="#cfe8c1" stroke="#4d9a4a" strokeWidth="1.6" strokeLinejoin="round" />
-                    <path d="M28 16v20M16 28l26 8" stroke="#4d9a4a" strokeWidth="1" strokeDasharray="2 2" />
-                    <circle cx="42" cy="21" r="6" fill="#ef4444" />
-                    <circle cx="42" cy="21" r="2.2" fill="#ffffff" />
-                    <rect x="16" y="49" width="26" height="2.5" rx="1.2" fill="#c4d8bb" />
-                </>
-            );
-            break;
-
-        case "lamination":
-            art = (
-                <>
-                    <defs>
-                        <linearGradient id="svc-lam" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0" stopColor="#e6f4ff" />
-                            <stop offset="1" stopColor="#b9dcff" />
-                        </linearGradient>
-                    </defs>
-                    <rect x="12" y="6" width="40" height="52" rx="5" fill="url(#svc-lam)" stroke="#6cb6f5" strokeWidth="2.5" />
-                    <rect x="19" y="14" width="26" height="3.5" rx="1.7" fill="#ffffff" />
-                    <rect x="19" y="22" width="26" height="3" rx="1.5" fill="#ffffffcc" />
-                    <rect x="19" y="29" width="18" height="3" rx="1.5" fill="#ffffffcc" />
-                    <path d="M42 6h10v10z" fill="#ffffff99" />
-                    <path d="M16 46L34 10h6L22 54z" fill="#ffffff66" />
-                </>
-            );
-            break;
-
-        case "photo":
-            art = (
-                <>
-                    <defs>
-                        <linearGradient id="svc-sky" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0" stopColor="#7dd3fc" />
-                            <stop offset="1" stopColor="#e0f2fe" />
-                        </linearGradient>
-                    </defs>
-                    <rect x="6" y="10" width="52" height="44" rx="5" fill="#c98b4b" />
-                    <rect x="11" y="15" width="42" height="34" rx="2" fill="url(#svc-sky)" />
-                    <circle cx="42" cy="24" r="5" fill="#fbbf24" />
-                    <path d="M11 49V38l12-9 10 8 8-5 12 7v10z" fill="#4ade80" />
-                    <path d="M11 49V43l14-6 12 7 16-4v9z" fill="#16a34a" />
-                </>
-            );
-            break;
-
-        case "printout":
-            art = (
-                <>
-                    <path d="M14 6h28l10 10v40a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" {...SVG_PAPER} />
-                    <path d="M42 6v10h10z" fill="#d3d8e8" />
-                    <rect x="18" y="22" width="30" height="3" rx="1.5" fill="#6b7bd6" />
-                    <rect x="18" y="30" width="30" height="2.5" rx="1.2" fill="#cfd4e6" />
-                    <rect x="18" y="36" width="30" height="2.5" rx="1.2" fill="#cfd4e6" />
-                    <rect x="18" y="42" width="20" height="2.5" rx="1.2" fill="#cfd4e6" />
-                </>
-            );
-            break;
-
-        default:
-            art = (
-                <>
-                    <path d="M32 8l22 9v24l-22 9-22-9V17z" fill="#d6a05e" />
-                    <path d="M32 8l22 9-22 9-22-9z" fill="#e8bd82" />
-                    <path d="M32 26v24l-22-9V17z" fill="#b9823f" />
-                    <rect x="26" y="9" width="12" height="9" fill="#f3d9a8" transform="rotate(25 32 14)" />
-                </>
-            );
-    }
-
-    return (
-        <svg
-            className="nt-service-img"
-            viewBox="0 0 64 64"
-            role="img"
-            aria-label={service?.name || "Service"}
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            {art}
-        </svg>
-    );
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>${esc(title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Outfit", Arial, sans-serif; color: #1b2437; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 8px; }
+    .head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 2px solid #1b2437; }
+    .head img { height: 64px; }
+    .head h2 { margin: 0; font-size: 26px; letter-spacing: 0.06em; text-align: right; }
+    .head p { margin: 2px 0 0; text-align: right; color: #5b6478; font-size: 14px; }
+    h3 { margin: 22px 0 8px; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6478; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { padding: 8px 10px; text-align: left; background: #eef1f8; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; }
+    td { padding: 8px 10px; border-top: 1px solid #dfe3ee; }
+    .r { text-align: right; }
+    .bill { margin-top: 14px; border: 1px solid #dfe3ee; border-radius: 10px; overflow: hidden; page-break-inside: avoid; }
+    .bill-head { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; font-size: 14px; }
+    .bill-head span { color: #5b6478; }
+    .bill-total { display: flex; justify-content: space-between; padding: 10px 12px; border-top: 1px solid #dfe3ee; background: #f6f8fc; font-size: 15px; }
+    .grand { display: flex; justify-content: space-between; margin-top: 18px; padding: 14px 16px; border-radius: 10px; background: #1b2437; color: #fff; font-size: 18px; }
+    .thanks { margin-top: 26px; text-align: center; font-weight: 700; color: #1b2437; }
+    @page { size: A4; margin: 10mm; }
+</style></head>
+<body><main class="page">
+    <section class="head">
+        <img src="${logos}" alt="AKR Communications" />
+        <div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div>
+    </section>
+    ${summaryHtml}
+    ${entries.map(billBlock).join("")}
+    <div class="grand"><span>${entries.length > 1 ? "DAY TOTAL" : "GRAND TOTAL"}</span><strong>${inr(grand)}</strong></div>
+    <div class="thanks">Thank you for choosing AKR Communications</div>
+</main></body></html>`;
 }
 
 export default function NewTransaction() {
@@ -575,76 +455,283 @@ export default function NewTransaction() {
        ADD SERVICE
        ===================================================== */
 
-    function add(service) {
-        setCart((current) => {
-            const existing =
-                current.find(
-                    (item) =>
-                        item.id === service.id
-                );
+    // Today's running total of bills completed on this page (kept per user, per day)
+    const dayStorageKey = `nt-day-total:${user?.uid || "anon"}:${new Date().toLocaleDateString("en-CA")}`;
+    const [dayStats, setDayStats] = useState({ amount: 0, bills: 0, entries: [] });
+    const [showDayPopup, setShowDayPopup] = useState(false);
 
-            if (existing) {
-                return current.map(
-                    (item) =>
-                        item.id === service.id
-                            ? {
-                                ...item,
-                                quantity:
-                                    item.quantity + 1,
-                            }
-                            : item
-                );
-            }
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(dayStorageKey) || "null");
+            setDayStats({
+                amount: Number(saved?.amount) || 0,
+                bills: Number(saved?.bills) || 0,
+                entries: Array.isArray(saved?.entries) ? saved.entries : [],
+            });
+        } catch {
+            setDayStats({ amount: 0, bills: 0, entries: [] });
+        }
+    }, [dayStorageKey]);
 
-            return [
-                ...current,
-                {
-                    ...service,
-                    quantity: 1,
-                },
-            ];
+    // ---- CRUD for the bills listed in the day popup ----
+    const [editor, setEditor] = useState(null);
+    const [deletingBillId, setDeletingBillId] = useState(null);
+
+    useEffect(() => {
+        if (!showDayPopup) setEditor(null);
+    }, [showDayPopup]);
+
+    function persistDay(next) {
+        setDayStats(next);
+        try {
+            localStorage.setItem(dayStorageKey, JSON.stringify(next));
+        } catch {
+            /* storage unavailable - the on-screen data still updates */
+        }
+    }
+
+    function openNewBill() {
+        setEditor({ id: null, customer: "", phone: "", payment: "cash", items: [{ name: "", rate: "", quantity: "" }] });
+    }
+
+    function openEditBill(entry) {
+        setEditor({
+            id: entry.id,
+            customer: entry.customer || "",
+            phone: entry.phone || "",
+            payment: entry.payment || "cash",
+            items: (entry.items || []).map((it) => ({
+                name: it.name,
+                rate: String(it.rate ?? ""),
+                quantity: String(it.quantity ?? ""),
+            })),
         });
     }
 
-    /* =====================================================
-       CHANGE QUANTITY
-       ===================================================== */
+    function patchEditorItem(index, patch) {
+        setEditor((current) => ({
+            ...current,
+            items: current.items.map((it, i) => (i === index ? { ...it, ...patch } : it)),
+        }));
+    }
 
-    function qty(id, delta) {
-        setCart((current) =>
-            current
-                .map((item) =>
-                    item.id === id
-                        ? {
-                            ...item,
-                            quantity: Math.max(
-                                0,
-                                item.quantity + delta
-                            ),
-                        }
-                        : item
-                )
-                .filter(
-                    (item) =>
-                        item.quantity > 0
-                )
+    function addEditorItem() {
+        setEditor((current) => ({ ...current, items: [...current.items, { name: "", rate: "", quantity: "" }] }));
+    }
+
+    function removeEditorItem(index) {
+        setEditor((current) => ({
+            ...current,
+            items: current.items.length > 1 ? current.items.filter((_, i) => i !== index) : current.items,
+        }));
+    }
+
+    function saveEditor() {
+        const items = editor.items
+            .map((it) => ({
+                name: it.name.trim(),
+                rate: Number(it.rate) || 0,
+                quantity: parseInt(it.quantity, 10) || 0,
+            }))
+            .filter((it) => it.name && it.quantity > 0);
+
+        if (!items.length) {
+            alert("Add at least one service with a name and a quantity.");
+            return;
+        }
+
+        const billTotal = items.reduce((sum, it) => sum + it.rate * it.quantity, 0);
+        const entries = Array.isArray(dayStats.entries) ? dayStats.entries : [];
+        const base = {
+            customer: editor.customer.trim(),
+            phone: editor.phone,
+            payment: editor.payment,
+            total: billTotal,
+            items,
+        };
+
+        if (editor.id === null) {
+            persistDay({
+                amount: dayStats.amount + billTotal,
+                bills: dayStats.bills + 1,
+                entries: [...entries, { id: Date.now(), manual: true, time: new Date().toISOString(), ...base }],
+            });
+        } else {
+            const old = entries.find((entry) => entry.id === editor.id);
+            persistDay({
+                amount: dayStats.amount - (Number(old?.total) || 0) + billTotal,
+                bills: dayStats.bills,
+                entries: entries.map((entry) => (entry.id === editor.id ? { ...entry, ...base, edited: true } : entry)),
+            });
+        }
+        setEditor(null);
+    }
+
+    // ---- export / print ----
+    const dayLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "short", year: "numeric" });
+    const dayFileStamp = new Date().toLocaleDateString("en-CA");
+    const billNumberOf = (entry) => (Array.isArray(dayStats.entries) ? dayStats.entries.indexOf(entry) + 1 : 0);
+
+    function exportBill(entry) {
+        downloadCsv(`AKR-bill-${billNumberOf(entry)}-${dayFileStamp}.csv`, billsToCsvRows([entry], billNumberOf));
+    }
+
+    function printBill(entry) {
+        // same invoice layout as the main "Preview & Print Bill"
+        printReceipt(entry);
+    }
+
+    function exportDay() {
+        const entries = Array.isArray(dayStats.entries) ? dayStats.entries : [];
+        if (!entries.length) return;
+        downloadCsv(`AKR-day-report-${dayFileStamp}.csv`, billsToCsvRows(entries, billNumberOf));
+    }
+
+    function printDay(summary) {
+        const entries = Array.isArray(dayStats.entries) ? dayStats.entries : [];
+        if (!entries.length) return;
+        printHtmlDocument(
+            billsToHtml(entries, billNumberOf, {
+                title: "DAILY REPORT",
+                subtitle: dayLabel,
+                summary,
+            })
         );
     }
 
-    /* =====================================================
-       SET QUANTITY (typed manually)
-       ===================================================== */
+    // Removes the old totals that have no service details (bills completed before details were saved)
+    function clearUnrecordedBills() {
+        if (!window.confirm("Delete the old bills that have no service details? This also removes them from the Day Total.")) return;
+        const entries = Array.isArray(dayStats.entries) ? dayStats.entries : [];
+        persistDay({
+            amount: entries.reduce((sum, entry) => sum + (Number(entry.total) || 0), 0),
+            bills: entries.length,
+            entries,
+        });
+    }
 
-    function setQty(id, value) {
-        const quantity = Math.max(1, Math.floor(Number(value) || 0));
+    // Finds the Firestore transaction that belongs to a saved popup bill
+    async function findFirestoreTransactionId(entry) {
+        if (entry.firestoreId) return entry.firestoreId;
 
+        // bills added by hand or edited here no longer match a saved transaction
+        if (entry.manual || entry.edited || !user?.uid) return null;
+
+        const snapshot = await getDocs(
+            query(collection(db, "transactions"), where("attendantId", "==", user.uid))
+        );
+
+        const billTime = new Date(entry.time).getTime();
+        let best = null;
+
+        snapshot.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            const created = data.createdAt?.toMillis?.()
+                ?? (typeof data.createdAt?.seconds === "number" ? data.createdAt.seconds * 1000 : 0);
+            const amount = Number(data.total ?? data.amount ?? data.customerPays ?? 0);
+            const sameItems = !Array.isArray(data.items) || data.items.length === (entry.items || []).length;
+            const diff = Math.abs(created - billTime);
+
+            if (created && amount === Number(entry.total) && sameItems && diff <= 5 * 60 * 1000) {
+                if (!best || diff < best.diff) best = { id: docSnap.id, diff };
+            }
+        });
+
+        return best ? best.id : null;
+    }
+
+    async function deleteBill(entry) {
+        if (deletingBillId) return;
+        if (!window.confirm("Delete this bill? It will also be removed from My Transactions.")) return;
+
+        setDeletingBillId(entry.id);
+
+        try {
+            const transactionId = await findFirestoreTransactionId(entry);
+
+            if (transactionId) {
+                await deleteDoc(firestoreDoc(db, "transactions", transactionId));
+            }
+
+            const entries = Array.isArray(dayStats.entries) ? dayStats.entries : [];
+            persistDay({
+                amount: Math.max(0, dayStats.amount - (Number(entry.total) || 0)),
+                bills: Math.max(0, dayStats.bills - 1),
+                entries: entries.filter((e) => e.id !== entry.id),
+            });
+
+            if (!transactionId && !entry.manual) {
+                alert("The bill was removed here, but no matching transaction was found in My Transactions. Delete it there if it still shows.");
+            }
+        } catch (error) {
+            console.error("Delete bill error:", error);
+            alert(error?.message || "Unable to delete the transaction. The bill was not removed.");
+        } finally {
+            setDeletingBillId(null);
+        }
+    }
+
+    // Esc closes the day-total popup
+    useEffect(() => {
+        if (!showDayPopup) return undefined;
+        const onKey = (event) => {
+            if (event.key === "Escape") setShowDayPopup(false);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [showDayPopup]);
+
+    // Typed rate for each service row (string so the box can be empty while typing)
+    const [rates, setRates] = useState({});
+
+    function rateOf(service) {
+        const inCart = cart.find((item) => item.id === service.id);
+        if (inCart) return Number(inCart.sellingPrice) || 0;
+        return Number(rates[service.id]) || 0;
+    }
+
+    function withRate(service, rate) {
+        const costPrice = Number(service.costPrice) || 0;
+        const sameAsDefault = rate === Number(service.sellingPrice || 0);
+        const profit = sameAsDefault
+            ? Number(service.profit) || 0
+            : rate - costPrice;
+        return {
+            ...service,
+            sellingPrice: rate,
+            price: rate,
+            profit,
+            profitPerUnit: profit,
+        };
+    }
+
+    function changeRate(service, raw) {
+        const clean = raw.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 8);
+        setRates((current) => ({ ...current, [service.id]: clean }));
+        const rate = Number(clean) || 0;
         setCart((current) =>
             current.map((item) =>
-                item.id === id
-                    ? { ...item, quantity }
-                    : item
+                item.id === service.id ? { ...item, ...withRate(service, rate), quantity: item.quantity } : item
             )
         );
+    }
+
+    function changeRowQty(service, raw) {
+        const digits = raw.replace(/\D/g, "").slice(0, 5);
+        const quantity = parseInt(digits, 10) || 0;
+        setCart((current) => {
+            const exists = current.some((item) => item.id === service.id);
+            if (quantity <= 0) {
+                return current.filter((item) => item.id !== service.id);
+            }
+            if (exists) {
+                return current.map((item) =>
+                    item.id === service.id ? { ...item, quantity } : item
+                );
+            }
+            const rate = Number(rates[service.id]) || 0;
+            return [...current, { ...withRate(service, rate), quantity }];
+        });
     }
 
     /* =====================================================
@@ -777,9 +864,19 @@ export default function NewTransaction() {
                 transactionData
             );
 
-            await createTransaction(
+            const savedTransaction = await createTransaction(
                 transactionData
             );
+
+            // Firestore document id of the saved transaction (used to delete it from My Transactions later)
+            const firestoreId =
+                typeof savedTransaction === "string"
+                    ? savedTransaction
+                    : savedTransaction?.id ||
+                      savedTransaction?.transactionId ||
+                      savedTransaction?.docId ||
+                      savedTransaction?.ref?.id ||
+                      null;
 
             console.log(
                 "TRANSACTION SAVED SUCCESSFULLY"
@@ -788,6 +885,34 @@ export default function NewTransaction() {
             alert(
                 "Sale completed successfully."
             );
+
+            const nextDay = {
+                amount: dayStats.amount + (Number(total) || 0),
+                bills: dayStats.bills + 1,
+                entries: [
+                    ...(dayStats.entries || []),
+                    {
+                        id: Date.now(),
+                        firestoreId,
+                        time: new Date().toISOString(),
+                        customer: customerName.trim(),
+                        phone: customerPhone,
+                        payment,
+                        total: Number(total) || 0,
+                        items: cart.map((item) => ({
+                            name: item.name,
+                            rate: Number(item.sellingPrice) || 0,
+                            quantity: Number(item.quantity) || 0,
+                        })),
+                    },
+                ],
+            };
+            setDayStats(nextDay);
+            try {
+                localStorage.setItem(dayStorageKey, JSON.stringify(nextDay));
+            } catch {
+                /* storage unavailable - the on-screen total still updates */
+            }
 
             setCart([]);
             setCustomerName("");
@@ -836,12 +961,22 @@ export default function NewTransaction() {
    PREMIUM PRINT RECEIPT
    ===================================================== */
 
-    function printReceipt() {
-        if (!cart.length) {
+    // printReceipt()        -> prints the current bill (cart)
+    // printReceipt(entry)   -> prints a saved bill from the day popup with the SAME layout
+    function printReceipt(entry) {
+        const lines = entry
+            ? (entry.items || []).map((it) => ({ name: it.name, sellingPrice: it.rate, quantity: it.quantity }))
+            : cart;
+        const billTotal = entry ? Number(entry.total) || 0 : total;
+        const billPayment = String((entry ? entry.payment : payment) || "cash");
+        const billCustomerName = entry ? entry.customer || "" : customerName;
+        const billPhone = entry ? entry.phone || "" : customerPhone;
+
+        if (!lines.length) {
             return;
         }
 
-        const now = new Date();
+        const now = entry ? new Date(entry.time) : new Date();
 
         const dateStr = now.toLocaleDateString("en-IN", {
             day: "2-digit",
@@ -860,19 +995,19 @@ export default function NewTransaction() {
             "Attendant";
 
         const customerLabel =
-            customerName.trim() ||
+            billCustomerName.trim() ||
             "Walk-in Customer";
 
-        const itemCount = cart.reduce(
+        const itemCount = lines.reduce(
             (sum, item) =>
                 sum + Number(item.quantity || 0),
             0
         );
 
         const paymentLabel =
-            payment === "cash"
+            billPayment === "cash"
                 ? "Cash"
-                : payment.toUpperCase();
+                : billPayment.toUpperCase();
 
         const escapeHtml = (value) =>
             String(value ?? "").replace(
@@ -948,9 +1083,9 @@ export default function NewTransaction() {
             return `${words} Only`;
         };
 
-        const totalInWords = amountInWords(total);
+        const totalInWords = amountInWords(billTotal);
 
-        const rowsHtml = cart
+        const rowsHtml = lines
             .map((item) => {
                 const rate =
                     Number(item.sellingPrice) || 0;
@@ -973,7 +1108,7 @@ export default function NewTransaction() {
             .join("");
 
         const customerPhoneLabel =
-            String(customerPhone || "").trim();
+            String(billPhone || "").trim();
 
         const receiptHtml = `
         <!DOCTYPE html>
@@ -1288,7 +1423,7 @@ export default function NewTransaction() {
 
                         <div class="due">
                             <span>GRAND TOTAL :</span>
-                            <strong>₹${Number(total).toLocaleString("en-IN")}</strong>
+                            <strong>₹${Number(billTotal).toLocaleString("en-IN")}</strong>
                         </div>
                     </div>
                 </section>
@@ -1380,6 +1515,23 @@ export default function NewTransaction() {
             (activeCategory === "Printing" && /print/i.test(s.name || ""))) &&
             text.includes(serviceSearch.toLowerCase());
     });
+    const dayEntries = Array.isArray(dayStats.entries) ? dayStats.entries : [];
+    const serviceSummary = Object.values(
+        dayEntries.reduce((acc, entry) => {
+            (entry.items || []).forEach((it) => {
+                const row = acc[it.name] || { name: it.name, quantity: 0, amount: 0 };
+                row.quantity += it.quantity;
+                row.amount += it.quantity * it.rate;
+                acc[it.name] = row;
+            });
+            return acc;
+        }, {})
+    ).sort((a, b) => b.amount - a.amount);
+    const detailedTotal = dayEntries.reduce((sum, entry) => sum + (Number(entry.total) || 0), 0);
+    const legacyAmount = Math.max(0, (Number(dayStats.amount) || 0) - detailedTotal);
+    const legacyBills = Math.max(0, (Number(dayStats.bills) || 0) - dayEntries.length);
+    const hasLegacy = legacyAmount > 0 || legacyBills > 0;
+    const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
     const paymentOptions = [
         { id: "cash", label: "Cash", Icon: Banknote },
         { id: "upi", label: "UPI", Icon: Zap },
@@ -1400,28 +1552,120 @@ export default function NewTransaction() {
                         <section className="nt-services-panel">
                             <div className="nt-section-heading"><span className="nt-heading-icon"><Printer /></span><h2>Services</h2></div>
                             <div className="nt-category-tabs">{categories.map((c) => <button type="button" key={c} className={activeCategory === c ? "active" : ""} onClick={() => setActiveCategory(c)}>{c}</button>)}</div>
-                            {servicesLoading ? <div className="nt-empty-services">Loading services…</div> : <div className="nt-service-grid">
-                                {filteredServices.map((s) => <button type="button" className="nt-service-card" key={s.id} onClick={() => add(s)}>
-                                    <span className="nt-service-art"><ServiceImage service={s} /></span><strong>{s.name}</strong>
-                                    <span className="nt-service-price">₹{Number(s.sellingPrice || 0).toLocaleString("en-IN")} <small>/ {s.unit || "unit"}</small></span><span className="nt-add-service"><Plus /></span>
-                                </button>)}
-                                {!filteredServices.length && <div className="nt-empty-services">No services found.</div>}
+                            {servicesLoading ? <div className="nt-empty-services">Loading services…</div> : <div className="nt-service-table-wrap">
+                                <table className="nt-service-table">
+                                    <thead>
+                                        <tr><th className="col-sno">S.No</th><th className="col-service">Service</th><th className="col-rate">Rate</th><th className="col-qty">Quantity</th><th className="col-total">Total</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredServices.map((s, index) => {
+                                            const inCart = cart.find((item) => item.id === s.id);
+                                            const qtyValue = inCart ? inCart.quantity : 0;
+                                            const rateValue = rateOf(s);
+                                            return (
+                                                <tr key={s.id} className={inCart ? "is-selected" : ""}>
+                                                    <td className="col-sno">{index + 1}</td>
+                                                    <td className="col-service">{s.name}</td>
+                                                    <td className="col-rate">
+                                                        <div className="nt-table-input-wrap"><span>₹</span><input type="text" inputMode="decimal" autoComplete="off" aria-label={`Rate for ${s.name}`} className="nt-table-input" placeholder="0" value={rates[s.id] ?? ""} onChange={(e) => changeRate(s, e.target.value)} onFocus={(e) => e.target.select()} /></div>
+                                                    </td>
+                                                    <td className="col-qty">
+                                                        <input type="text" inputMode="numeric" autoComplete="off" aria-label={`Quantity for ${s.name}`} className="nt-table-input" placeholder="0" value={qtyValue ? String(qtyValue) : ""} onChange={(e) => changeRowQty(s, e.target.value)} onFocus={(e) => e.target.select()} />
+                                                    </td>
+                                                    <td className="col-total">{qtyValue ? `₹${(rateValue * qtyValue).toLocaleString("en-IN")}` : "—"}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {!filteredServices.length && <tr><td colSpan={5} className="nt-table-empty">No services found.</td></tr>}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colSpan={5} className="nt-table-totals-cell">
+                                                <div className="nt-table-totals">
+                                                    <div className="nt-total-box">
+                                                        <span className="nt-total-label">Per Transaction Total</span>
+                                                        <strong className="nt-total-value">₹{Number(total || 0).toLocaleString("en-IN")}</strong>
+                                                        <small>{cart.length} {cart.length === 1 ? "service" : "services"} in this bill</small>
+                                                    </div>
+                                                    <button type="button" className="nt-total-box nt-total-box-day nt-total-clickable" onClick={() => setShowDayPopup(true)} aria-haspopup="dialog">
+                                                        <span className="nt-total-label">Per Day Total</span>
+                                                        <strong className="nt-total-value">₹{Number(dayStats.amount || 0).toLocaleString("en-IN")}</strong>
+                                                        <small>{dayStats.bills} {dayStats.bills === 1 ? "bill" : "bills"} completed today · <b>View details</b></small>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>}
                         </section>
                     </div>
-                    <aside className="nt-bill-panel">
-                        <div className="nt-bill-heading"><div className="nt-section-heading"><span className="nt-heading-icon"><ShoppingCart /></span><h2>Current Bill</h2></div><button type="button" className="nt-clear-all" disabled={!cart.length} onClick={() => setCart([])}><Trash2 /> Clear All</button></div>
-                        <div className="nt-bill-items">{cart.map((item) => <div className="nt-bill-row" key={item.id}>
-                            <div className="nt-bill-item-art"><ServiceImage service={item} /></div><div className="nt-bill-item-info"><strong>{item.name}</strong><span>₹{Number(item.sellingPrice || 0).toLocaleString("en-IN")} / {item.unit || "unit"}</span></div>
-                            <div className="nt-qty-control"><button type="button" onClick={() => qty(item.id, -1)}><Minus /></button><QtyInput value={item.quantity} onChange={(value) => setQty(item.id, value)} /><button type="button" onClick={() => qty(item.id, 1)}><Plus /></button></div>
-                            <strong className="nt-line-total">₹{(Number(item.sellingPrice || 0) * item.quantity).toLocaleString("en-IN")}</strong><button type="button" className="nt-remove-item" onClick={() => removeItem(item.id)}><Trash2 /></button>
-                        </div>)}{!cart.length && <div className="nt-empty-cart"><ShoppingCart /><strong>Your bill is empty</strong><span>Add a service to begin</span></div>}</div>
-                        <section className="nt-customer-panel nt-customer-panel-bill">
-                            <div className="nt-section-heading"><span className="nt-heading-icon"><UserRound /></span><h2>Customer Details</h2></div>
-                            <div className="nt-customer-fields"><label><span>Customer Name</span><input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Enter customer name" maxLength={60} /></label><label><span>Phone Number</span><input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Enter phone number" inputMode="tel" /></label><button type="button" className="nt-add-customer" onClick={() => document.querySelector(".nt-customer-panel-bill .nt-customer-fields input")?.focus()}><Plus /> Add</button></div>
+                    <aside className="nt-bill-panel nt-bp">
+                        <header className="nt-bp-head">
+                            <span className="nt-bp-badge"><ShoppingCart /></span>
+                            <div className="nt-bp-title">
+                                <h2>Current Bill</h2>
+                                <span>{cart.length ? `${cart.length} ${cart.length === 1 ? "service" : "services"} added` : "No services yet"}</span>
+                            </div>
+                            <button type="button" className="nt-bp-clear" disabled={!cart.length} onClick={() => { setCart([]); setRates({}); }}><Trash2 /> Clear</button>
+                        </header>
+
+                        <div className="nt-bp-items">
+                            {cart.map((item) => (
+                                <div className="nt-bp-item" key={item.id}>
+                                    <div className="nt-bp-item-info">
+                                        <strong>{item.name}</strong>
+                                        <span>₹{Number(item.sellingPrice || 0).toLocaleString("en-IN")} × {item.quantity}</span>
+                                    </div>
+                                    <strong className="nt-bp-item-total">₹{(Number(item.sellingPrice || 0) * item.quantity).toLocaleString("en-IN")}</strong>
+                                    <button type="button" className="nt-bp-item-remove" onClick={() => removeItem(item.id)} aria-label={`Remove ${item.name}`}><X /></button>
+                                </div>
+                            ))}
+                            {!cart.length && (
+                                <div className="nt-bp-empty">
+                                    <ReceiptText />
+                                    <strong>Bill is empty</strong>
+                                    <span>Enter a quantity in the table to add a service</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="nt-bp-total">
+                            <span>Bill Total</span>
+                            <strong>₹{Number(total || 0).toLocaleString("en-IN")}</strong>
+                        </div>
+
+                        <section className="nt-bp-section">
+                            <h3>Customer</h3>
+                            <div className="nt-bp-fields">
+                                <label className="nt-bp-field">
+                                    <UserRound />
+                                    <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name" maxLength={60} aria-label="Customer name" />
+                                </label>
+                                <label className="nt-bp-field">
+                                    <Phone />
+                                    <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Phone number" inputMode="tel" aria-label="Phone number" />
+                                </label>
+                            </div>
                         </section>
-                        <button type="button" className="nt-preview-button" disabled={!cart.length} onClick={() => setShowBillPreview(true)}><Eye /> Preview &amp; Print Bill</button>
-                        <div className="nt-payment"><div className="nt-payment-title"><UserRound /><strong>Payment Method</strong></div><div className="nt-payment-options">{paymentOptions.map(({ id, label, Icon }) => <button type="button" key={id} className={payment === id ? "active" : ""} onClick={() => setPayment(id)}><Icon /><span>{label}</span></button>)}<button type="button" className="nt-checkout-button" disabled={!cart.length || saving} onClick={complete}><ShoppingCart />{saving ? "Processing…" : "Checkout"}</button></div></div>
+
+                        <section className="nt-bp-section">
+                            <h3>Payment</h3>
+                            <div className="nt-bp-segment" role="radiogroup" aria-label="Payment method">
+                                {paymentOptions.map(({ id, label, Icon }) => (
+                                    <button type="button" role="radio" aria-checked={payment === id} key={id} className={payment === id ? "active" : ""} onClick={() => setPayment(id)}>
+                                        <Icon /><span>{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+
+                        <div className="nt-bp-actions">
+                            {/* <button type="button" className="nt-bp-preview" disabled={!cart.length} onClick={() => setShowBillPreview(true)}><Eye /> Preview &amp; Print</button> */}
+                            <button type="button" className="nt-bp-checkout" disabled={!cart.length || saving} onClick={complete}>
+                                <ShoppingCart />{saving ? "Processing…" : "Checkout"}
+                            </button>
+                        </div>
                     </aside>
                 </div>
             </div>
@@ -1429,6 +1673,125 @@ export default function NewTransaction() {
             {/* =============================================
                 BILL PREVIEW / PRINT MODAL
             ============================================= */}
+
+            {showDayPopup && createPortal(
+                <div className={`nt-day-overlay theme-${theme}`} onClick={() => setShowDayPopup(false)}>
+                    <div className="nt-day-modal" role="dialog" aria-modal="true" aria-label="Today's transactions" onClick={(e) => e.stopPropagation()}>
+                        <div className="nt-day-head">
+                            <div>
+                                <h3>{editor ? (editor.id === null ? "Add Bill" : "Edit Bill") : "Today's Transactions"}</h3>
+                                <p>{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}</p>
+                            </div>
+                            <div className="nt-day-head-actions">
+                                {!editor && dayEntries.length > 0 && <button type="button" className="nt-day-btn" onClick={exportDay} title="Download all bills as CSV (opens in Excel)"><Download /> Export</button>}
+                                {!editor && dayEntries.length > 0 && <button type="button" className="nt-day-btn" onClick={() => printDay(serviceSummary)} title="Print the day report"><Printer /> Print</button>}
+                                {!editor && <button type="button" className="nt-day-add" onClick={openNewBill}><Plus /> Add Bill</button>}
+                                <button type="button" className="nt-day-close" onClick={() => setShowDayPopup(false)} aria-label="Close"><X /></button>
+                            </div>
+                        </div>
+                        <div className="nt-day-body">
+                            {editor ? (
+                                <div className="nt-day-form">
+                                    <div className="nt-day-form-grid">
+                                        <label><span>Customer Name</span><input value={editor.customer} maxLength={60} placeholder="Optional" onChange={(e) => setEditor({ ...editor, customer: e.target.value })} /></label>
+                                        <label><span>Payment</span>
+                                            <select value={editor.payment} onChange={(e) => setEditor({ ...editor, payment: e.target.value })}>
+                                                <option value="cash">Cash</option>
+                                                <option value="upi">UPI</option>
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <datalist id="nt-day-service-names">
+                                        {availableServices.map((svc) => <option key={svc.id} value={svc.name} />)}
+                                    </datalist>
+
+                                    <div className="nt-day-form-items">
+                                        <div className="nt-day-form-row nt-day-form-row-head"><span>Service</span><span>Rate</span><span>Qty</span><span>Total</span><span /></div>
+                                        {editor.items.map((it, i) => (
+                                            <div className="nt-day-form-row" key={i}>
+                                                <input list="nt-day-service-names" value={it.name} placeholder="Service name" aria-label="Service" onChange={(e) => patchEditorItem(i, { name: e.target.value })} />
+                                                <input inputMode="decimal" value={it.rate} placeholder="0" aria-label="Rate" onChange={(e) => patchEditorItem(i, { rate: e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 8) })} />
+                                                <input inputMode="numeric" value={it.quantity} placeholder="0" aria-label="Quantity" onChange={(e) => patchEditorItem(i, { quantity: e.target.value.replace(/\D/g, "").slice(0, 5) })} />
+                                                <strong className="nt-day-form-line">{money((Number(it.rate) || 0) * (parseInt(it.quantity, 10) || 0))}</strong>
+                                                <button type="button" className="nt-day-icon-btn danger" onClick={() => removeEditorItem(i)} disabled={editor.items.length === 1} aria-label="Remove service"><Trash2 /></button>
+                                            </div>
+                                        ))}
+                                        <button type="button" className="nt-day-link-btn" onClick={addEditorItem}><Plus /> Add service</button>
+                                    </div>
+
+                                    <div className="nt-day-form-foot">
+                                        <div className="nt-day-form-total"><span>Bill Total</span><strong>{money(editor.items.reduce((sum, it) => sum + (Number(it.rate) || 0) * (parseInt(it.quantity, 10) || 0), 0))}</strong></div>
+                                        <div className="nt-day-form-buttons">
+                                            <button type="button" className="nt-day-btn" onClick={() => setEditor(null)}>Cancel</button>
+                                            <button type="button" className="nt-day-btn primary" onClick={saveEditor}>{editor.id === null ? "Add Bill" : "Save Changes"}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                            <>
+                            <div className="nt-day-stats">
+                                <div><span>Day Total</span><strong>{money(dayStats.amount)}</strong></div>
+                                <div><span>Bills</span><strong>{dayStats.bills}</strong></div>
+                            </div>
+
+                            {hasLegacy && (
+                                <div className="nt-day-legacy">
+                                    <div>
+                                        <strong>{legacyBills} {legacyBills === 1 ? "bill" : "bills"} · {money(legacyAmount)} without service details</strong>
+                                        <span>Completed before details were saved, so they cannot be listed below.</span>
+                                    </div>
+                                    <button type="button" className="nt-day-btn danger" onClick={clearUnrecordedBills}><Trash2 /> Delete</button>
+                                </div>
+                            )}
+
+                            {dayEntries.length === 0 ? (
+                                !hasLegacy && <div className="nt-day-empty">No transactions completed today yet.</div>
+                            ) : (
+                                <>
+                                    <h4>Service-wise summary</h4>
+                                    <table className="nt-day-table">
+                                        <thead><tr><th>S.No</th><th>Service</th><th className="num">Qty</th><th className="num">Amount</th></tr></thead>
+                                        <tbody>
+                                            {serviceSummary.map((row, i) => (
+                                                <tr key={row.name}><td>{i + 1}</td><td>{row.name}</td><td className="num">{row.quantity}</td><td className="num">{money(row.amount)}</td></tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+
+                                    <h4>Bills</h4>
+                                    {[...dayEntries].reverse().map((entry, i) => (
+                                        <div className="nt-day-bill" key={entry.id}>
+                                            <div className="nt-day-bill-head">
+                                                <strong>Bill #{dayEntries.length - i}</strong>
+                                                <span>{new Date(entry.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} · {String(entry.payment || "").toUpperCase()}{entry.customer ? ` · ${entry.customer}` : ""}</span>
+                                                <strong className="nt-day-bill-total">{money(entry.total)}</strong>
+                                                <span className="nt-day-bill-actions">
+                                                    <button type="button" className="nt-day-icon-btn" onClick={() => printBill(entry)} aria-label="Print bill" title="Print"><Printer /></button>
+                                                    <button type="button" className="nt-day-icon-btn" onClick={() => exportBill(entry)} aria-label="Export bill" title="Export CSV"><Download /></button>
+                                                    <button type="button" className="nt-day-icon-btn" onClick={() => openEditBill(entry)} aria-label="Edit bill" title="Edit"><Pencil /></button>
+                                                    <button type="button" className="nt-day-icon-btn danger" onClick={() => deleteBill(entry)} disabled={deletingBillId === entry.id} aria-label="Delete bill" title="Delete"><Trash2 /></button>
+                                                </span>
+                                            </div>
+                                            <table className="nt-day-table">
+                                                <thead><tr><th>Service</th><th className="num">Rate</th><th className="num">Qty</th><th className="num">Total</th></tr></thead>
+                                                <tbody>
+                                                    {(entry.items || []).map((it, k) => (
+                                                        <tr key={k}><td>{it.name}</td><td className="num">{money(it.rate)}</td><td className="num">{it.quantity}</td><td className="num">{money(it.rate * it.quantity)}</td></tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                            </>
+                            )}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             {showBillPreview && createPortal(
                 <div
@@ -1657,7 +2020,7 @@ export default function NewTransaction() {
                                 type="button"
                                 className="bill-modal-primary"
                                 disabled={!cart.length}
-                                onClick={printReceipt}
+                                onClick={() => printReceipt()}
                             >
                                 <Printer size={15} />
                                 Print Bill
