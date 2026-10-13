@@ -10,7 +10,7 @@ import {
   straightenWithQuad,
   fullQuad,
   isSingleCard,
-} from "./idCardPhoto";
+} from "../home/idCardPhoto";
 import PhotoCornerEditor from "./PhotoCornerEditor";
 
 import {
