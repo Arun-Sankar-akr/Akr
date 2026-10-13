@@ -642,6 +642,26 @@ const Home = () => {
         };
     }, [isDark]);
 
+    // The print tool opens as a full page: Esc goes back, the home page
+    // behind it does not scroll.
+    useEffect(() => {
+        if (!activePrintTool) return undefined;
+
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        const onKey = (event) => {
+            if (event.key === "Escape") setActivePrintTool(null);
+        };
+
+        window.addEventListener("keydown", onKey);
+
+        return () => {
+            document.body.style.overflow = previous;
+            window.removeEventListener("keydown", onKey);
+        };
+    }, [activePrintTool]);
+
     const closeMenu = () => setMenuOpen(false);
 
     return (
@@ -784,9 +804,7 @@ const Home = () => {
                     </section>
 
                     {activePrintTool && (
-                        <div className="print-tool-modal-backdrop" onMouseDown={(event) => {
-                            if (event.target === event.currentTarget) setActivePrintTool(null);
-                        }}>
+                        <div className="print-tool-modal-backdrop print-tool-fullscreen">
                             <section className="print-tool-modal" role="dialog" aria-modal="true" aria-labelledby="print-tool-modal-title">
                                 <header className="print-tool-modal-header">
                                     <div>

@@ -5,6 +5,13 @@ import "./AadhaarCardPrinter.css";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { detectContentBox, applyDrag } from "./idCardGeometry";
 import { detectLayout, DOC_TYPES } from "./idCardDetect";
+import {
+  detectPhotoQuad,
+  straightenWithQuad,
+  fullQuad,
+  isSingleCard,
+} from "./idCardPhoto";
+import PhotoCornerEditor from "./PhotoCornerEditor";
 
 import {
   DEFAULT_ADJUST,
@@ -389,6 +396,36 @@ const canvasToPng = (canvas) =>
     }, "image/png");
   });
 
+// whole picture as a crop box (a straightened card has no margin to trim)
+const FULL_BOX = { x: 0, y: 0, w: 1, h: 1 };
+
+const nextFrame = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+const canvasToBlobUrl = (canvas, quality = 0.85) =>
+  new Promise((resolve) =>
+    canvas.toBlob((blob) => resolve(URL.createObjectURL(blob)), "image/jpeg", quality)
+  );
+
+// A phone photo is kept as a "shot": the original picture + the 4 corners
+// of the card in it. The straightened, cleaned card is cut from it.
+//   returns { shot, page }  (page = the canvas the tool works with)
+const buildShot = async (raw) => {
+  const quad = detectPhotoQuad(raw);
+
+  return {
+    shot: {
+      original: raw,
+      url: await canvasToBlobUrl(raw, 0.82),
+      quad: quad || fullQuad(raw, 0.06),
+      applied: Boolean(quad), // true = the card was cut out of the photo
+      clean: true, // remove shadows + dark edges
+      editing: false,
+      busy: false,
+    },
+    page: quad ? straightenWithQuad(raw, quad, { clean: true }) : raw,
+  };
+};
+
 export default function AadhaarCardPrinter() {
   // password dialog
   const [pwdAsk, setPwdAsk] = useState(null); // { retry, resolve }
@@ -481,6 +518,33 @@ export default function AadhaarCardPrinter() {
   const [dragOver, setDragOver] = useState(false);
   const [docType, setDocType] = useState("auto"); // auto | aadhaar | pan | voter
   const [detected, setDetected] = useState(""); // what "auto" found
+  const [notice, setNotice] = useState("");
+
+  // phone-photo sessions: "page" (full-size tool), "front", "back" (merge tool)
+  const shotsRef = useRef({ page: null, front: null, back: null });
+  const [shots, setShots] = useState(shotsRef.current);
+
+  const setShotValue = (key, next) => {
+    const prev = shotsRef.current[key];
+    if (prev?.url && prev.url !== next?.url) URL.revokeObjectURL(prev.url);
+
+    shotsRef.current = { ...shotsRef.current, [key]: next || null };
+    setShots(shotsRef.current);
+  };
+
+  const patchShot = (key, patch) => {
+    const prev = shotsRef.current[key];
+    if (prev) setShotValue(key, { ...prev, ...patch });
+  };
+
+  useEffect(
+    () => () => {
+      Object.values(shotsRef.current).forEach((item) => {
+        if (item?.url) URL.revokeObjectURL(item.url);
+      });
+    },
+    []
+  );
 
   // free the preview image when it is replaced / on leave
   useEffect(
@@ -646,6 +710,40 @@ export default function AadhaarCardPrinter() {
   // ----------------------------------------------------------
   // Upload
   // ----------------------------------------------------------
+  // make `canvas` the page: find the cards on it and set the first enhance
+  const installPage = async (canvas, name) => {
+    const { found, kind } = analyzePage(canvas, "auto");
+    setDocType("auto");
+    setDetected(kind);
+
+    const previewBlob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9)
+    );
+
+    sourceRef.current = canvas;
+    defaultsRef.current = found;
+
+    setAdjust(
+      AUTO_ENHANCE_ON_UPLOAD
+        ? {
+            front: autoAdjust(cropCanvas(canvas, found.front)),
+            back: autoAdjust(cropCanvas(canvas, found.back)),
+          }
+        : NO_ADJUST
+    );
+
+    setPhotoAdjust(
+      AUTO_ENHANCE_ON_UPLOAD
+        ? autoPhotoAdjust(cropCanvas(canvas, found.photo))
+        : DEFAULT_ADJUST
+    );
+
+    setPageUrl(URL.createObjectURL(previewBlob));
+    setBoxes(found);
+    setFileName(name);
+    setStatus("ready");
+  };
+
   const handleFile = async (file) => {
     if (!file) return;
 
@@ -659,44 +757,37 @@ export default function AadhaarCardPrinter() {
     }
 
     setError("");
+    setNotice("");
     setStatus("loading");
 
     try {
-      const canvas = isPdf
+      const raw = isPdf
         ? await readPdfFile(file)
         : await readImageFile(file);
 
-      // find the cards (Aadhaar letter / e-PAN / e-Voter) on the page
-      const { found, kind } = analyzePage(canvas, "auto");
-      setDocType("auto");
-      setDetected(kind);
+      // phone photo: cut the card out, straighten it, remove shadows
+      const built = isPdf
+        ? { shot: null, page: raw }
+        : await buildShot(raw);
 
-      const previewBlob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.9)
-      );
+      // a photo of ONE card side belongs in "Front & back images"
+      if (built.shot?.applied && isSingleCard(built.page)) {
+        const which = !separate.front ? "front" : !separate.back ? "back" : "front";
 
-      sourceRef.current = canvas;
-      defaultsRef.current = found;
+        switchTool("separate");
+        setActiveSlot(which);
+        await prepareSeparate(which, built.page, file.name, { shot: built.shot });
 
-      setAdjust(
-        AUTO_ENHANCE_ON_UPLOAD
-          ? {
-              front: autoAdjust(cropCanvas(canvas, found.front)),
-              back: autoAdjust(cropCanvas(canvas, found.back)),
-            }
-          : NO_ADJUST
-      );
+        if (inputRef.current) inputRef.current.value = "";
+        setStatus("idle");
+        setNotice(
+          `This is a photo of one card side, so it was added as the ${which} image. Add the other side to finish.`
+        );
+        return;
+      }
 
-      setPhotoAdjust(
-        AUTO_ENHANCE_ON_UPLOAD
-          ? autoPhotoAdjust(cropCanvas(canvas, found.photo))
-          : DEFAULT_ADJUST
-      );
-
-      setPageUrl(URL.createObjectURL(previewBlob));
-      setBoxes(found);
-      setFileName(file.name);
-      setStatus("ready");
+      setShotValue("page", built.shot);
+      await installPage(built.page, file.name);
     } catch (readError) {
       console.error("ID card read error:", readError);
 
@@ -714,6 +805,8 @@ export default function AadhaarCardPrinter() {
     sourceRef.current = null;
     defaultsRef.current = null;
 
+    setShotValue("page", null);
+    setNotice("");
     setPageUrl("");
     setAdjust(NO_ADJUST);
     setPhotoAdjust(DEFAULT_ADJUST);
@@ -773,11 +866,21 @@ export default function AadhaarCardPrinter() {
   };
 
   // store a page canvas for one side, with its preview + default crop
-  const prepareSeparate = async (which, canvas, name) => {
+  // options: { shot, reenhance, wasSingle }
+  //   shot      = phone-photo session for this side (null clears it)
+  //   reenhance = run auto enhance again (used after the corners move)
+  const prepareSeparate = async (which, canvas, name, options = {}) => {
+    // a straightened card is cropped by its own edges: the whole picture
+    const ratio = canvas.width / canvas.height;
+    const single =
+      Boolean(options.shot?.applied) &&
+      (isSingleCard(canvas) ||
+        (options.wasSingle && ratio > 0.52 && ratio < 0.77));
+
     // a full e-PAN / e-Voter page uploaded here: take the matching card
     // from it (front slot = front card, back slot = back card)
-    const page = findPageCards(canvas);
-    const box = page ? page[which] : detectCardBox(canvas);
+    const page = single ? null : findPageCards(canvas);
+    const box = single ? FULL_BOX : page ? page[which] : detectCardBox(canvas);
     const photoBox =
       which === "front"
         ? findPhotoBox(canvas, box, page ? page.photoType : "auto")
@@ -797,7 +900,7 @@ export default function AadhaarCardPrinter() {
     sepDefaultsRef.current = { ...sepDefaultsRef.current, [which]: box };
 
     // a new file (not a rotate) starts with fresh enhance settings
-    if (name) {
+    if (name || options.reenhance) {
       setAdjust((current) => ({
         ...current,
         [which]: AUTO_ENHANCE_ON_UPLOAD
@@ -817,7 +920,7 @@ export default function AadhaarCardPrinter() {
       ...(photoBox ? { photo: photoBox } : {}),
     };
 
-    if (photoBox && name) {
+    if (photoBox && (name || options.reenhance)) {
       setPhotoAdjust(
         AUTO_ENHANCE_ON_UPLOAD
           ? autoPhotoAdjust(cropCanvas(canvas, photoBox))
@@ -829,6 +932,10 @@ export default function AadhaarCardPrinter() {
       ...current,
       [which]: { name: name || current[which]?.name || "" },
     }));
+
+    if (options.shot !== undefined) {
+      setShotValue(which, options.shot ? { ...options.shot, single } : null);
+    }
   };
 
   const handleSeparateFile = async (which, file) => {
@@ -843,13 +950,18 @@ export default function AadhaarCardPrinter() {
     }
 
     setError("");
+    setNotice("");
 
     try {
-      const canvas = isPdf
+      const raw = isPdf
         ? await readPdfFile(file, which === "front" ? "Front" : "Back")
         : await readImageFile(file);
 
-      await prepareSeparate(which, canvas, file.name);
+      const built = isPdf
+        ? { shot: null, page: raw }
+        : await buildShot(raw);
+
+      await prepareSeparate(which, built.page, file.name, { shot: built.shot });
     } catch (readError) {
       setError(
         isPdf
@@ -863,7 +975,94 @@ export default function AadhaarCardPrinter() {
     const source = separateRef.current[which];
     if (!source) return;
 
-    await prepareSeparate(which, rotateCanvas(source));
+    const current = shotsRef.current[which];
+
+    // cut from a photo: turn the 4 corners, so the card is cut from the
+    // original again (and the corner editor still matches the photo)
+    if (current?.applied) {
+      const q = current.quad;
+      const quad = [q[3], q[0], q[1], q[2]];
+      const page = straightenWithQuad(current.original, quad, {
+        clean: current.clean,
+      });
+
+      await prepareSeparate(which, page, undefined, {
+        shot: { ...current, quad },
+        wasSingle: current.single,
+      });
+      return;
+    }
+
+    const rotated = rotateCanvas(source);
+    const shot = current
+      ? {
+          ...current,
+          original: rotated,
+          url: await canvasToBlobUrl(rotated, 0.82),
+          quad: fullQuad(rotated, 0.06),
+        }
+      : null;
+
+    await prepareSeparate(which, rotated, undefined, { shot });
+  };
+
+  // ----------------------------------------------------------
+  // Phone photo: move the 4 corners / clean on-off / auto crop
+  // ----------------------------------------------------------
+  const recropLetter = async (patch) => {
+    const current = shotsRef.current.page;
+    if (!current) return;
+
+    if (!patch.quad && !current.applied) {
+      patchShot("page", patch);
+      return;
+    }
+
+    const next = { ...current, ...patch };
+    patchShot("page", { ...patch, busy: true });
+    await nextFrame();
+
+    try {
+      const page = straightenWithQuad(next.original, next.quad, {
+        clean: next.clean,
+      });
+      await installPage(page, fileName);
+      patchShot("page", { applied: true, busy: false });
+    } catch (cutError) {
+      console.error("ID card photo error:", cutError);
+      setError("Could not cut the card out of this photo.");
+      patchShot("page", { busy: false });
+    }
+  };
+
+  const recropSeparate = async (which, patch) => {
+    const current = shotsRef.current[which];
+    if (!current) return;
+
+    if (!patch.quad && !current.applied) {
+      patchShot(which, patch);
+      return;
+    }
+
+    const next = { ...current, ...patch };
+    patchShot(which, { ...patch, busy: true });
+    await nextFrame();
+
+    try {
+      const page = straightenWithQuad(next.original, next.quad, {
+        clean: next.clean,
+      });
+
+      await prepareSeparate(which, page, undefined, {
+        shot: { ...next, applied: true, busy: false },
+        reenhance: true,
+        wasSingle: current.single,
+      });
+    } catch (cutError) {
+      console.error("ID card photo error:", cutError);
+      setError("Could not cut the card out of this photo.");
+      patchShot(which, { busy: false });
+    }
   };
 
   const resetSeparateCrop = (which) => {
@@ -881,6 +1080,7 @@ export default function AadhaarCardPrinter() {
     sepUrlRef.current = { ...sepUrlRef.current, [which]: "" };
     separateRef.current = { ...separateRef.current, [which]: null };
     sepDefaultsRef.current = { ...sepDefaultsRef.current, [which]: null };
+    setShotValue(which, null);
 
     setSepUrls((current) => ({ ...current, [which]: "" }));
     setAdjust((current) => ({ ...current, [which]: DEFAULT_ADJUST }));
@@ -898,6 +1098,7 @@ export default function AadhaarCardPrinter() {
   const switchTool = (next) => {
     setTool(next);
     setError("");
+    setNotice("");
   };
 
   // ----------------------------------------------------------
@@ -1525,6 +1726,79 @@ export default function AadhaarCardPrinter() {
     );
   };
 
+  // ---- phone photo bar: auto crop, corners, clean on / off ------
+  const renderPhotoBar = (key) => {
+    const shot = shots[key];
+    if (!shot) return null;
+
+    const apply = (patch) =>
+      key === "page" ? recropLetter(patch) : recropSeparate(key, patch);
+
+    const autoCrop = () => {
+      const quad = detectPhotoQuad(shot.original);
+
+      if (quad) {
+        apply({ quad, editing: false });
+      } else {
+        patchShot(key, { editing: true });
+        setNotice("No card edges were found. Drag the four corners onto the card.");
+      }
+    };
+
+    return (
+      <div className="idc-photo">
+        <div className="idc-photo-head">
+          <strong>
+            {shot.applied
+              ? "Phone photo: card cut out and cleaned"
+              : "Photo is used as it is"}
+          </strong>
+          <span>
+            {shot.applied
+              ? "Drag the corners if the cut is not right."
+              : "If there is background around the card, crop it with the corners."}
+          </span>
+        </div>
+
+        <div className="idc-photo-actions">
+          <button
+            type="button"
+            className="idc-ghost primary"
+            onClick={() => patchShot(key, { editing: !shot.editing })}
+          >
+            {shot.editing
+              ? "Hide corners"
+              : shot.applied
+              ? "Adjust corners"
+              : "Crop photo"}
+          </button>
+
+          <button type="button" className="idc-ghost" onClick={autoCrop}>
+            <Icon name="spark" /> Auto crop
+          </button>
+        </div>
+
+        {shot.applied &&
+          renderSwitch("Remove shadows and dark edges", shot.clean, (value) =>
+            apply({ clean: value })
+          )}
+
+        {shot.busy && <p className="idc-hint">Working...</p>}
+
+        {shot.editing && (
+          <PhotoCornerEditor
+            src={shot.url}
+            width={shot.original.width}
+            height={shot.original.height}
+            quad={shot.quad}
+            busy={shot.busy}
+            onCommit={(quad) => apply({ quad })}
+          />
+        )}
+      </div>
+    );
+  };
+
   // ---- one upload slot of the merge tool ----------------------
   const renderSlot = (which) => {
     const slot = separate[which];
@@ -1631,6 +1905,8 @@ export default function AadhaarCardPrinter() {
                 </span>
               </div>
             </div>
+
+            {renderPhotoBar(which)}
 
             <div className="idc-stage" ref={sepStageRefs[which]}>
               <img
@@ -1898,6 +2174,7 @@ export default function AadhaarCardPrinter() {
           </div>
 
           {error && <div className="idc-error">{error}</div>}
+          {notice && <div className="idc-notice">{notice}</div>}
 
           {status === "ready" && boxes && (
             <div className="idc-workspace">
@@ -1919,6 +2196,8 @@ export default function AadhaarCardPrinter() {
                     Reset
                   </button>
                 </div>
+
+                {renderPhotoBar("page")}
 
                 <div className="idc-types" role="group" aria-label="Document type">
                   <span className="idc-types-label">Document</span>
@@ -1990,6 +2269,7 @@ export default function AadhaarCardPrinter() {
           </p>
 
           {error && <div className="idc-error">{error}</div>}
+          {notice && <div className="idc-notice">{notice}</div>}
 
           <div className="idc-workspace">
             <div className="idc-editor idc-slots">

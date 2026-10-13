@@ -954,6 +954,10 @@ export default function PassportPhotoPrinter() {
               </div>
             </div>
 
+            <div className="ppp-compare">
+              <div className="ppp-pane">
+                <h3 className="ppp-pane-title">Uploaded image</h3>
+
             <div
               className="idc-stage"
               ref={stageRef}
@@ -986,23 +990,22 @@ export default function PassportPhotoPrinter() {
                 ))}
               </div>
             </div>
+              </div>
+
+              <div className="ppp-pane ppp-pane-edited" aria-live="polite">
+                <h3 className="ppp-pane-title">Edited image</h3>
+
+                <figure>
+                  <canvas ref={photoCanvasRef} />
+                  <figcaption>
+                    Photo {size.w} x {size.h} mm
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
           </div>
 
           <div className="idc-side">
-            <div className="ppp-previews">
-              <figure>
-                <canvas ref={photoCanvasRef} />
-                <figcaption>
-                  Photo {size.w} x {size.h} mm
-                </figcaption>
-              </figure>
-
-              <figure>
-                <canvas ref={sheetCanvasRef} />
-                <figcaption>A4 sheet - {sheet.count} photos</figcaption>
-              </figure>
-            </div>
-
             <div className="idc-panel">
               <div className="idc-panel-tabs" role="tablist">
                 {[
@@ -1028,6 +1031,13 @@ export default function PassportPhotoPrinter() {
                 : panel === "enhance"
                 ? renderEnhanceTab()
                 : renderBackgroundTab()}
+            </div>
+
+            <div className="ppp-previews ppp-sheet">
+              <figure>
+                <canvas ref={sheetCanvasRef} />
+                <figcaption>A4 sheet - {sheet.count} photos</figcaption>
+              </figure>
             </div>
 
             <label className={`ppp-cut${cutLines ? " on" : ""}`}>

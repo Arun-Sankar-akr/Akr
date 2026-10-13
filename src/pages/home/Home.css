@@ -4467,3 +4467,75 @@ body.akr-home-page.akr-home-dark {
     width: 0;
     height: 0;
 }
+
+/* =========================================================
+   PRINT TOOLS: full-screen page (replaces the popup)
+========================================================= */
+.print-tool-modal-backdrop.print-tool-fullscreen {
+    z-index: 900;
+    padding: 0;
+    display: block;
+    overflow: hidden;
+    background: var(--akr-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.print-tool-fullscreen .print-tool-modal {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+}
+
+.print-tool-fullscreen .print-tool-modal-header {
+    align-items: center;
+    padding: 14px clamp(16px, 4vw, 48px);
+}
+
+.print-tool-fullscreen .print-tool-modal-header h2 {
+    margin: 4px 0 2px;
+    font-size: clamp(20px, 2.6vw, 28px);
+}
+
+.print-tool-fullscreen .print-tool-modal-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 24px clamp(14px, 4vw, 48px) 56px;
+}
+
+.print-tool-fullscreen .print-tool-modal-content>* {
+    max-width: 1280px;
+    margin-inline: auto;
+}
+
+[data-theme="dark"] .print-tool-modal-backdrop.print-tool-fullscreen {
+    background: #0c0c0c;
+}
+
+@media (max-width: 700px) {
+    .print-tool-modal-backdrop.print-tool-fullscreen {
+        padding: 0;
+    }
+
+    .print-tool-fullscreen .print-tool-modal {
+        max-height: none;
+        border-radius: 0;
+    }
+
+    .print-tool-fullscreen .print-tool-modal-header {
+        padding: 12px 14px;
+    }
+
+    .print-tool-fullscreen .print-tool-modal-header p {
+        display: none;
+    }
+
+    .print-tool-fullscreen .print-tool-modal-content {
+        padding: 14px 12px 36px;
+    }
+}
