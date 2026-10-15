@@ -1,10 +1,3 @@
-// ============================================================
-// ID CARD PRINT  -  image enhance helpers (no imports)
-//   * DEFAULT_ADJUST   : "no change" settings
-//   * applyAdjustments : edits a canvas in place
-//   * autoAdjust       : looks at a card and suggests settings
-// ============================================================
-
 export const DEFAULT_ADJUST = {
   exposure: 0, // -100..100  (+-2 stops)
   brightness: 0, // -100..100

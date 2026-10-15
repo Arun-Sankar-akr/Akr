@@ -12,7 +12,7 @@ import {
   isSingleCard,
 } from "./idCardPhotoEn";
 import PhotoCornerEditor from "./PhotoCornerEditor";
-
+ 
 import {
   DEFAULT_ADJUST,
   applyAdjustments,
@@ -1360,6 +1360,12 @@ export default function AadhaarCardPrinter() {
 
   const stopCompare = () => setCompare("");
 
+  // tap the big preview to flip the card over
+  const flipCard = () => {
+    setCompare("");
+    setViewSide((side) => (side === "front" ? "back" : "front"));
+  };
+
   const openZoom = () => {
     const canvas = (viewSide === "front" ? frontCanvasRef : backCanvasRef)
       .current;
@@ -1654,25 +1660,41 @@ export default function AadhaarCardPrinter() {
           </div>
 
           <div className="idc-viewer-stage">
-            {["front", "back"].map((which) => {
-              const missing = tool === "separate" && !separate[which];
-              const ref = which === "front" ? frontCanvasRef : backCanvasRef;
+            <div
+              className={`idc-flip${viewSide === "back" ? " flipped" : ""}`}
+              role="button"
+              tabIndex={0}
+              title="Tap the card to flip it"
+              aria-label={`Showing the ${viewSide} of the card. Tap to flip.`}
+              onClick={flipCard}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  flipCard();
+                }
+              }}
+            >
+              {["front", "back"].map((which) => {
+                const missing = tool === "separate" && !separate[which];
+                const ref = which === "front" ? frontCanvasRef : backCanvasRef;
 
-              return (
-                <figure
-                  key={which}
-                  className={viewSide === which ? "" : "hidden"}
-                >
-                  {missing ? (
-                    <div className="idc-empty-preview">
-                      Add the {which} image to see it here
-                    </div>
-                  ) : (
-                    <canvas ref={ref} />
-                  )}
-                </figure>
-              );
-            })}
+                return (
+                  <figure
+                    key={which}
+                    className={`idc-face ${which}`}
+                    aria-hidden={viewSide !== which}
+                  >
+                    {missing ? (
+                      <div className="idc-empty-preview">
+                        Add the {which} image to see it here
+                      </div>
+                    ) : (
+                      <canvas ref={ref} />
+                    )}
+                  </figure>
+                );
+              })}
+            </div>
 
             {compare && (
               <img className="idc-compare-img" src={compare} alt="Original" />
@@ -1682,6 +1704,7 @@ export default function AadhaarCardPrinter() {
               {compare ? "ORIGINAL" : "EDITED"}
             </span>
           </div>
+          <p className="idc-flip-hint">Tap the card to flip it</p>
         </div>
 
         <div className="idc-panel">

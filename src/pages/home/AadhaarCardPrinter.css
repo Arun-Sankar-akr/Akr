@@ -1209,8 +1209,53 @@
     margin: 0;
 }
 
-.idc-viewer-stage figure.hidden {
-    display: none;
+/* ---------- tap-to-flip card ---------- */
+.idc-viewer-stage {
+    perspective: 1400px;
+}
+
+.idc-flip {
+    display: grid;
+    position: relative;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform .65s cubic-bezier(.4, .2, .2, 1);
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+.idc-flip.flipped {
+    transform: rotateY(180deg);
+}
+
+.idc-flip:focus-visible {
+    border-radius: 8px;
+    box-shadow: 0 0 0 2px var(--akr-primary);
+}
+
+/* both sides sit in the same grid cell, back one is turned around */
+.idc-face {
+    grid-area: 1 / 1;
+    align-self: start;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.idc-face.back {
+    transform: rotateY(180deg);
+}
+
+.idc-flip-hint {
+    margin: 6px 0 0;
+    text-align: center;
+    font-size: .75rem;
+    color: var(--akr-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .idc-flip {
+        transition: none;
+    }
 }
 
 .idc-viewer-stage canvas {
