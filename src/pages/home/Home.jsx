@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png"
 import "./Home.css";
 import { useTheme } from "../../context/ThemeContext";
 import CgpaPercentageCalculator from "./CgpaPercentageCalculator";
 import AadhaarCardPrinter from "./AadhaarCardPrinter";
 import PassportPhotoPrinter from "./PassportPhotoPrinter";
+import Login from "../auth/Login"; // <-- adjust this path to where your Login.jsx lives
 
 import Aadhar from "../../assets/aadhar1.png"
 import Pan from "../../assets/pan.png"
@@ -83,6 +84,46 @@ const Icon = ({ name, size = 24 }) => {
         moon: (
             <svg {...common}>
                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+            </svg>
+        ),
+
+        minimize: (
+            <svg {...common}>
+                <path d="M6 18h12" />
+            </svg>
+        ),
+
+        maximize: (
+            <svg {...common}>
+                <rect x="4" y="4" width="16" height="16" rx="2.5" />
+            </svg>
+        ),
+
+        restore: (
+            <svg {...common}>
+                <rect x="8" y="8" width="12" height="12" rx="2.5" />
+                <path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8" />
+            </svg>
+        ),
+
+        grip: (
+            <svg {...common}>
+                <path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" strokeWidth={2.6} />
+            </svg>
+        ),
+
+        expand: (
+            <svg {...common}>
+                <path d="M15 4h5v5" />
+                <path d="m20 4-6 6" />
+                <path d="M9 20H4v-5" />
+                <path d="m4 20 6-6" />
+            </svg>
+        ),
+
+        chevron: (
+            <svg {...common}>
+                <path d="m6 9 6 6 6-6" />
             </svg>
         ),
 
@@ -211,7 +252,7 @@ const Icon = ({ name, size = 24 }) => {
         ),
     };
 
-    return icons[name] || null;
+    return icons[name] || icons.card;
 };
 
 /* =========================================================
@@ -408,7 +449,7 @@ const digitalTools = [
         description:
             "Passport size photo and photo copy.",
         icon: "compress",
-        color: "violey",
+        color: "violet",
         url: "https://image.pi7.org/passport-size-photo",
         number: "04",
     },
@@ -508,10 +549,8 @@ const GovernmentCard = ({ service, index }) => {
             href={service.url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ "--delay": `${index * 80}ms` }}
+            style={{ "--delay": `${index * 60}ms` }}
         >
-            <div className="gov-card-glow" />
-
             <div className="gov-card-top">
                 <div className={`gov-icon ${showLogo ? "gov-icon-logo" : ""}`}>
                     {showLogo ? (
@@ -522,7 +561,7 @@ const GovernmentCard = ({ service, index }) => {
                             onError={() => setLogoFailed(true)}
                         />
                     ) : (
-                        <Icon name={service.icon} size={27} />
+                        <Icon name={service.icon} size={22} />
                     )}
                 </div>
 
@@ -543,8 +582,9 @@ const GovernmentCard = ({ service, index }) => {
                     Official portal
                 </span>
 
-                <span className="gov-arrow">
-                    <Icon name="external" size={18} />
+                <span className="gov-open">
+                    Open
+                    <Icon name="external" size={14} />
                 </span>
             </div>
         </a>
@@ -557,15 +597,21 @@ const GovernmentCard = ({ service, index }) => {
 
 const ToolCard = ({ tool, index }) => {
     return (
-        <Link
-            to={tool.url} target="_blank"
+        <a
+            href={tool.url}
+            target="_blank"
+            rel="noopener noreferrer"
             className={`tool-card tool-card-${tool.color}`}
-            style={{ "--delay": `${index * 90}ms` }}
+            style={{ "--delay": `${index * 60}ms` }}
         >
-            <div className="tool-number">{tool.number}</div>
+            <div className="tool-top">
+                <div className="tool-icon">
+                    <Icon name={tool.icon} size={20} />
+                </div>
 
-            <div className="tool-icon">
-                <Icon name={tool.icon} size={27} />
+                <span className="tool-arrow">
+                    <Icon name="external" size={14} />
+                </span>
             </div>
 
             <div className="tool-content">
@@ -573,13 +619,8 @@ const ToolCard = ({ tool, index }) => {
                 <p>{tool.description}</p>
             </div>
 
-            <div className="tool-link">
-                <span>Open tool</span>
-                <span className="tool-arrow">
-                    <Icon name="arrow" size={18} />
-                </span>
-            </div>
-        </Link>
+            <div className="tool-link">Open tool</div>
+        </a>
     );
 };
 
@@ -590,6 +631,19 @@ const ToolCard = ({ tool, index }) => {
 const Home = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [activePrintTool, setActivePrintTool] = useState(null);
+    const [toolExpanded, setToolExpanded] = useState(true);
+    const [toolMinimized, setToolMinimized] = useState(false);
+    const [toolMaximized, setToolMaximized] = useState(false);
+
+    // minimised dock: null = default corner, {x, y} = where the user dragged it
+    const [dockPos, setDockPos] = useState(null);
+    const [dockDragging, setDockDragging] = useState(false);
+    const dockRef = useRef(null);
+    const dockDrag = useRef({ active: false, moved: false, startX: 0, startY: 0, offX: 0, offY: 0 });
+    const location = useLocation();
+    const navigate = useNavigate();
+    // Login popup: opens from any Login button, or when the URL is /login
+    const [loginOpen, setLoginOpen] = useState(location.pathname === "/login");
     const { theme, toggleTheme } = useTheme();
     const isDark = theme === "dark";
 
@@ -642,10 +696,10 @@ const Home = () => {
         };
     }, [isDark]);
 
-    // The print tool opens as a full page: Esc goes back, the home page
+    // The print tool opens as a popup card: Esc closes it, the home page
     // behind it does not scroll.
     useEffect(() => {
-        if (!activePrintTool) return undefined;
+        if (!activePrintTool || toolMinimized) return undefined;
 
         const previous = document.body.style.overflow;
         document.body.style.overflow = "hidden";
@@ -660,9 +714,107 @@ const Home = () => {
             document.body.style.overflow = previous;
             window.removeEventListener("keydown", onKey);
         };
-    }, [activePrintTool]);
+    }, [activePrintTool, toolMinimized]);
+
+    const openPrintTool = (tool) => {
+        setActivePrintTool(tool);
+        setToolExpanded(true);
+        setToolMinimized(false);
+        setToolMaximized(false);
+    };
 
     const closeMenu = () => setMenuOpen(false);
+
+    const openLogin = (event) => {
+        event.preventDefault();
+        setMenuOpen(false);
+        setLoginOpen(true);
+    };
+
+    /* ---------- minimised dock: drag anywhere ---------- */
+
+    const clampValue = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+
+    const onDockPointerDown = (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (event.target.closest(".print-tool-dock-close")) return;
+
+        const rect = dockRef.current.getBoundingClientRect();
+        dockDrag.current = {
+            active: true,
+            moved: false,
+            startX: event.clientX,
+            startY: event.clientY,
+            offX: event.clientX - rect.left,
+            offY: event.clientY - rect.top,
+        };
+    };
+
+    const onDockPointerMove = (event) => {
+        const drag = dockDrag.current;
+        if (!drag.active) return;
+
+        if (!drag.moved) {
+            // small movement = still a tap, not a drag
+            if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 5) return;
+            drag.moved = true;
+            setDockDragging(true);
+            dockRef.current.setPointerCapture?.(event.pointerId);
+        }
+
+        const rect = dockRef.current.getBoundingClientRect();
+        setDockPos({
+            x: clampValue(event.clientX - drag.offX, 8, window.innerWidth - rect.width - 8),
+            y: clampValue(event.clientY - drag.offY, 8, window.innerHeight - rect.height - 8),
+        });
+    };
+
+    const onDockPointerEnd = (event) => {
+        const drag = dockDrag.current;
+        drag.active = false;
+
+        if (drag.moved) {
+            setDockDragging(false);
+            try {
+                dockRef.current.releasePointerCapture?.(event.pointerId);
+            } catch (error) {
+                /* pointer already released */
+            }
+        }
+    };
+
+    const restoreFromDock = () => {
+        // a drag must not count as a tap on "restore"
+        if (dockDrag.current.moved) {
+            dockDrag.current.moved = false;
+            return;
+        }
+        setToolMinimized(false);
+    };
+
+    // keep the dragged dock on screen if the window gets smaller
+    useEffect(() => {
+        if (!dockPos) return undefined;
+
+        const onResize = () => {
+            const rect = dockRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            setDockPos((prev) =>
+                prev && {
+                    x: clampValue(prev.x, 8, window.innerWidth - rect.width - 8),
+                    y: clampValue(prev.y, 8, window.innerHeight - rect.height - 8),
+                }
+            );
+        };
+
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, [dockPos]);
+
+    const closeLogin = () => {
+        setLoginOpen(false);
+        if (location.pathname === "/login") navigate("/", { replace: true });
+    };
 
     return (
         <div className="akr-home" data-theme={isDark ? "dark" : "light"}>
@@ -681,7 +833,7 @@ const Home = () => {
                 <nav className="akr-navbar">
 
                     <Link to="/" className="akr-brand" onClick={closeMenu}>
-                        <img src={logo} id="logoakt" alt="" />
+                        <img src={logo} id="logoakt" alt="AKR" />
                     </Link>
 
                     <div className={`akr-nav-links ${menuOpen ? "nav-open" : ""}`}>
@@ -689,42 +841,49 @@ const Home = () => {
                             Services
                         </a>
 
+                        <a href="#govt" onClick={closeMenu}>
+                            Govt. Exams
+                        </a>
+
+                        <a href="#print-tools" onClick={closeMenu}>
+                            Print Tools
+                        </a>
+
                         <a href="#tools" onClick={closeMenu}>
                             Digital Tools
                         </a>
 
-                        <Link to="/login" className="mobile-login" onClick={closeMenu}>
-                            <Icon name="user" size={17} />
+                        <Link to="/login" className="mobile-login" onClick={openLogin}>
+                            <Icon name="user" size={16} />
                             Login
                         </Link>
                     </div>
 
-                    <button
-                        type="button"
-                        className="theme-toggle"
-                        onClick={toggleTheme}
-                        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                        title={isDark ? "Light mode" : "Dark mode"}
-                    >
-                        <Icon name={isDark ? "sun" : "moon"} size={19} />
-                    </button>
+                    <div className="nav-actions">
+                        <button
+                            type="button"
+                            className="theme-toggle"
+                            onClick={toggleTheme}
+                            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                            title={isDark ? "Light mode" : "Dark mode"}
+                        >
+                            <Icon name={isDark ? "sun" : "moon"} size={18} />
+                        </button>
 
-                    <Link to="/login" className="navbar-login">
-                        <span>Login</span>
-                        <span className="login-icon">
-                            <Icon name="user" size={17} />
-                        </span>
-                    </Link>
+                        <Link to="/login" className="navbar-login" onClick={openLogin}>
+                            Login
+                        </Link>
 
-                    <button
-                        type="button"
-                        className="mobile-menu-button"
-                        onClick={() => setMenuOpen((prev) => !prev)}
-                        aria-label={menuOpen ? "Close menu" : "Open menu"}
-                        aria-expanded={menuOpen}
-                    >
-                        <Icon name={menuOpen ? "close" : "menu"} size={23} />
-                    </button>
+                        <button
+                            type="button"
+                            className="mobile-menu-button"
+                            onClick={() => setMenuOpen((prev) => !prev)}
+                            aria-label={menuOpen ? "Close menu" : "Open menu"}
+                            aria-expanded={menuOpen}
+                        >
+                            <Icon name={menuOpen ? "close" : "menu"} size={22} />
+                        </button>
+                    </div>
                 </nav>
             </header>
 
@@ -782,44 +941,129 @@ const Home = () => {
                             </div>
 
                             <div className="print-tools-grid">
-                                <button type="button" className="print-tool-card print-tool-aadhaar" onClick={() => setActivePrintTool("aadhaar")}>
+                                <button type="button" className="print-tool-card print-tool-aadhaar" onClick={() => openPrintTool("aadhaar")}>
                                     <span className="print-tool-card-glow" />
-                                    <span className="print-tool-icon"><Icon name="aadhaar" size={30} /></span>
+                                    <span className="print-tool-icon"><Icon name="aadhaar" size={22} /></span>
                                     <span className="print-tool-label">DOCUMENT PRINTING</span>
                                     <strong>ID Card Print</strong>
                                     <span className="print-tool-description">Upload an Aadhaar letter and prepare the front and back for printing.</span>
-                                    <span className="print-tool-action">Open tool <Icon name="arrow" size={18} /></span>
+                                    <span className="print-tool-action">Open tool</span>
                                 </button>
 
-                                <button type="button" className="print-tool-card print-tool-passport" onClick={() => setActivePrintTool("passport")}>
+                                <button type="button" className="print-tool-card print-tool-passport" onClick={() => openPrintTool("passport")}>
                                     <span className="print-tool-card-glow" />
-                                    <span className="print-tool-icon"><Icon name="image" size={30} /></span>
+                                    <span className="print-tool-icon"><Icon name="image" size={22} /></span>
                                     <span className="print-tool-label">PHOTO PRINTING</span>
                                     <strong>Passport Photo Print</strong>
                                     <span className="print-tool-description">Upload a photo and automatically crop and resize it to passport size.</span>
-                                    <span className="print-tool-action">Open tool <Icon name="arrow" size={18} /></span>
+                                    <span className="print-tool-action">Open tool</span>
                                 </button>
                             </div>
                         </div>
                     </section>
 
                     {activePrintTool && (
-                        <div className="print-tool-modal-backdrop print-tool-fullscreen">
-                            <section className="print-tool-modal" role="dialog" aria-modal="true" aria-labelledby="print-tool-modal-title">
+                        <div
+                            className={`print-tool-modal-backdrop ${toolMinimized ? "is-minimized" : ""} ${toolMaximized ? "is-maximized" : ""}`}
+                            onMouseDown={(event) => {
+                                if (!toolMinimized && event.target === event.currentTarget) setActivePrintTool(null);
+                            }}
+                        >
+                            <section
+                                className={`print-tool-modal ${toolExpanded ? "is-expanded" : ""} ${toolMaximized ? "is-maximized" : ""}`}
+                                role="dialog"
+                                aria-modal={!toolMinimized}
+                                aria-hidden={toolMinimized}
+                                aria-labelledby="print-tool-modal-title"
+                            >
                                 <header className="print-tool-modal-header">
-                                    <div>
-                                        <span className="print-tool-modal-eyebrow">AKR PRINT TOOLS</span>
+                                    <span className="print-tool-modal-eyebrow">AKR PRINT TOOLS</span>
+                                    <div className="print-tool-modal-actions">
+                                        <button type="button" className="print-tool-modal-minimize" onClick={() => setToolMinimized(true)} aria-label="Minimise print tool" title="Minimise">
+                                            <Icon name="minimize" size={16} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="print-tool-modal-maximize"
+                                            onClick={() => {
+                                                setToolMaximized((prev) => !prev);
+                                                setToolExpanded(true);
+                                            }}
+                                            aria-label={toolMaximized ? "Exit full screen" : "Full screen"}
+                                            title={toolMaximized ? "Exit full screen" : "Full screen"}
+                                        >
+                                            <Icon name={toolMaximized ? "restore" : "maximize"} size={15} />
+                                        </button>
+                                        <button type="button" className="print-tool-modal-close" onClick={() => setActivePrintTool(null)} aria-label="Close print tool" title="Close">
+                                            <Icon name="close" size={16} />
+                                        </button>
+                                    </div>
+                                </header>
+
+                                <div className="print-tool-summary">
+                                    <div className="print-tool-summary-icon">
+                                        <Icon name={activePrintTool === "aadhaar" ? "aadhaar" : "image"} size={30} />
+                                    </div>
+
+                                    <div className="print-tool-summary-text">
                                         <h2 id="print-tool-modal-title">{activePrintTool === "aadhaar" ? "ID Card Print" : "Passport Photo Print"}</h2>
                                         <p>{activePrintTool === "aadhaar" ? "Prepare your Aadhaar front and back for printing." : "Prepare a passport-size photo for printing."}</p>
+                                        <span className="print-tool-status">
+                                            <span className="print-tool-status-dot" />
+                                            Ready to use
+                                        </span>
                                     </div>
-                                    <button type="button" className="print-tool-modal-close" onClick={() => setActivePrintTool(null)} aria-label="Close print tool">
-                                        <Icon name="close" size={22} />
-                                    </button>
-                                </header>
-                                <div className="print-tool-modal-content">
-                                    {activePrintTool === "aadhaar" ? <AadhaarCardPrinter /> : <PassportPhotoPrinter />}
                                 </div>
+
+                                <div className="print-tool-body" aria-hidden={!toolExpanded}>
+                                    <div className="print-tool-body-inner">
+                                        <div className="print-tool-modal-content">
+                                            {activePrintTool === "aadhaar" ? <AadhaarCardPrinter /> : <PassportPhotoPrinter />}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="print-tool-toggle"
+                                    onClick={() => setToolExpanded((prev) => !prev)}
+                                    aria-expanded={toolExpanded}
+                                >
+                                    {toolExpanded ? "Hide tool" : "View full tool"}
+                                    <Icon name="chevron" size={15} />
+                                </button>
                             </section>
+                        </div>
+                    )}
+
+                    {activePrintTool && toolMinimized && (
+                        <div
+                            ref={dockRef}
+                            className={`print-tool-dock ${dockDragging ? "is-dragging" : ""}`}
+                            style={dockPos ? { left: dockPos.x, top: dockPos.y, right: "auto", bottom: "auto" } : undefined}
+                            role="region"
+                            aria-label="Minimised print tool (drag to move)"
+                            onPointerDown={onDockPointerDown}
+                            onPointerMove={onDockPointerMove}
+                            onPointerUp={onDockPointerEnd}
+                            onPointerCancel={onDockPointerEnd}
+                        >
+                            <span className="print-tool-dock-grip" aria-hidden="true" title="Drag to move">
+                                <Icon name="grip" size={16} />
+                            </span>
+                            <button type="button" className="print-tool-dock-restore" onClick={restoreFromDock} aria-label="Restore print tool">
+                                <span className="print-tool-dock-icon">
+                                    <Icon name={activePrintTool === "aadhaar" ? "aadhaar" : "image"} size={18} />
+                                </span>
+                                <span className="print-tool-dock-text">
+                                    <strong>{activePrintTool === "aadhaar" ? "ID Card Print" : "Passport Photo Print"}</strong>
+                                    <small>Minimised · tap to restore</small>
+                                </span>
+                                <Icon name="expand" size={16} />
+                            </button>
+                            <button type="button" className="print-tool-dock-close" onClick={() => setActivePrintTool(null)} aria-label="Close print tool" title="Close">
+                                <Icon name="close" size={15} />
+                            </button>
                         </div>
                     )}
 
@@ -980,7 +1224,7 @@ const Home = () => {
                                 Digital Resources
                             </a>
 
-                            <Link to="/login">
+                            <Link to="/login" onClick={openLogin}>
                                 User Login
                             </Link>
 
@@ -1076,6 +1320,9 @@ const Home = () => {
                 </div>
 
             </footer>
+
+            {/* LOGIN POPUP (blurs this page behind it) */}
+            {loginOpen && <Login onClose={closeLogin} />}
         </div>
     );
 };
