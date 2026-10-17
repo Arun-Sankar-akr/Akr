@@ -1,0 +1,340 @@
+/* =========================================================
+   DASHBOARD WIDGETS  -  stat cards, charts, recent list
+   Uses theme.css variables with safe fallbacks.
+   ========================================================= */
+
+/* ---------- stat card ---------- */
+
+.dw-stat {
+    --dw-violet: var(--accent, #5b5ce2);
+    --dw-violet-bg: var(--accent-soft, #eef0ff);
+
+    min-width: 0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid var(--border, #e6e9f4);
+    border-radius: 22px;
+    background: var(--surface, #fff);
+    box-shadow: 0 2px 10px rgba(17, 25, 54, .05);
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+}
+
+.dw-stat:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent-border, #cfd3f8);
+    box-shadow: 0 14px 34px rgba(30, 41, 100, .12);
+}
+
+.dw-stat-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.dw-stat-label {
+    color: var(--text-soft, #5b6480);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.dw-stat-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    color: var(--dw-violet);
+    background: var(--dw-violet-bg);
+}
+
+.dw-stat-icon.green  { color: #12a06a; background: rgba(18, 160, 106, .12); }
+.dw-stat-icon.blue   { color: #2563eb; background: rgba(37, 99, 235, .12); }
+.dw-stat-icon.orange { color: #e08a0b; background: rgba(224, 138, 11, .14); }
+.dw-stat-icon.red    { color: #e5484d; background: rgba(229, 72, 77, .12); }
+
+.dw-stat-value {
+    margin-top: 6px;
+    color: var(--text, #111936);
+    font-size: clamp(22px, 2.4vw, 28px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -.6px;
+    overflow-wrap: anywhere;
+}
+
+.dw-stat-foot {
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dw-stat-foot small {
+    color: var(--muted, #96a0b8);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.dw-trend {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 999px;
+}
+
+.dw-trend.up   { color: #12a06a; background: rgba(18, 160, 106, .12); }
+.dw-trend.down { color: #e5484d; background: rgba(229, 72, 77, .12); }
+
+/* ---------- charts ---------- */
+
+.dw-chart {
+    width: 100%;
+    height: clamp(220px, 32vw, 300px);
+}
+
+.dw-chart .recharts-wrapper,
+.dw-chart svg { outline: none; }
+
+.dw-empty {
+    min-height: 160px;
+    display: grid;
+    place-items: center;
+    color: var(--muted, #96a0b8);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px dashed var(--border, #e6e9f4);
+    border-radius: 18px;
+}
+
+.dw-tip {
+    padding: 9px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: 1px solid var(--border-strong, #e6e9f4);
+    border-radius: 14px;
+    background: var(--surface, #fff);
+    box-shadow: 0 12px 30px rgba(17, 25, 54, .16);
+}
+
+.dw-tip span {
+    color: var(--muted, #96a0b8);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dw-tip strong {
+    color: var(--text, #111936);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+/* ---------- payment donut ---------- */
+
+.dw-pay {
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 3vw, 28px);
+}
+
+.dw-pay-ring {
+    position: relative;
+    width: clamp(150px, 20vw, 190px);
+    height: clamp(150px, 20vw, 190px);
+    flex-shrink: 0;
+}
+
+.dw-pay-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.dw-pay-center strong {
+    color: var(--text, #111936);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.dw-pay-center span {
+    margin-top: 3px;
+    color: var(--muted, #96a0b8);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.dw-legend {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    list-style: none;
+}
+
+.dw-legend li {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border, #e6e9f4);
+    border-radius: 14px;
+    background: var(--surface-glass, #f7f8fd);
+}
+
+.dw-legend i {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+.dw-legend span {
+    flex: 1;
+    color: var(--text-soft, #5b6480);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.dw-legend b {
+    color: var(--text, #111936);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+/* ---------- recent transactions ---------- */
+
+.dw-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border, #e6e9f4);
+    border-radius: 20px;
+    scrollbar-width: none;
+}
+
+.dw-table-wrap::-webkit-scrollbar { display: none; }
+
+.dw-table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+}
+
+.dw-table th {
+    padding: 13px 16px;
+    color: var(--muted, #96a0b8);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: var(--surface-glass, #f7f8fd);
+}
+
+.dw-table td {
+    padding: 14px 16px;
+    color: var(--text, #2b3452);
+    font-size: 13.5px;
+    border-top: 1px solid var(--border, #e6e9f4);
+}
+
+.dw-table tbody tr {
+    transition: background .15s;
+}
+
+.dw-table tbody tr:hover {
+    background: var(--surface-hover, #f8f9ff);
+}
+
+.dw-table b {
+    color: var(--text, #111936);
+    font-weight: 700;
+}
+
+.dw-amount { font-weight: 800; }
+
+.dw-muted {
+    color: var(--muted, #96a0b8) !important;
+    font-size: 12.5px !important;
+    white-space: nowrap;
+}
+
+.dw-pill {
+    padding: 4px 11px;
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 800;
+    text-transform: capitalize;
+    border-radius: 999px;
+    color: var(--accent, #5b5ce2);
+    background: var(--accent-soft, #eef0ff);
+}
+
+.dw-pill.green  { color: #12a06a; background: rgba(18, 160, 106, .12); }
+.dw-pill.blue   { color: #2563eb; background: rgba(37, 99, 235, .12); }
+.dw-pill.orange { color: #e08a0b; background: rgba(224, 138, 11, .14); }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 640px) {
+    .dw-pay {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dw-pay-ring { margin: 0 auto; }
+
+    /* table -> stacked cards */
+    .dw-table-wrap {
+        overflow: visible;
+        border: 0;
+    }
+
+    .dw-table,
+    .dw-table tbody { display: block; min-width: 0; }
+    .dw-table thead { display: none; }
+
+    .dw-table tr {
+        margin-bottom: 10px;
+        padding: 4px 14px;
+        display: block;
+        border: 1px solid var(--border, #e6e9f4);
+        border-radius: 18px;
+        background: var(--surface, #fff);
+    }
+
+    .dw-table td {
+        padding: 9px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        text-align: right;
+        border-top: 1px dashed var(--border, #e6e9f4);
+    }
+
+    .dw-table td:first-child { border-top: 0; }
+
+    .dw-table td::before {
+        content: attr(data-label);
+        color: var(--muted, #96a0b8);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .6px;
+        text-transform: uppercase;
+    }
+}

@@ -1,5 +1,5 @@
-import { NavLink } from "react-router-dom";
-import logo from "../../assets/logo.png"
+import { NavLink, useLocation } from "react-router-dom";
+import logo from "../../assets/logo.png";
 
 import {
     LayoutDashboard,
@@ -14,12 +14,10 @@ import {
     Settings,
     LogOut,
     X,
-    ChevronRight,
-    Sun,
-    Moon,
+    Menu,
 } from "lucide-react";
 import "./theme.css";
-import "./Sidebar.css"
+import "./Sidebar.css";
 import { useAuth } from "../../context/AuthContext";
 
 const admin = [
@@ -38,15 +36,32 @@ const attendant = [
     ["Dashboard", "/attendant", LayoutDashboard],
     ["Cash Register", "/attendant/cash", Banknote],
     ["New Transaction", "/attendant/new-transaction", ReceiptText],
-    ["EB - BIll", "/attendant/eb", ArrowLeftRight],
+    ["EB - Bill", "/attendant/eb", ArrowLeftRight],
     ["Money Transfer", "/attendant/money-transfer", ArrowLeftRight],
     ["Withdrawal", "/attendant/withdrawal", ArrowLeftRight],
     ["My Transactions", "/attendant/transactions", ReceiptText],
     ["Customers", "/attendant/customers", Users],
 ];
 
-export default function Sidebar({ open, onClose, theme = "light", onToggleTheme }) {
+// Tabs shown in the mobile bottom bar (everything else goes in "More")
+const mobilePrimary = {
+    admin: [
+        ["/admin", "Dashboard"],
+        ["/admin/transactions", "Sales"],
+        ["/admin/cash", "Cash"],
+        ["/admin/inventory", "Stock"],
+    ],
+    attendant: [
+        ["/attendant", "Dashboard"],
+        ["/attendant/new-transaction", "New"],
+        ["/attendant/cash", "Cash"],
+        ["/attendant/transactions", "History"],
+    ],
+};
+
+export default function Sidebar({ open, onClose, onOpen }) {
     const { profile, logout } = useAuth();
+    const { pathname } = useLocation();
 
     const isAdmin = profile?.role === "admin";
     const items = isAdmin ? admin : attendant;
@@ -60,70 +75,157 @@ export default function Sidebar({ open, onClose, theme = "light", onToggleTheme 
             : "Attendant";
 
     const avatarLetter = displayName.charAt(0).toUpperCase();
-    // const isDark = theme === "dark";
+
+    // ----- mobile bottom bar -----
+    const primaryDefs = isAdmin ? mobilePrimary.admin : mobilePrimary.attendant;
+    const itemByPath = Object.fromEntries(items.map((row) => [row[1], row]));
+
+    const tabs = primaryDefs.map(([path, short]) => ({
+        path,
+        label: short,
+        Icon: itemByPath[path][2],
+    }));
+
+    const primaryPaths = tabs.map((tab) => tab.path);
+    const moreItems = items.filter(([, path]) => !primaryPaths.includes(path));
+
+    const isActivePath = (path) =>
+        path === "/admin" || path === "/attendant"
+            ? pathname === path || pathname === `${path}/`
+            : pathname === path || pathname.startsWith(`${path}/`);
+
+    const foundIndex = tabs.findIndex((tab) => isActivePath(tab.path));
+    const moreIndex = tabs.length;
+    const activeIndex = open || foundIndex === -1 ? moreIndex : foundIndex;
 
     return (
+        <>
+            {/* DESKTOP SIDEBAR */}
         <aside
-            className={`sidebar ${open ? "open" : ""}`}
+            className={`sidebar${open ? " open" : ""}`}
             aria-label="Main navigation"
         >
-            {/* BRAND */}
             <div className="brand">
                 <div className="brand-info">
                     <img src={logo} alt="logo" id="logo" />
                 </div>
 
-                <button
-                    type="button"
-                    className="mobile-close"
-                    onClick={onClose}
-                    aria-label="Close navigation"
-                >
-                    <X size={18} />
-                </button>
             </div>
 
-            {/* NAVIGATION */}
-            <div className="side-label">
-                <span>Workspace</span>
-            </div>
+            <div className="side-label">Workspace</div>
 
             <nav className="sidebar-nav">
                 {items.map(([label, path, Icon]) => (
                     <NavLink
                         key={path}
                         to={path}
+                        end={path === "/admin" || path === "/attendant"}
                         onClick={onClose}
                         className={({ isActive }) =>
-                            `nav-item ${isActive ? "active" : ""}`
+                            `nav-item${isActive ? " active" : ""}`
                         }
                     >
-                        {({ isActive }) => (
-                            <>
-                                <span className="nav-icon">
-                                    <Icon size={17} />
-                                </span>
-
-                                <span className="nav-label">{label}</span>
-
-                                <ChevronRight
-                                    className="nav-arrow"
-                                    size={14}
-                                    strokeWidth={2}
-                                />
-
-                                {isActive && (
-                                    <span className="nav-active-dot" aria-hidden="true" />
-                                )}
-                            </>
-                        )}
+                        <span className="nav-icon">
+                            <Icon size={18} />
+                        </span>
+                        <span className="nav-label">{label}</span>
                     </NavLink>
                 ))}
             </nav>
 
-            {/* THEME / USER / LOGOUT */}
             <div className="side-bottom">
-                
+                <div className="user-mini">
+                    <div className="avatar" aria-hidden="true">
+                        {avatarLetter}
+                    </div>
+
+                    <div className="user-details">
+                        <b title={displayName}>{displayName}</b>
+                        <span>{roleName}</span>
+                    </div>
+
+                    <div className="user-status" title="Online" />
+                </div>
+
+                <button type="button" className="logout-btn" onClick={logout}>
+                    <LogOut size={16} />
+                    <span>Sign out</span>
+                </button>
+            </div>
+        </aside>
+
+            {/* MOBILE BOTTOM BAR */}
+            <nav
+                className="m-nav"
+                aria-label="Main navigation"
+                style={{ "--mn": tabs.length + 1, "--mi": activeIndex }}
+            >
+                <div className="m-nav-bar" />
+
+                {tabs.map(({ path, label, Icon }, index) => (
+                    <NavLink
+                        key={path}
+                        to={path}
+                        end={path === "/admin" || path === "/attendant"}
+                        onClick={onClose}
+                        className={`m-nav-item${index === activeIndex ? " active" : ""}`}
+                    >
+                        <span className="m-nav-icon">
+                            <Icon size={20} />
+                        </span>
+                        <span className="m-nav-label">{label}</span>
+                    </NavLink>
+                ))}
+
+                <button
+                    type="button"
+                    className={`m-nav-item${activeIndex === moreIndex ? " active" : ""}`}
+                    onClick={open ? onClose : onOpen}
+                    aria-expanded={open}
+                >
+                    <span className="m-nav-icon">
+                        <Menu size={20} />
+                    </span>
+                    <span className="m-nav-label">More</span>
+                </button>
+            </nav>
+
+            {/* MOBILE "MORE" SHEET */}
+            <div
+                className={`m-sheet${open ? " open" : ""}`}
+                role="dialog"
+                aria-label="More menu"
+                aria-hidden={!open}
+            >
+                <div className="m-sheet-head">
+                    <strong>Menu</strong>
+                    <button
+                        type="button"
+                        className="mobile-close"
+                        onClick={onClose}
+                        aria-label="Close menu"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="m-sheet-grid">
+                    {moreItems.map(([label, path, Icon]) => (
+                        <NavLink
+                            key={path}
+                            to={path}
+                            onClick={onClose}
+                            className={({ isActive }) =>
+                                `m-sheet-item${isActive ? " active" : ""}`
+                            }
+                        >
+                            <span className="m-sheet-icon">
+                                <Icon size={20} />
+                            </span>
+                            <span>{label}</span>
+                        </NavLink>
+                    ))}
+                </div>
 
                 <div className="user-mini">
                     <div className="avatar" aria-hidden="true">
@@ -138,15 +240,11 @@ export default function Sidebar({ open, onClose, theme = "light", onToggleTheme 
                     <div className="user-status" title="Online" />
                 </div>
 
-                <button
-                    type="button"
-                    className="logout-btn"
-                    onClick={logout}
-                >
+                <button type="button" className="logout-btn" onClick={logout}>
                     <LogOut size={16} />
                     <span>Sign out</span>
                 </button>
             </div>
-        </aside>
+        </>
     );
 }

@@ -19,6 +19,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 
+import { useNavigate } from "react-router-dom";
+
 import {
   Banknote,
   Coins,
@@ -45,6 +47,11 @@ import {
   Pencil,
   FileText,
   FileSpreadsheet,
+  LayoutDashboard,
+  History as HistoryIcon,
+  Sun,
+  Moon,
+  ArrowLeft,
 } from "lucide-react";
 
 import { db } from "../../services/firebase";
@@ -598,25 +605,25 @@ function formatDateTime(value) {
 // ============================================================
 
 const EXPORT_COLORS = {
-  ink: [30, 24, 48],
-  deep: [46, 16, 101],
-  violet: [76, 29, 149],
-  violetSoft: [109, 40, 217],
-  indigo: [55, 48, 163],
-  indigoSoft: [79, 70, 229],
-  pale: [237, 233, 254],
-  zebra: [250, 248, 255],
-  line: [232, 228, 244],
-  muted: [100, 100, 122],
-  faint: [160, 160, 182],
-  green: [4, 120, 87],
-  greenBg: [209, 250, 229],
+  ink: [15, 31, 30],
+  deep: [4, 48, 46],
+  violet: [11, 127, 115],
+  violetSoft: [13, 148, 136],
+  indigo: [14, 116, 144],
+  indigoSoft: [20, 165, 180],
+  pale: [220, 245, 241],
+  zebra: [245, 250, 249],
+  line: [223, 233, 231],
+  muted: [88, 115, 112],
+  faint: [147, 168, 165],
+  green: [22, 163, 74],
+  greenBg: [227, 247, 233],
   amber: [180, 83, 9],
   amberBg: [254, 243, 199],
-  red: [190, 18, 60],
-  redBg: [255, 228, 230],
-  blue: [29, 78, 216],
-  blueBg: [219, 234, 254],
+  red: [225, 29, 72],
+  redBg: [255, 233, 237],
+  blue: [14, 116, 144],
+  blueBg: [223, 243, 248],
   white: [255, 255, 255],
 };
 
@@ -666,7 +673,7 @@ function drawExportHeader(pdf, { title, subtitle, generated, cards, legend }) {
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.5);
-  pdf.setTextColor(221, 214, 254);
+  pdf.setTextColor(190, 235, 228);
   pdf.text(subtitle, margin, 60);
 
   pdf.setFontSize(8.5);
@@ -778,6 +785,43 @@ export default function CashRegister() {
     role,
     profile,
   } = useAuth();
+
+  const navigate = useNavigate();
+
+  // ----------------------------------------------------------
+  // THEME  (light / dark) - saved in the browser, starts from the
+  // saved choice, then the app theme, then the device setting.
+  // ----------------------------------------------------------
+
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem("cash-register-theme");
+      if (saved === "dark" || saved === "light") return saved;
+    } catch {
+      /* storage not available */
+    }
+
+    const appTheme = document.documentElement.getAttribute("data-theme");
+    if (appTheme === "dark" || appTheme === "light") return appTheme;
+
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
+
+  const toggleTheme = () => {
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+
+      try {
+        window.localStorage.setItem("cash-register-theme", next);
+      } catch {
+        /* storage not available */
+      }
+
+      return next;
+    });
+  };
 
   // ----------------------------------------------------------
   // STATE
@@ -2639,7 +2683,7 @@ export default function CashRegister() {
 
       put(1, c, {
         fill: solid(C.deep),
-        font: font([221, 214, 254], { sz: 10 }),
+        font: font([190, 235, 228], { sz: 10 }),
         alignment: { vertical: "center", horizontal: "left", indent: 1 },
       });
     }
@@ -3099,7 +3143,7 @@ export default function CashRegister() {
 
       put(1, c, {
         fill: solid(C.deep),
-        font: font([221, 214, 254], { sz: 10 }),
+        font: font([190, 235, 228], { sz: 10 }),
         alignment: { vertical: "center", horizontal: "left", indent: 1 },
       });
 
@@ -4248,12 +4292,64 @@ export default function CashRegister() {
     calculateCreditEffect(closingCredits) -
     getOpeningTotal(openRegister);
 
+  // ----------------------------------------------------------
+  // BOTTOM NAVIGATION  (curved-notch bar)
+  // Items scroll to a section of the page; the active one is
+  // tracked while scrolling.
+  // ----------------------------------------------------------
+
+  const navItems = useMemo(
+    () => [
+      { id: "cash-sec-overview", label: "Overview", Icon: LayoutDashboard },
+      ...(currentRegister
+        ? [{ id: "cash-sec-money", label: "Money", Icon: Landmark }]
+        : []),
+      { id: "cash-sec-credit", label: "Credit", Icon: Receipt },
+      { id: "cash-sec-history", label: "History", Icon: HistoryIcon },
+    ],
+    [Boolean(currentRegister)] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const [activeNav, setActiveNav] = useState("cash-sec-overview");
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveNav(entry.target.id);
+        });
+      },
+      { rootMargin: "-30% 0px -55% 0px", threshold: 0 }
+    );
+
+    navItems.forEach((item) => {
+      const el = document.getElementById(item.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [navItems, loading]);
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    setActiveNav(id);
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const activeNavIndex = Math.max(
+    0,
+    navItems.findIndex((item) => item.id === activeNav)
+  );
+
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-    <div className="cash-register-page">
+    <div className="cash-register-page" data-theme={theme}>
 
       {/* ====================================================
           HEADER
@@ -4285,6 +4381,37 @@ export default function CashRegister() {
         </div>
 
         <div className="cash-header-actions">
+          <button
+            type="button"
+            className="cash-icon-action cash-theme-btn"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "dark"
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? (
+              <Sun size={19} />
+            ) : (
+              <Moon size={19} />
+            )}
+          </button>
+
+          <button
+            type="button"
+            className="cash-icon-action wide"
+            onClick={() =>
+              navigate(role === "admin" ? "/admin" : "/attendant")
+            }
+            aria-label="Back to dashboard"
+            title="Back to dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>Dashboard</span>
+          </button>
+
           {openRegister ? (
             <button
               className="cash-primary-btn close"
@@ -4346,140 +4473,10 @@ export default function CashRegister() {
       )}
 
       {/* ====================================================
-          STATS
-      ==================================================== */}
-
-      <section className="cash-stats-grid">
-
-        {/* STATUS */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Today's Status
-            </span>
-
-            <div className="cash-stat-icon purple">
-              {openRegister ? (
-                <UnlockKeyhole
-                  size={15}
-                />
-              ) : (
-                <LockKeyhole
-                  size={15}
-                />
-              )}
-            </div>
-          </div>
-
-          <strong>
-            {openRegister
-              ? "Open"
-              : latestTodayRegister
-                ? "Closed"
-                : "Not Opened"}
-          </strong>
-
-          <small>
-            {openRegister
-              ? "Register is active"
-              : latestTodayRegister
-                ? "Today's register is closed"
-                : "No register opened today"}
-          </small>
-        </div>
-
-        {/* OPENING CASH */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Opening Overall Total
-            </span>
-
-            <div className="cash-stat-icon blue">
-              <Banknote
-                size={15}
-              />
-            </div>
-          </div>
-
-          <strong>
-            {formatCurrency(
-              openingTotal
-            )}
-          </strong>
-
-          <small>
-            Cash + digital + credit paid
-          </small>
-        </div>
-
-        {/* CASH SALES */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Cash Sales
-            </span>
-
-            <div className="cash-stat-icon green">
-              <ArrowUpRight
-                size={15}
-              />
-            </div>
-          </div>
-
-          <strong>
-            {formatCurrency(
-              cashSales
-            )}
-          </strong>
-
-          <small>
-            Cash received today
-          </small>
-        </div>
-
-        {/* EXPECTED CASH */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              {currentRegister?.status ===
-                "closed"
-                ? "Closing Overall Total"
-                : "Current Overall Total"}
-            </span>
-
-            <div className="cash-stat-icon orange">
-              <CircleDollarSign
-                size={15}
-              />
-            </div>
-          </div>
-
-          <strong>
-            {formatCurrency(
-              currentOverallTotal
-            )}
-          </strong>
-
-          <small>
-            {currentRegister?.status ===
-              "closed"
-              ? "Cash + digital + credit paid"
-              : "Expected cash + digital + credit paid"}
-          </small>
-        </div>
-
-      </section>
-
-      {/* ====================================================
           MAIN REGISTER
       ==================================================== */}
 
-      <section className="cash-main-card">
+      <section className="cash-main-card" id="cash-sec-overview">
 
         <div className="cash-main-left">
 
@@ -4619,56 +4616,203 @@ export default function CashRegister() {
 
         <div className="cash-main-action">
 
-          <div className="cash-action-icon">
-            <Calculator
-              size={18}
-            />
+          <div className="cash-action-head">
+            <div className="cash-action-icon">
+              <Calculator size={18} />
+            </div>
+
+            <div>
+              <strong>
+                {openRegister
+                  ? "Register is ready"
+                  : latestTodayRegister
+                    ? "Today's register is closed"
+                    : "Start today's register"}
+              </strong>
+
+              <span>
+                {openRegister
+                  ? "Continue recording shop sales."
+                  : latestTodayRegister
+                    ? "Today's cash session has been completed."
+                    : "Count your opening notes and coins."}
+              </span>
+            </div>
           </div>
 
-          <div>
-            <strong>
-              {openRegister
-                ? "Register is ready"
-                : latestTodayRegister
-                  ? "Today's register is closed"
-                  : "Start today's register"}
-            </strong>
+          <div className="cash-quick-actions">
+            {openRegister ? (
+              <button
+                type="button"
+                className="cash-quick-btn danger"
+                onClick={() => openCloseModal()}
+              >
+                <LockKeyhole size={17} />
+                Close
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="cash-quick-btn primary"
+                onClick={openOpenModal}
+              >
+                <UnlockKeyhole size={17} />
+                Open
+              </button>
+            )}
 
+            <button
+              type="button"
+              className="cash-quick-btn"
+              onClick={openCreateEntry}
+            >
+              <Plus size={17} />
+              Add Entry
+            </button>
+
+            <button
+              type="button"
+              className="cash-quick-btn"
+              onClick={() => {
+                setExportTarget("history");
+                setShowExportModal(true);
+              }}
+            >
+              <Download size={17} />
+              Export
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* ====================================================
+          STATS
+      ==================================================== */}
+
+      <section className="cash-stats-grid">
+
+        {/* STATUS */}
+
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
             <span>
-              {openRegister
-                ? "Continue recording shop sales."
-                : latestTodayRegister
-                  ? "Today's cash session has been completed."
-                  : "Count your opening notes and coins."}
+              Today's Status
             </span>
+
+            <div className="cash-stat-icon purple">
+              {openRegister ? (
+                <UnlockKeyhole
+                  size={15}
+                />
+              ) : (
+                <LockKeyhole
+                  size={15}
+                />
+              )}
+            </div>
           </div>
 
-          {openRegister ? (
-            <button
-              className="cash-action-btn danger"
-              onClick={() =>
-                openCloseModal()
-              }
-            >
-              <LockKeyhole
+          <strong>
+            {openRegister
+              ? "Open"
+              : latestTodayRegister
+                ? "Closed"
+                : "Not Opened"}
+          </strong>
+
+          <small>
+            {openRegister
+              ? "Register is active"
+              : latestTodayRegister
+                ? "Today's register is closed"
+                : "No register opened today"}
+          </small>
+        </div>
+
+        {/* OPENING CASH */}
+
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              Opening Overall Total
+            </span>
+
+            <div className="cash-stat-icon blue">
+              <Banknote
                 size={15}
               />
+            </div>
+          </div>
 
-              Close
-            </button>
-          ) : (
-            <button
-              className="cash-action-btn"
-              onClick={openOpenModal}
-            >
-              <Plus
+          <strong>
+            {formatCurrency(
+              openingTotal
+            )}
+          </strong>
+
+          <small>
+            Cash + digital + credit paid
+          </small>
+        </div>
+
+        {/* CASH SALES */}
+
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              Cash Sales
+            </span>
+
+            <div className="cash-stat-icon green">
+              <ArrowUpRight
                 size={15}
               />
+            </div>
+          </div>
 
-              Open
-            </button>
-          )}
+          <strong>
+            {formatCurrency(
+              cashSales
+            )}
+          </strong>
 
+          <small>
+            Cash received today
+          </small>
+        </div>
+
+        {/* EXPECTED CASH */}
+
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              {currentRegister?.status ===
+                "closed"
+                ? "Closing Overall Total"
+                : "Current Overall Total"}
+            </span>
+
+            <div className="cash-stat-icon orange">
+              <CircleDollarSign
+                size={15}
+              />
+            </div>
+          </div>
+
+          <strong>
+            {formatCurrency(
+              currentOverallTotal
+            )}
+          </strong>
+
+          <small>
+            {currentRegister?.status ===
+              "closed"
+              ? "Cash + digital + credit paid"
+              : "Expected cash + digital + credit paid"}
+          </small>
         </div>
 
       </section>
@@ -4678,7 +4822,7 @@ export default function CashRegister() {
       ==================================================== */}
 
       {currentRegister && (
-        <section className="cash-money-section">
+        <section className="cash-money-section" id="cash-sec-money">
 
           <div className="cash-money-grid">
 
@@ -5038,7 +5182,7 @@ export default function CashRegister() {
           CREDIT / LOAN HISTORY (all days)
       ==================================================== */}
 
-      <section className="cash-history-card cash-credit-history-card">
+      <section className="cash-history-card cash-credit-history-card" id="cash-sec-credit">
         <div className="cash-history-head">
           <div>
             <div className="cash-section-label">
@@ -5116,7 +5260,7 @@ export default function CashRegister() {
                         }
                       }}
                     >
-                      <td>
+                      <td data-label="Date">
                         <strong>
                           {item.createdAtMs
                             ? formatDate(item.createdAtMs)
@@ -5129,24 +5273,24 @@ export default function CashRegister() {
                         </small>
                       </td>
 
-                      <td>
+                      <td data-label="Name / Reason">
                         <strong>{item.reason}</strong>
                         {item.carriedOver && <small>Carried forward</small>}
                       </td>
 
-                      <td>
+                      <td data-label="Credit">
                         <strong>{formatCurrency(total)}</strong>
                       </td>
 
-                      <td className="cash-credit-paid-cell">
+                      <td className="cash-credit-paid-cell" data-label="Paid">
                         <strong>{formatCurrency(paid)}</strong>
                       </td>
 
-                      <td className="cash-credit-due-cell">
+                      <td className="cash-credit-due-cell" data-label="Not paid">
                         <strong>{formatCurrency(balance)}</strong>
                       </td>
 
-                      <td className="cash-credit-actions-cell">
+                      <td className="cash-credit-actions-cell" data-label="">
                         <div className="cash-credit-row-tools">
                           <button
                             type="button"
@@ -5190,7 +5334,7 @@ export default function CashRegister() {
           HISTORY
       ==================================================== */}
 
-      <section className="cash-history-card">
+      <section className="cash-history-card" id="cash-sec-history">
 
         <div className="cash-history-head">
 
@@ -5376,23 +5520,23 @@ export default function CashRegister() {
                       }}
                     >
 
-                      <td>
+                      <td data-label="Status">
                         <span className={`cash-table-status ${item.status}`}>
                           <i />
                           {item.status}
                         </span>
                       </td>
 
-                      <td>
+                      <td data-label="Date">
                         <strong>{formatDate(item.dateKey)}</strong>
                         <small>{formatDateTime(item.openedAt)}</small>
                       </td>
 
-                      <td>
+                      <td data-label="Opening">
                         <strong>{formatCurrency(getOpeningTotal(item))}</strong>
                       </td>
 
-                      <td>
+                      <td data-label="Closing">
                         {itemClosingTotal === null ? (
                           "—"
                         ) : (
@@ -5400,7 +5544,7 @@ export default function CashRegister() {
                         )}
                       </td>
 
-                      <td>
+                      <td data-label="Difference">
                         {item.status === "closed" ? (
                           <span
                             className={`cash-difference ${itemDifference > 0
@@ -5418,12 +5562,13 @@ export default function CashRegister() {
                         )}
                       </td>
 
-                      <td>
+                      <td data-label="Total money">
                         <strong>{formatCurrency(getTotalMoney(item))}</strong>
                       </td>
 
                       <td
                         className="cash-actions-td"
+                        data-label=""
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => event.stopPropagation()}
                       >
@@ -7100,6 +7245,49 @@ export default function CashRegister() {
           </div>
         );
       })()}
+
+      {/* ====================================================
+          BOTTOM NAVIGATION
+      ==================================================== */}
+
+      <nav
+        className="cash-bottom-nav"
+        aria-label="Cash register sections"
+        style={{
+          "--n": navItems.length + 1,
+          "--i": activeNavIndex,
+        }}
+      >
+        <div className="cash-bottom-nav-bar" />
+
+        {navItems.map(({ id, label, Icon }, index) => (
+          <button
+            key={id}
+            type="button"
+            className={`cash-nav-item${index === activeNavIndex ? " active" : ""}`}
+            onClick={() => scrollToSection(id)}
+            aria-current={index === activeNavIndex ? "true" : undefined}
+          >
+            <span className="cash-nav-icon">
+              <Icon size={20} />
+            </span>
+            <span className="cash-nav-label">{label}</span>
+          </button>
+        ))}
+
+        <button
+          type="button"
+          className={`cash-nav-item cash-nav-action${openRegister ? " danger" : ""}`}
+          onClick={openRegister ? () => openCloseModal() : openOpenModal}
+        >
+          <span className="cash-nav-icon">
+            {openRegister ? <LockKeyhole size={20} /> : <UnlockKeyhole size={20} />}
+          </span>
+          <span className="cash-nav-label">
+            {openRegister ? "Close" : "Open"}
+          </span>
+        </button>
+      </nav>
 
     </div>
   );

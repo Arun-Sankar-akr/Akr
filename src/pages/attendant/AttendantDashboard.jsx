@@ -4,13 +4,11 @@ import {
   Banknote,
   CheckCircle2,
   Clock3,
-  IndianRupee,
   Plus,
   ReceiptText,
   RefreshCw,
   Search,
   Smartphone,
-  TrendingUp,
   WalletCards,
   CreditCard,
   ChevronRight,
@@ -137,37 +135,19 @@ function getStatusLabel(status) {
   return status || "Completed";
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  note,
-  tone,
-}) {
-  return (
-    <div className={`att-stat-card ${tone}`}>
-      <div className="att-stat-top">
-        <div className="att-stat-icon">
-          <Icon size={19} strokeWidth={2.2} />
-        </div>
+function getGreeting() {
+  const hour = new Date().getHours();
 
-        <span className="att-stat-dot" />
-      </div>
-
-      <div className="att-stat-content">
-        <span className="att-stat-label">{label}</span>
-
-        <strong className="att-stat-value">
-          {value}
-        </strong>
-
-        <span className="att-stat-note">
-          {note}
-        </span>
-      </div>
-    </div>
-  );
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
+
+const PAYMENT_ROWS = [
+  { key: "cash", label: "Cash", Icon: WalletCards },
+  { key: "upi", label: "UPI", Icon: Smartphone },
+  { key: "card", label: "Card", Icon: CreditCard },
+];
 
 export default function AttendantDashboard() {
   const { user, profile } = useAuth();
@@ -351,13 +331,12 @@ export default function AttendantDashboard() {
           </div>
 
           <h1>
-            Good morning,{" "}
+            {getGreeting()},{" "}
             <span>{attendantName}</span>
           </h1>
 
           <p>
-            Keep track of today's sales,
-            collections and counter activity.
+            Keep track of today's sales, collections and counter activity.
           </p>
         </div>
 
@@ -377,42 +356,49 @@ export default function AttendantDashboard() {
         </div>
       </header>
 
-      {/* QUICK STATS */}
-      <section className="att-stat-grid">
-        <StatCard
-          icon={IndianRupee}
-          label="Today's sales"
-          value={formatCurrency(totals.sales)}
-          note={`${totals.transactions} transaction${totals.transactions === 1
-            ? ""
-            : "s"
-            } today`}
-          tone="violet"
-        />
+      {/* HERO */}
+      <section className="att-hero">
+        <div className="att-hero-main">
+          <span className="att-hero-label">Today's sales</span>
 
-        {/* <StatCard
-          icon={TrendingUp}
-          label="Today's profit"
-          value={formatCurrency(totals.profit)}
-          note="Based on recorded service costs"
-          tone="green"
-        /> */}
+          <strong className="att-hero-value">
+            {formatCurrency(totals.sales)}
+          </strong>
 
-        <StatCard
-          icon={ReceiptText}
-          label="Transactions"
-          value={totals.transactions}
-          note="Your completed bills today"
-          tone="blue"
-        />
+          <div className="att-hero-chips">
+            <span className="att-chip">
+              <ReceiptText size={13} />
+              {totals.transactions} transaction
+              {totals.transactions === 1 ? "" : "s"}
+            </span>
 
-        <StatCard
-          icon={Banknote}
-          label="Cash collected"
-          value={formatCurrency(totals.cash)}
-          note="Cash payment collection"
-          tone="amber"
-        />
+            <span className="att-chip">
+              <Clock3 size={13} />
+              {new Date().toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+        </div>
+
+        <div className="att-hero-tiles">
+          <div className="att-hero-tile">
+            <span>Transactions</span>
+            <strong>{totals.transactions}</strong>
+          </div>
+
+          {PAYMENT_ROWS.map(({ key, label, Icon }) => (
+            <div className="att-hero-tile" key={key}>
+              <span>
+                <Icon size={13} />
+                {label}
+              </span>
+              <strong>{formatCurrency(totals[key])}</strong>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ERROR */}
@@ -762,89 +748,33 @@ export default function AttendantDashboard() {
             </div>
 
             <div className="att-payment-bars">
-              <div className="att-payment-bar-row">
-                <div className="att-payment-label">
-                  <span className="att-payment-dot cash" />
-                  Cash
-                </div>
+              {PAYMENT_ROWS.map(({ key, label }) => {
+                const percent =
+                  paymentTotal > 0
+                    ? Math.round((totals[key] / paymentTotal) * 100)
+                    : 0;
 
-                <strong>
-                  {formatCurrency(
-                    totals.cash
-                  )}
-                </strong>
-              </div>
+                return (
+                  <div className="att-payment-item" key={key}>
+                    <div className="att-payment-bar-row">
+                      <div className="att-payment-label">
+                        <span className={`att-payment-dot ${key}`} />
+                        {label}
+                        <em>{percent}%</em>
+                      </div>
 
-              <div className="att-bar">
-                <span
-                  style={{
-                    width:
-                      paymentTotal >
-                        0
-                        ? `${(totals.cash /
-                          paymentTotal) *
-                        100
-                        }%`
-                        : "0%",
-                  }}
-                />
-              </div>
+                      <strong>{formatCurrency(totals[key])}</strong>
+                    </div>
 
-              <div className="att-payment-bar-row">
-                <div className="att-payment-label">
-                  <span className="att-payment-dot upi" />
-                  UPI
-                </div>
-
-                <strong>
-                  {formatCurrency(
-                    totals.upi
-                  )}
-                </strong>
-              </div>
-
-              <div className="att-bar">
-                <span
-                  style={{
-                    width:
-                      paymentTotal >
-                        0
-                        ? `${(totals.upi /
-                          paymentTotal) *
-                        100
-                        }%`
-                        : "0%",
-                  }}
-                />
-              </div>
-
-              <div className="att-payment-bar-row">
-                <div className="att-payment-label">
-                  <span className="att-payment-dot card" />
-                  Card
-                </div>
-
-                <strong>
-                  {formatCurrency(
-                    totals.card
-                  )}
-                </strong>
-              </div>
-
-              <div className="att-bar">
-                <span
-                  style={{
-                    width:
-                      paymentTotal >
-                        0
-                        ? `${(totals.card /
-                          paymentTotal) *
-                        100
-                        }%`
-                        : "0%",
-                  }}
-                />
-              </div>
+                    <div className="att-bar">
+                      <span
+                        className={key}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
