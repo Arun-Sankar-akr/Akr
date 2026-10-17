@@ -205,7 +205,7 @@ body {
     }
 
     .page {
-        padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     }
 
     .sidebar-backdrop {

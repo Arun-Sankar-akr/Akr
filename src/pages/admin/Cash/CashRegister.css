@@ -199,8 +199,7 @@
 }
 
 .cash-stat-card {
-    display: flex;
-    align-items: center;
+    display: block;
     gap: 12px;
     min-height: 82px;
     padding: 15px;

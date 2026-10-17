@@ -27,15 +27,7 @@ export default function AdminLayout() {
         return (
             <div className="app-shell cash-mode">
                 <main className="main">
-                    <button
-                        type="button"
-                        className="cash-back-btn"
-                        onClick={() => navigate(home)}
-                        aria-label="Back to dashboard"
-                    >
-                        <ArrowLeft size={16} />
-                        <span>Dashboard</span>
-                    </button>
+                
 
                     <section className="page">
                         <Outlet />
