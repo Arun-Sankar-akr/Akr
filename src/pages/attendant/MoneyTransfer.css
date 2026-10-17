@@ -1528,3 +1528,214 @@
     box-shadow: 0 7px 17px rgba(212, 175, 55, 0.18);
     color: #15110a;
 }
+
+
+/* =========================================================
+   MOBILE - MONEY TRANSFER PAGE  (<= 700px)
+   Table rows become cards; search, buttons and form fields get
+   proper touch-friendly sizes. Colours are untouched, so light
+   and dark mode keep working.
+   ========================================================= */
+
+@media (max-width: 700px) {
+    .money-transfer-page .money-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .money-transfer-page .money-add-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0 18px !important;
+        font-size: 14px !important;
+        gap: 8px;
+    }
+
+    .money-transfer-page .money-add-btn svg {
+        margin: 0;
+    }
+
+    .money-transfer-page .money-add-btn,
+    .money-transfer-page .money-export-btn {
+        min-height: 46px;
+        border-radius: 12px;
+    }
+
+    .money-transfer-page .money-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .money-transfer-page .money-search {
+        width: 100%;
+        min-width: 0;
+        height: 46px;
+        box-sizing: border-box;
+        border-radius: 12px;
+    }
+
+    .money-transfer-page .money-search input {
+        font-size: 16px;
+    }
+
+    .money-transfer-page .money-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .money-transfer-page .money-input {
+        min-height: 46px;
+        border-radius: 12px;
+    }
+
+    .money-transfer-page input,
+    .money-transfer-page select,
+    .money-transfer-page textarea {
+        font-size: 16px;
+    }
+
+    .money-transfer-page .money-modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .money-transfer-page .cancel-money-btn,
+    .money-transfer-page .save-money-btn {
+        width: 100%;
+        min-height: 46px;
+        border-radius: 12px;
+        justify-content: center;
+    }
+
+    .money-transfer-page .money-table-wrap {
+        overflow-x: visible !important;
+        border-top: 0 !important;
+        padding: 12px !important;
+    }
+
+    .money-transfer-page .money-table {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .money-transfer-page .money-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .money-transfer-page .money-table tbody {
+        display: block !important;
+    }
+
+    .money-transfer-page .money-table tbody tr {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 14px;
+        margin: 0 0 12px;
+        padding: 14px !important;
+        border: 1px solid rgba(127, 127, 127, .28);
+        border-radius: 16px;
+        background: rgba(127, 127, 127, .07);
+    }
+
+    .money-transfer-page .money-table tbody tr:hover {
+        background: rgba(127, 127, 127, .07);
+    }
+
+    .money-transfer-page .money-table tbody tr>td {
+        display: block !important;
+        min-width: 0;
+        padding: 0 !important;
+        border: 0 !important;
+        font-size: 14px !important;
+        text-align: left !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(2)::before {
+        content: "Transfer";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(3)::before {
+        content: "Service charge";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(4)::before {
+        content: "Customer pays";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(5)::before {
+        content: "Payment";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(6)::before {
+        content: "Attendant";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(7)::before {
+        content: "Date";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .money-transfer-page .money-table tbody tr>td:nth-child(1) {
+        grid-column: 1 / -1;
+        order: -1;
+        padding-bottom: 12px !important;
+        border-bottom: 1px solid rgba(127, 127, 127, .22) !important;
+        font-size: 15px !important;
+    }
+}

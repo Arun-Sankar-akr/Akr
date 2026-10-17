@@ -1448,7 +1448,8 @@
    Activated by <html data-theme="dark">
    ========================================================= */
 
-:root[data-theme="dark"] .customers-page, .cash-main-card {
+:root[data-theme="dark"] .customers-page,
+.cash-main-card {
     color: #e9e4d7;
     background: radial-gradient(circle at 0% 0%,
             rgba(216, 180, 90, 0.07),
@@ -1815,7 +1816,238 @@
 }
 
 @media (max-width: 720px) {
-:root[data-theme="dark"] .modal-actions {
-    background: rgba(17, 16, 14, 0.96);
+    :root[data-theme="dark"] .modal-actions {
+        background: rgba(17, 16, 14, 0.96);
+    }
 }
+
+
+/* =========================================================
+   MOBILE - CUSTOMERS PAGE  (<= 700px)
+   Table rows become cards; search, buttons and form fields get
+   proper touch-friendly sizes. Colours are untouched, so light
+   and dark mode keep working.
+   ========================================================= */
+
+@media (max-width: 700px) {
+    .customers-page .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .customers-page .search-bar {
+        width: 100%;
+        min-width: 0;
+        height: 46px;
+        box-sizing: border-box;
+        border-radius: 12px;
+    }
+
+    .customers-page .search-bar input {
+        font-size: 16px;
+    }
+
+    .customers-page .toolbar-right {
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .customers-page .toolbar-right .secondary-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .customers-page .primary-btn,
+    .customers-page .secondary-btn,
+    .customers-page .save-btn,
+    .customers-page .cancel-btn {
+        min-height: 46px;
+        border-radius: 12px;
+        font-size: 14px;
+    }
+
+    .customers-page .customer-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .customers-page .customer-input-wrap {
+        min-height: 46px;
+        border-radius: 12px;
+    }
+
+    .customers-page .customer-input-wrap input,
+    .customers-page .customer-input-wrap textarea {
+        font-size: 16px;
+    }
+
+    .customers-page .modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .customers-page .modal-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .customers-page .customer-table-wrap {
+        overflow-x: visible !important;
+        border-top: 0 !important;
+        padding: 12px !important;
+    }
+
+    .customers-page .customer-table {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .customers-page .customer-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .customers-page .customer-table tbody {
+        display: block !important;
+    }
+
+    .customers-page .customer-table tbody tr {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 14px;
+        margin: 0 0 12px;
+        padding: 14px !important;
+        border: 1px solid rgba(127, 127, 127, .28);
+        border-radius: 16px;
+        background: rgba(127, 127, 127, .07);
+    }
+
+    .customers-page .customer-table tbody tr:hover {
+        background: rgba(127, 127, 127, .07);
+    }
+
+    .customers-page .customer-table tbody tr>td {
+        display: block !important;
+        min-width: 0;
+        padding: 0 !important;
+        border: 0 !important;
+        font-size: 14px !important;
+        text-align: left !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(2)::before {
+        content: "Contact";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(3)::before {
+        content: "Address";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(4)::before {
+        content: "Transactions";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(5)::before {
+        content: "Total value";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(6)::before {
+        content: "Status";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(7)::before {
+        content: "Added";
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        opacity: .6;
+        color: inherit;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(1) {
+        grid-column: 1 / -1;
+        order: -1;
+        padding-bottom: 12px !important;
+        border-bottom: 1px solid rgba(127, 127, 127, .22) !important;
+        font-size: 15px !important;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(2) {
+        grid-column: 1 / -1;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(8) {
+        grid-column: 1 / -1;
+        order: 99;
+        padding-top: 12px !important;
+        border-top: 1px solid rgba(127, 127, 127, .22) !important;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(8)>div {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 10px;
+    }
+
+    .customers-page .customer-table tbody tr>td:nth-child(8) button {
+        min-width: 44px;
+        min-height: 44px;
+    }
 }

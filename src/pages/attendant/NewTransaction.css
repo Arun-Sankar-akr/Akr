@@ -5323,3 +5323,191 @@
         font-size: 15px;
     }
 }
+
+/* =========================================================
+   MOBILE - SERVICES TABLE AS CARDS  (<= 640px)
+   Each service becomes one card: name on top,
+   Rate | Quantity | Total underneath.
+   ========================================================= */
+
+@media (max-width: 640px) {
+
+    /* category tabs: proper, evenly sized, swipeable buttons */
+    .new-transaction-page .nt-category-tabs {
+        gap: 8px;
+        margin: 4px 0 14px;
+        padding: 2px 2px 4px;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .new-transaction-page .nt-category-tabs button {
+        flex: 0 0 auto;
+        min-width: 84px;
+        min-height: 40px;
+        padding: 0 18px;
+        border: 1px solid var(--nt-border);
+        font-size: 14px;
+        font-weight: 600;
+        scroll-snap-align: start;
+    }
+
+    .new-transaction-page .nt-category-tabs button.active {
+        border-color: transparent;
+    }
+
+    /* table shell -> plain stack of cards */
+    .new-transaction-page .nt-service-table-wrap {
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .new-transaction-page .nt-service-table,
+    .new-transaction-page .nt-service-table tbody,
+    .new-transaction-page .nt-service-table tfoot,
+    .new-transaction-page .nt-service-table tfoot tr {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* header row hidden visually but kept for screen readers */
+    .new-transaction-page .nt-service-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    /* the card */
+    .new-transaction-page .nt-service-table tbody tr {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 10px;
+        margin-bottom: 12px;
+        padding: 14px;
+        border: 1px solid var(--nt-border);
+        border-radius: 16px;
+        background: var(--nt-surface, var(--nt-tbl-field-bg, #fff));
+    }
+
+    .new-transaction-page .nt-service-table tbody tr:hover {
+        background: var(--nt-surface, var(--nt-tbl-field-bg, #fff));
+    }
+
+    .new-transaction-page .nt-service-table tbody tr.is-selected {
+        border-color: var(--nt-accent);
+        background: var(--nt-accent-soft, rgba(0, 0, 0, 0.05));
+        box-shadow: 0 0 0 1px var(--nt-accent) inset;
+    }
+
+    .new-transaction-page .nt-service-table tbody tr > td {
+        display: block;
+        width: auto;
+        padding: 0;
+        border: 0;
+        text-align: left;
+    }
+
+    /* S.No becomes a small round badge */
+    .new-transaction-page .nt-service-table tbody tr > td.col-sno {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--nt-accent-soft, rgba(0, 0, 0, 0.06));
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    /* service name across the top */
+    .new-transaction-page .nt-service-table tbody tr > td.col-service {
+        grid-column: 1 / -1;
+        min-height: 28px;
+        padding-left: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 16px;
+        line-height: 1.25;
+    }
+
+    /* Rate / Quantity / Total: label above value */
+    .new-transaction-page .nt-service-table tbody tr > td.col-rate::before,
+    .new-transaction-page .nt-service-table tbody tr > td.col-qty::before,
+    .new-transaction-page .nt-service-table tbody tr > td.col-total::before {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--nt-tbl-dim, #5b6478);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .new-transaction-page .nt-service-table tbody tr > td.col-rate::before { content: "Rate"; }
+    .new-transaction-page .nt-service-table tbody tr > td.col-qty::before { content: "Qty"; }
+    .new-transaction-page .nt-service-table tbody tr > td.col-total::before { content: "Total"; }
+
+    .new-transaction-page .nt-service-table tbody tr > td.col-rate,
+    .new-transaction-page .nt-service-table tbody tr > td.col-qty {
+        width: auto;
+    }
+
+    .new-transaction-page .nt-service-table tbody tr > td.col-total {
+        display: grid;
+        grid-template-rows: auto 46px;
+        align-items: center;
+        width: auto;
+        font-size: 18px;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    /* inputs: tall, 16px text (stops iOS zoom-on-focus) */
+    .new-transaction-page .nt-table-input,
+    .new-transaction-page .nt-table-input-wrap {
+        height: 46px;
+        font-size: 16px;
+        border-radius: 12px;
+    }
+
+    .new-transaction-page .nt-table-input {
+        min-width: 0;
+        padding: 0 12px;
+    }
+
+    .new-transaction-page .nt-table-input-wrap {
+        padding: 0 10px;
+    }
+
+    .new-transaction-page .nt-table-input-wrap .nt-table-input {
+        padding: 0;
+    }
+
+    /* empty state */
+    .new-transaction-page .nt-service-table tbody tr > td.nt-table-empty {
+        grid-column: 1 / -1;
+        padding: 20px 0;
+        text-align: center;
+    }
+
+    /* totals block under the cards */
+    .new-transaction-page .nt-service-table tfoot td.nt-table-totals-cell {
+        display: block;
+        padding: 14px;
+        border: 1px solid var(--nt-border);
+        border-radius: 16px;
+    }
+}

@@ -2822,3 +2822,86 @@ body:has(.cash-modal-overlay) {
         transition-duration: .01ms !important;
     }
 }
+
+/* =========================================================
+   MOBILE / TABLET - POPUP BUTTONS + TOUCH TARGETS
+   The popup footer buttons (Cancel / Close Register / Add Entry /
+   Save) could collapse to a thin strip when the footer stacked,
+   because they had "flex: 1" but no minimum height. Sizes are now
+   explicit. Colours are not touched, so light/dark theme still work.
+   ========================================================= */
+
+/* all screens: a button can never shrink below its own height */
+.cash-modal-actions button,
+.cash-cancel-btn,
+.cash-save-btn {
+    flex-shrink: 0;
+    min-height: 46px;
+    height: auto;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+    .cash-modal-actions button,
+    .cash-cancel-btn,
+    .cash-save-btn,
+    .cash-export-btn {
+        min-height: 48px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 640px) {
+
+    /* footer: Cancel | Primary side by side, equal width */
+    .cash-modal-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-items: stretch;
+        padding: 14px var(--cr-mp) calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .cash-modal-actions button {
+        flex: none !important;
+        width: 100%;
+        min-height: 48px !important;
+        padding: 0 12px;
+    }
+
+    /* history header buttons (Add Entry / Export) */
+    .cash-history-head-actions .cash-export-btn {
+        min-height: 46px;
+        justify-content: center;
+    }
+
+    /* small round / icon buttons: finger-sized */
+    .cash-modal-close,
+    .cash-icon-btn,
+    .cash-credit-icon-btn,
+    .cash-expense-remove {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+    }
+}
+
+/* very narrow phones: one button per row, main action on top */
+@media (max-width: 400px) {
+    .cash-modal-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cash-modal-actions .cash-save-btn {
+        order: -1;
+    }
+}
+
+/* the +/- piece buttons stay compact so the denomination rows fit */
+@media (max-width: 520px) {
+    .cash-pcs-btn {
+        width: 34px;
+        height: 34px;
+    }
+}

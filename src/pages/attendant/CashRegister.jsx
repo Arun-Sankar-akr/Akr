@@ -5125,20 +5125,20 @@ export default function CashRegister() {
                 </strong>
               </div>
 
-              <div className="sum">
-                <span>Total amount of the day</span>
-                <strong>
-                  {formatCurrency(
-                    dayTotals.net
-                  )}
-                </strong>
-              </div>
-
               <div className="minus">
                 <span>Expenses</span>
                 <strong>
                   −{formatCurrency(
                     dayTotals.expenses
+                  )}
+                </strong>
+              </div>
+
+              <div className="sum">
+                <span>Total amount of the day</span>
+                <strong>
+                  {formatCurrency(
+                    dayTotals.net
                   )}
                 </strong>
               </div>
