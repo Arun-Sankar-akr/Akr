@@ -35,6 +35,7 @@ const admin = [
 const attendant = [
     ["Dashboard", "/attendant", LayoutDashboard],
     ["Cash Register", "/attendant/cash", Banknote],
+    ["Credit Manager", "/attendant/Credit", ReceiptText],
     ["New Transaction", "/attendant/new-transaction", ReceiptText],
     ["EB - Bill", "/attendant/eb", ArrowLeftRight],
     ["Money Transfer", "/attendant/money-transfer", ArrowLeftRight],

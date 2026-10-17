@@ -9,11 +9,10 @@
      04 Hero                   13 Session detail modal
      05 Stat cards             14 Entry modal
      06 Panels                 15 Export modal
-     07 Day total              16 Credit modal
-     08 Expense / credit rows  17 Bottom navigation
+     07 Day total              16 (reserved)
+     08 Expense rows           17 Bottom navigation
      09 Buttons                18 Responsive
    ========================================================= */
-
 
 /* ---------------------------------------------------------
    01  TOKENS & PAGE
@@ -184,7 +183,6 @@
     --cr-nav-ring: #0b0c0e;
 }
 
-
 .cash-register-page,
 .cash-register-page *,
 .cash-register-page *::before,
@@ -292,8 +290,6 @@ body:has(.cash-modal-overlay) {
 .cash-history-card {
     animation: cash-rise .5s cubic-bezier(.2, .7, .2, 1) both;
 }
-
-
 
 /* placeholders / date inputs follow the theme */
 .cash-register-page input::placeholder { color: var(--cr-text-3); }
@@ -412,7 +408,6 @@ body:has(.cash-modal-overlay) {
     flex-shrink: 0;
 }
 
-
 /* ---------------------------------------------------------
    03  STATES  (error / loading / empty)
    --------------------------------------------------------- */
@@ -475,7 +470,6 @@ body:has(.cash-modal-overlay) {
     color: var(--cr-ink);
     font-size: 16px;
 }
-
 
 /* ---------------------------------------------------------
    04  HERO  (current register)
@@ -838,9 +832,8 @@ body:has(.cash-modal-overlay) {
     font-weight: 600;
 }
 
-
 /* ---------------------------------------------------------
-   06  PANELS  (digital money / expenses / credit)
+   06  PANELS  (digital money / expenses)
    --------------------------------------------------------- */
 
 .cash-money-section {
@@ -916,7 +909,6 @@ body:has(.cash-modal-overlay) {
 
 .cash-panel-total.red   { color: var(--cr-red);   background: var(--cr-red-soft); }
 .cash-panel-total.green { color: var(--cr-green); background: var(--cr-green-soft); }
-
 
 /* ---------------------------------------------------------
    07  DAY TOTAL
@@ -1002,27 +994,6 @@ body:has(.cash-modal-overlay) {
 
 .cash-day-total-lines .minus strong { color: #fda4af; }
 
-.cash-day-total-lines .cash-credit-split {
-    grid-column: 1 / -1;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    background: none;
-}
-
-.cash-credit-split > div {
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    border-radius: var(--cr-r-md);
-    background: rgba(255, 255, 255, .08);
-}
-
-.cash-credit-split .paid strong { color: #6ee7b7; }
-.cash-credit-split .due strong  { color: #fcd34d; }
-
-
 /* ---------------------------------------------------------
    08  EXPENSE / CREDIT FORMS & ROWS
    --------------------------------------------------------- */
@@ -1032,10 +1003,6 @@ body:has(.cash-modal-overlay) {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto;
     gap: 10px;
-}
-
-.cash-credit-form {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 .cash-expense-reason,
@@ -1177,28 +1144,13 @@ body:has(.cash-modal-overlay) {
     font-weight: 500;
 }
 
-.cash-credit-detail {
-    margin-top: 2px;
-    color: var(--cr-text-2) !important;
-    font-weight: 600 !important;
-}
-
-.cash-expense-amount,
-.cash-credit-amount {
+.cash-expense-amount {
     flex-shrink: 0;
     font-size: 14px;
     font-weight: 800;
 }
 
 .cash-expense-amount { color: var(--cr-red); }
-.cash-credit-amount  { color: var(--cr-orange); }
-.cash-credit-item.settled .cash-credit-amount { color: var(--cr-green); }
-.cash-credit-item.settled { opacity: .75; }
-
-.cash-credit-chevron {
-    flex-shrink: 0;
-    color: var(--cr-text-3);
-}
 
 .cash-expense-remove {
     width: 32px;
@@ -1217,7 +1169,6 @@ body:has(.cash-modal-overlay) {
     color: #fff;
     background: var(--cr-red);
 }
-
 
 /* ---------------------------------------------------------
    09  BUTTONS
@@ -1281,8 +1232,7 @@ body:has(.cash-modal-overlay) {
 
 .cash-cancel-btn:disabled { opacity: .55; }
 
-.cash-icon-btn,
-.cash-credit-icon-btn {
+.cash-icon-btn {
     width: 34px;
     height: 34px;
     flex-shrink: 0;
@@ -1295,66 +1245,21 @@ body:has(.cash-modal-overlay) {
     transition: color .2s, background .2s, border-color .2s;
 }
 
-.cash-icon-btn:hover:not(:disabled),
-.cash-credit-icon-btn:hover:not(:disabled) {
+.cash-icon-btn:hover:not(:disabled) {
     color: var(--cr-primary);
     border-color: var(--cr-primary-line);
     background: var(--cr-primary-soft);
 }
 
-.cash-icon-btn.danger,
-.cash-credit-icon-btn.danger { color: var(--cr-red); }
+.cash-icon-btn.danger { color: var(--cr-red); }
 
-.cash-icon-btn.danger:hover:not(:disabled),
-.cash-credit-icon-btn.danger:hover:not(:disabled) {
+.cash-icon-btn.danger:hover:not(:disabled) {
     color: #fff;
     border-color: var(--cr-red);
     background: var(--cr-red);
 }
 
-.cash-credit-icon-btn.ok { color: var(--cr-green); }
-
-.cash-credit-icon-btn.ok:hover:not(:disabled) {
-    color: #fff;
-    border-color: var(--cr-green);
-    background: var(--cr-green);
-}
-
-.cash-icon-btn:disabled,
-.cash-credit-icon-btn:disabled { opacity: .5; }
-
-.cash-credit-action-btn {
-    height: 38px;
-    padding: 0 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    color: var(--cr-text);
-    font-size: 12.5px;
-    font-weight: 700;
-    border: 1.5px solid var(--cr-line);
-    border-radius: 12px;
-    background: var(--cr-surface);
-    transition: color .2s, background .2s, border-color .2s;
-}
-
-.cash-credit-action-btn:hover:not(:disabled) {
-    color: var(--cr-primary);
-    border-color: var(--cr-primary-line);
-    background: var(--cr-primary-soft);
-}
-
-.cash-credit-action-btn.danger { color: var(--cr-red); }
-
-.cash-credit-action-btn.danger:hover:not(:disabled) {
-    color: #fff;
-    border-color: var(--cr-red);
-    background: var(--cr-red);
-}
-
-.cash-credit-action-btn:disabled { opacity: .5; }
-
+.cash-icon-btn:disabled { opacity: .5; }
 
 /* ---------------------------------------------------------
    10  HISTORY CARD & TABLES
@@ -1515,14 +1420,11 @@ body:has(.cash-modal-overlay) {
 
 .cash-row-clickable:hover { background: var(--cr-surface-hover); }
 
-.cash-actions-th,
-.cash-credit-actions-th { text-align: right !important; }
+.cash-actions-th { text-align: right !important; }
 
-.cash-actions-td,
-.cash-credit-actions-cell { text-align: right; }
+.cash-actions-td { text-align: right; }
 
-.cash-row-actions,
-.cash-credit-row-tools {
+.cash-row-actions {
     display: inline-flex;
     gap: 6px;
 }
@@ -1561,19 +1463,6 @@ body:has(.cash-modal-overlay) {
 .cash-difference.positive { color: var(--cr-green); background: var(--cr-green-soft); }
 .cash-difference.negative { color: var(--cr-red);   background: var(--cr-red-soft); }
 
-/* credit history: colour runs red -> green as the loan is repaid */
-.cash-credit-row td:first-child {
-    box-shadow: inset 4px 0 0 hsl(var(--credit-hue, 0) 72% 48%);
-}
-
-.cash-credit-row .cash-credit-paid-cell strong { color: var(--cr-green); }
-
-.cash-credit-row .cash-credit-due-cell strong {
-    color: hsl(var(--credit-hue, 0) 70% 40%);
-}
-
-.cash-credit-row.settled { opacity: .72; }
-
 
 /* ---------------------------------------------------------
    11  MODALS (shared)
@@ -1593,8 +1482,6 @@ body:has(.cash-modal-overlay) {
     backdrop-filter: blur(8px);
     animation: cash-fade .2s ease both;
 }
-
-.cash-credit-overlay { z-index: 1100; }
 
 @keyframes cash-fade {
     from { opacity: 0; }
@@ -1632,7 +1519,6 @@ body:has(.cash-modal-overlay) {
 .cash-history-detail-modal { width: min(1080px, 100%); }
 
 .cash-export-modal { width: min(520px, 100%); }
-.cash-credit-modal { width: min(540px, 100%); }
 
 .cash-modal-head {
     position: sticky;
@@ -1859,7 +1745,6 @@ body:has(.cash-modal-overlay) {
     border-top: 1px solid var(--cr-line);
 }
 
-
 /* ---------------------------------------------------------
    12  CASH + DIGITAL EDITORS
    --------------------------------------------------------- */
@@ -2055,7 +1940,6 @@ body:has(.cash-modal-overlay) {
     background: transparent;
 }
 
-
 /* ---------------------------------------------------------
    13  SESSION DETAIL MODAL
    --------------------------------------------------------- */
@@ -2242,7 +2126,6 @@ body:has(.cash-modal-overlay) {
 
 .cash-history-expense-body { min-width: 0; }
 
-
 /* ---------------------------------------------------------
    14  ENTRY MODAL (add / edit session)
    --------------------------------------------------------- */
@@ -2265,32 +2148,6 @@ body:has(.cash-modal-overlay) {
     padding: 0 14px;
     border-radius: var(--cr-r-sm);
 }
-
-.cash-entry-credit {
-    margin-bottom: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.cash-entry-credit-head,
-.cash-entry-credit-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) 34px;
-    align-items: center;
-    gap: 10px;
-}
-
-.cash-entry-credit-head span {
-    color: var(--cr-text-3);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .8px;
-    text-transform: uppercase;
-}
-
-.cash-entry-credit-add { align-self: flex-start; }
-
 
 /* ---------------------------------------------------------
    15  EXPORT MODAL
@@ -2344,166 +2201,6 @@ body:has(.cash-modal-overlay) {
     font-size: 12.5px;
     text-align: center;
 }
-
-
-/* ---------------------------------------------------------
-   16  CREDIT MODAL
-   --------------------------------------------------------- */
-
-.cash-credit-summary {
-    margin-bottom: 12px;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.cash-credit-summary > div {
-    min-width: 0;
-    padding: 12px 14px;
-    border: 1px solid var(--cr-line);
-    border-radius: var(--cr-r-md);
-    background: var(--cr-surface-2);
-}
-
-.cash-credit-summary span {
-    display: block;
-    color: var(--cr-text-2);
-    font-size: 11.5px;
-    font-weight: 600;
-}
-
-.cash-credit-summary strong {
-    display: block;
-    margin-top: 2px;
-    color: var(--cr-ink);
-    font-size: 15px;
-    font-weight: 800;
-    overflow-wrap: anywhere;
-}
-
-.cash-credit-summary .paid strong { color: var(--cr-green); }
-.cash-credit-summary .due strong  { color: var(--cr-orange); }
-.cash-credit-summary.settled .due strong { color: var(--cr-green); }
-
-.cash-credit-progress {
-    height: 8px;
-    margin-bottom: 16px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--cr-line);
-}
-
-.cash-credit-progress i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #f59e0b, var(--cr-green));
-    transition: width .5s cubic-bezier(.2, .8, .2, 1);
-}
-
-.cash-credit-actions {
-    margin-bottom: 14px;
-    display: flex;
-    gap: 8px;
-}
-
-.cash-credit-update {
-    margin-bottom: 16px;
-    padding: 14px;
-    border: 1px solid var(--cr-line);
-    border-radius: var(--cr-r-md);
-    background: var(--cr-surface-2);
-}
-
-.cash-credit-update .cash-section-label {
-    display: block;
-    margin-bottom: 10px;
-}
-
-.cash-credit-update-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-}
-
-.cash-credit-edit-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.cash-credit-edit-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.cash-credit-settled {
-    margin-bottom: 16px;
-    padding: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--cr-green);
-    font-weight: 700;
-    border-radius: var(--cr-r-md);
-    background: var(--cr-green-soft);
-}
-
-.cash-credit-history {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.cash-credit-history .cash-section-label { margin-bottom: 4px; }
-
-.cash-credit-history-row {
-    padding: 11px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border: 1px solid var(--cr-line);
-    border-radius: 14px;
-    background: var(--cr-surface-2);
-}
-
-.cash-credit-history-row strong {
-    display: block;
-    color: var(--cr-ink);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.cash-credit-history-row span {
-    display: block;
-    color: var(--cr-text-3);
-    font-size: 11.5px;
-}
-
-.cash-credit-history-row > b { color: var(--cr-green); }
-
-.cash-credit-history-row.start { background: var(--cr-orange-soft); }
-.cash-credit-history-row.start > b { color: var(--cr-orange); }
-
-.cash-credit-pay-tools {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.cash-credit-pay-tools > b {
-    margin-right: 4px;
-    color: var(--cr-green);
-    font-weight: 800;
-}
-
-.cash-credit-pay-tools .cash-expense-money {
-    width: 118px;
-    height: 36px;
-}
-
 
 /* ---------------------------------------------------------
    17  BOTTOM NAVIGATION  (airy floating dock)
@@ -2696,23 +2393,16 @@ body:has(.cash-modal-overlay) {
 }
 
 @media (max-width: 720px) {
-    .cash-expense-form,
-    .cash-credit-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cash-expense-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     .cash-expense-form .cash-expense-reason { grid-column: 1 / -1; }
     .cash-expense-form .cash-expense-add     { grid-column: 1 / -1; }
 
-    .cash-entry-credit-head { display: none; }
+    
 
-    .cash-entry-credit-row {
-        padding: 12px;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 34px;
-        border: 1px solid var(--cr-line);
-        border-radius: var(--cr-r-md);
-        background: var(--cr-surface-2);
-    }
+    
 
-    .cash-entry-credit-row > :first-child { grid-column: 1 / -1; }
+    
 
     .cash-day-total-lines { grid-template-columns: minmax(0, 1fr); }
 }
@@ -2725,10 +2415,9 @@ body:has(.cash-modal-overlay) {
     }
 
     .cash-modal,
-    .cash-history-detail-modal,
-    .cash-modal.wide,
-    .cash-export-modal,
-    .cash-credit-modal {
+.cash-history-detail-modal,
+.cash-modal.wide,
+.cash-export-modal {
         width: 100%;
         max-height: 94vh;
         max-height: 94dvh;
@@ -2766,9 +2455,9 @@ body:has(.cash-modal-overlay) {
 
     .cash-history-head { align-items: flex-start; }
 
-    .cash-credit-summary { grid-template-columns: minmax(0, 1fr); }
+    
 
-    .cash-day-total-lines .cash-credit-split { grid-template-columns: minmax(0, 1fr); }
+    
 }
 
 @media (max-width: 520px) {
@@ -2803,8 +2492,8 @@ body:has(.cash-modal-overlay) {
     .cash-denomination-total { min-width: 62px; font-size: 12px; }
     .cash-digital-input { width: 118px; }
 
-    .cash-credit-pay-tools .cash-expense-money { width: 96px; }
-    .cash-credit-history-row { flex-wrap: wrap; }
+    
+    
 }
 
 @media (max-width: 380px) {
@@ -2878,9 +2567,8 @@ body:has(.cash-modal-overlay) {
 
     /* small round / icon buttons: finger-sized */
     .cash-modal-close,
-    .cash-icon-btn,
-    .cash-credit-icon-btn,
-    .cash-expense-remove {
+.cash-icon-btn,
+.cash-expense-remove {
         width: 40px;
         height: 40px;
         min-width: 40px;

@@ -1,0 +1,458 @@
+/* =========================================================
+   FLOATING CALCULATOR
+   Light = indigo / white   |   Dark = black & gold
+   ========================================================= */
+
+.fcalc {
+    --fc-accent: #4f55e8;
+    --fc-accent-2: #6a6ef0;
+    --fc-accent-soft: #e6e8ff;
+    --fc-on-accent: #ffffff;
+    --fc-card: #ffffff;
+    --fc-card-2: #f6f7fd;
+    --fc-line: #eceefa;
+    --fc-ink: #14172f;
+    --fc-ink-2: #5b6080;
+    --fc-key: #f1f2fb;
+    --fc-key-hover: #e6e8f8;
+    --fc-danger: #dc2626;
+    --fc-danger-soft: #fee2e2;
+    --fc-shadow: 0 18px 40px rgba(40, 44, 120, .24);
+    --fc-fab-shadow: 0 10px 24px rgba(67, 56, 202, .38);
+
+    font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.fcalc[data-theme="dark"] {
+    --fc-accent: #d4af37;
+    --fc-accent-2: #f0cf65;
+    --fc-accent-soft: rgba(212, 175, 55, .16);
+    --fc-on-accent: #1a1405;
+    --fc-card: #141414;
+    --fc-card-2: #1b1b1b;
+    --fc-line: rgba(212, 175, 55, .20);
+    --fc-ink: #f5efdc;
+    --fc-ink-2: #c9bf9f;
+    --fc-key: #202020;
+    --fc-key-hover: #2b2a25;
+    --fc-danger: #f87171;
+    --fc-danger-soft: rgba(248, 113, 113, .14);
+    --fc-shadow: 0 18px 40px rgba(0, 0, 0, .6);
+    --fc-fab-shadow: 0 10px 24px rgba(0, 0, 0, .55);
+}
+
+.fcalc *,
+.fcalc *::before,
+.fcalc *::after {
+    box-sizing: border-box;
+}
+
+/* ---------- floating button ---------- */
+.fcalc-fab {
+    position: fixed;
+    z-index: 1100;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: var(--fc-on-accent);
+    background: linear-gradient(145deg, var(--fc-accent-2), var(--fc-accent));
+    box-shadow: var(--fc-fab-shadow);
+    opacity: var(--fc-opacity, 1);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .15s ease;
+}
+
+.fcalc-fab:hover {
+    transform: scale(1.06);
+}
+
+.fcalc-fab:active {
+    cursor: grabbing;
+}
+
+.fcalc-fab:focus-visible,
+.fcalc-key:focus-visible,
+.fcalc-icon-btn:focus-visible {
+    outline: 2px solid var(--fc-accent);
+    outline-offset: 2px;
+}
+
+.fcalc.is-moving .fcalc-fab,
+.fcalc.is-moving .fcalc-panel {
+    transition: none;
+    cursor: grabbing;
+}
+
+/* ---------- panel ---------- */
+.fcalc-panel {
+    position: fixed;
+    z-index: 1100;
+    --s: 1;
+    padding: calc(8px * var(--s)) calc(8px * var(--s)) calc(10px * var(--s));
+    border: 1px solid var(--fc-line);
+    border-radius: 18px;
+    background: var(--fc-card);
+    color: var(--fc-ink);
+    box-shadow: var(--fc-shadow);
+    opacity: var(--fc-opacity, 1);
+    animation: fcalc-pop .16s ease-out;
+}
+
+@keyframes fcalc-pop {
+    from {
+        opacity: 0;
+        transform: scale(.94);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.fcalc-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 2px 6px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.fcalc-grip {
+    color: var(--fc-ink-2);
+    opacity: .7;
+}
+
+.fcalc-title {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--fc-ink-2);
+}
+
+.fcalc-icon-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: var(--fc-ink-2);
+    background: transparent;
+    cursor: pointer;
+}
+
+.fcalc-icon-btn:hover {
+    background: var(--fc-key);
+    color: var(--fc-ink);
+}
+
+/* ---------- display ---------- */
+.fcalc-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 2px;
+    min-height: calc(66px * var(--s));
+    margin-bottom: calc(8px * var(--s));
+    padding: 8px 12px;
+    border-radius: 13px;
+    background: var(--fc-card-2);
+    overflow: hidden;
+}
+
+.fcalc-expr {
+    max-width: 100%;
+    font-size: 12px;
+    color: var(--fc-ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;
+}
+
+.fcalc-result {
+    max-width: 100%;
+    font-size: calc(28px * var(--s));
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--fc-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+
+.fcalc-result.small {
+    font-size: calc(20px * var(--s));
+}
+
+.fcalc-result.error {
+    color: var(--fc-danger);
+}
+
+/* ---------- keypad ---------- */
+.fcalc-keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: calc(6px * var(--s));
+}
+
+.fcalc-key {
+    height: calc(40px * var(--s));
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font: inherit;
+    font-size: calc(16px * var(--s));
+    font-weight: 700;
+    color: var(--fc-ink);
+    background: var(--fc-key);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .12s ease, transform .08s ease;
+}
+
+.fcalc-key:hover {
+    background: var(--fc-key-hover);
+}
+
+.fcalc-key:active {
+    transform: scale(.94);
+}
+
+.fcalc-key.fn {
+    color: var(--fc-ink-2);
+}
+
+.fcalc-key.op {
+    color: var(--fc-accent);
+    background: var(--fc-accent-soft);
+    font-size: calc(19px * var(--s));
+}
+
+.fcalc-key.clear {
+    color: var(--fc-danger);
+    background: var(--fc-danger-soft);
+}
+
+.fcalc-key.equals {
+    color: var(--fc-on-accent);
+    background: linear-gradient(145deg, var(--fc-accent-2), var(--fc-accent));
+}
+
+.fcalc-key.equals:hover {
+    filter: brightness(1.06);
+}
+
+/* ---------- resize handle (bottom-right corner) ---------- */
+.fcalc-resize {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 18px;
+    height: 18px;
+    cursor: nwse-resize;
+    touch-action: none;
+    border-radius: 0 0 16px 0;
+    background:
+        linear-gradient(135deg, transparent 0 52%, var(--fc-ink-2) 52% 58%, transparent 58% 70%, var(--fc-ink-2) 70% 76%, transparent 76%);
+    opacity: .55;
+}
+
+.fcalc-resize:hover {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fcalc-fab,
+    .fcalc-panel {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* ---------- history ---------- */
+.fcalc-icon-btn.active {
+    color: var(--fc-accent);
+    background: var(--fc-accent-soft);
+}
+
+.fcalc-keys[hidden] {
+    display: none;
+}
+
+.fcalc-log {
+    height: calc(224px * var(--s));
+    display: flex;
+    flex-direction: column;
+    border-radius: 13px;
+    background: var(--fc-card-2);
+    overflow: hidden;
+}
+
+.fcalc-log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--fc-ink-2);
+}
+
+.fcalc-log-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--fc-danger);
+    background: var(--fc-danger-soft);
+    cursor: pointer;
+}
+
+.fcalc-log-empty {
+    margin: 0;
+    padding: 18px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--fc-ink-2);
+}
+
+.fcalc-log-list {
+    flex: 1;
+    margin: 0;
+    padding: 0 6px 6px;
+    list-style: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.fcalc-log-item {
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--fc-line);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    font: inherit;
+    color: var(--fc-ink);
+    background: transparent;
+    cursor: pointer;
+}
+
+.fcalc-log-item:hover {
+    background: var(--fc-key);
+}
+
+.fcalc-log-expr {
+    max-width: 100%;
+    font-size: 11px;
+    color: var(--fc-ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fcalc-log-result {
+    font-size: calc(16px * var(--s));
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- opacity control ---------- */
+.fcalc-opacity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: calc(8px * var(--s));
+    padding: 6px 10px;
+    border-radius: 11px;
+    background: var(--fc-card-2);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--fc-ink-2);
+}
+
+.fcalc-opacity-label {
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.fcalc-opacity input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--fc-accent);
+    cursor: pointer;
+}
+
+.fcalc-opacity-value {
+    min-width: 34px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--fc-ink);
+}
+
+/* ---------- teal palette (used with palette="teal") ---------- */
+.fcalc[data-palette="teal"] {
+    --fc-accent: #0d9488;
+    --fc-accent-2: #14b8a6;
+    --fc-accent-soft: #e0f6f2;
+    --fc-line: #dcebe8;
+    --fc-ink: #0b1f1d;
+    --fc-ink-2: #567470;
+    --fc-card-2: #f3faf8;
+    --fc-key: #eaf5f3;
+    --fc-key-hover: #dcefeb;
+    --fc-shadow: 0 18px 40px rgba(6, 70, 62, .24);
+    --fc-fab-shadow: 0 10px 24px rgba(13, 148, 136, .38);
+}
+
+.fcalc[data-palette="teal"][data-theme="dark"] {
+    --fc-accent: #2dd4bf;
+    --fc-accent-2: #5eead4;
+    --fc-accent-soft: rgba(45, 212, 191, .16);
+    --fc-on-accent: #04201d;
+    --fc-card: #0f1a24;
+    --fc-card-2: #14222e;
+    --fc-line: #1f3240;
+    --fc-ink: #eaf6f4;
+    --fc-ink-2: #96b0ac;
+    --fc-key: #182a37;
+    --fc-key-hover: #213645;
+    --fc-shadow: 0 18px 40px rgba(0, 0, 0, .6);
+    --fc-fab-shadow: 0 10px 24px rgba(0, 0, 0, .55);
+}

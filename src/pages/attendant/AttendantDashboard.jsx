@@ -20,6 +20,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTransactions } from "../../hooks/useTransactions";
 import { formatCurrency } from "../../utils/currency";
+import FloatingCalculator from "./FloatingCalculator";
 import "./AttendantDashboard.css";
 
 function getDateKey(date = new Date()) {
@@ -796,6 +797,9 @@ export default function AttendantDashboard() {
           </div>
         </div>
       </section>
+
+      {/* FLOATING CALCULATOR */}
+      <FloatingCalculator />
     </div>
   );
 }

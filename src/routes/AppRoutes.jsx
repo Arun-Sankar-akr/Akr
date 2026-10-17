@@ -82,7 +82,7 @@ import AttMoney from "../pages/attendant/MoneyTransfer";
 import AttWithdrawal from "../pages/attendant/Withdrawal";
 import AttCustomers from "../pages/attendant/Customers";
 import EBBillPayments from "../pages/attendant/Ebbillpayments";
-
+import CreditManager from "../pages/attendant/CreditManager"
 
 export default function AppRoutes() {
     return (
@@ -363,6 +363,9 @@ export default function AppRoutes() {
                             path="/attendant/transactions"
                             element={<MyTransactions />}
                         />
+
+                        <Route path="/attendant/credit" element={<CreditManager />} />
+
 
                         <Route
                             path="/attendant/eb"
