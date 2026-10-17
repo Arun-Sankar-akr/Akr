@@ -11,7 +11,10 @@ import {
   Smartphone,
   WalletCards,
   CreditCard,
-  ChevronRight,
+  Eye,
+  EyeOff,
+  Zap,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -149,6 +152,13 @@ const PAYMENT_ROWS = [
   { key: "card", label: "Card", Icon: CreditCard },
 ];
 
+const QUICK_ACTIONS = [
+  ["New bill", "/attendant/new-transaction", Plus],
+  ["EB bill", "/attendant/eb", Zap],
+  ["Transfer", "/attendant/money-transfer", ArrowLeftRight],
+  ["Cash", "/attendant/cash", Banknote],
+];
+
 export default function AttendantDashboard() {
   const { user, profile } = useAuth();
 
@@ -160,6 +170,10 @@ export default function AttendantDashboard() {
 
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [hideAmounts, setHideAmounts] = useState(false);
+
+  const money = (value) =>
+    hideAmounts ? "₹ ••••" : formatCurrency(value);
 
   const transactions = Array.isArray(rawTransactions)
     ? rawTransactions
@@ -322,81 +336,75 @@ export default function AttendantDashboard() {
 
   return (
     <div className="attendant-dashboard">
-      {/* HEADER */}
-      <header className="att-dashboard-header">
-        <div className="att-header-copy">
-          <div className="att-eyebrow">
-            <span className="att-live-dot" />
-            COUNTER WORKSPACE
+      {/* HERO */}
+      <section className="att-hero">
+        <div className="att-hero-top">
+          <div className="att-hero-avatar">{initials || "A"}</div>
+
+          <div className="att-hero-hello">
+            <span>{getGreeting()}!</span>
+            <strong>{attendantName}</strong>
           </div>
 
-          <h1>
-            {getGreeting()},{" "}
-            <span>{attendantName}</span>
-          </h1>
-
-          <p>
-            Keep track of today's sales, collections and counter activity.
-          </p>
+          <span className="att-live-status">
+            <span className="att-live-pulse" />
+            Live
+          </span>
         </div>
 
-        <div className="att-header-actions">
-          <div className="att-live-status">
-            <span className="att-live-pulse" />
-            Live data
-          </div>
-
-          <Link
-            to="/attendant/new-transaction"
-            className="att-primary-btn"
+        <div className="att-hero-label">
+          Today's sales
+          <button
+            type="button"
+            className="att-eye"
+            onClick={() => setHideAmounts((value) => !value)}
+            aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
           >
+            {hideAmounts ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </div>
+
+        <strong className="att-hero-value">{money(totals.sales)}</strong>
+
+        <div className="att-hero-sub">
+          <span>
+            <ReceiptText size={13} />
+            {totals.transactions} transaction
+            {totals.transactions === 1 ? "" : "s"}
+          </span>
+          <span>
+            <Clock3 size={13} />
+            {new Date().toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+        </div>
+
+        <div className="att-hero-actions">
+          <Link to="/attendant/new-transaction" className="att-hero-btn">
             <Plus size={17} />
             New transaction
           </Link>
+
+          <Link to="/attendant/transactions" className="att-hero-btn">
+            <ReceiptText size={17} />
+            My transactions
+          </Link>
         </div>
-      </header>
+      </section>
 
-      {/* HERO */}
-      <section className="att-hero">
-        <div className="att-hero-main">
-          <span className="att-hero-label">Today's sales</span>
+      {/* QUICK ACTIONS */}
+      <section className="att-quick-wrap">
+        <h3 className="att-section-title">Quick Actions</h3>
 
-          <strong className="att-hero-value">
-            {formatCurrency(totals.sales)}
-          </strong>
-
-          <div className="att-hero-chips">
-            <span className="att-chip">
-              <ReceiptText size={13} />
-              {totals.transactions} transaction
-              {totals.transactions === 1 ? "" : "s"}
-            </span>
-
-            <span className="att-chip">
-              <Clock3 size={13} />
-              {new Date().toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-        </div>
-
-        <div className="att-hero-tiles">
-          <div className="att-hero-tile">
-            <span>Transactions</span>
-            <strong>{totals.transactions}</strong>
-          </div>
-
-          {PAYMENT_ROWS.map(({ key, label, Icon }) => (
-            <div className="att-hero-tile" key={key}>
-              <span>
-                <Icon size={13} />
-                {label}
-              </span>
-              <strong>{formatCurrency(totals[key])}</strong>
-            </div>
+        <div className="att-quick">
+          {QUICK_ACTIONS.map(([label, to, Icon]) => (
+            <Link to={to} className="att-quick-tile" key={to}>
+              <Icon size={22} />
+              <span>{label}</span>
+            </Link>
           ))}
         </div>
       </section>
@@ -663,26 +671,16 @@ export default function AttendantDashboard() {
                             </span>
                           </div>
 
-                          <div className="att-tx-payment">
-                            <PaymentIcon
-                              size={
-                                14
-                              }
-                            />
+                          <div className="att-tx-meta">
+                            <span className="att-tx-payment">
+                              <PaymentIcon size={13} />
+                              {payment}
+                            </span>
 
-                            {payment}
-                          </div>
-
-                          <div className="att-tx-time">
-                            <Clock3
-                              size={
-                                13
-                              }
-                            />
-
-                            {formatTime(
-                              transaction.createdAt
-                            )}
+                            <span className="att-tx-time">
+                              <Clock3 size={12} />
+                              {formatTime(transaction.createdAt)}
+                            </span>
                           </div>
 
                           <strong className="att-tx-amount">
@@ -691,12 +689,6 @@ export default function AttendantDashboard() {
                             )}
                           </strong>
 
-                          <ChevronRight
-                            size={
-                              16
-                            }
-                            className="att-tx-chevron"
-                          />
                         </div>
                       );
                     }
@@ -741,9 +733,7 @@ export default function AttendantDashboard() {
               </span>
 
               <strong>
-                {formatCurrency(
-                  totals.sales
-                )}
+                {money(totals.sales)}
               </strong>
             </div>
 
@@ -763,7 +753,7 @@ export default function AttendantDashboard() {
                         <em>{percent}%</em>
                       </div>
 
-                      <strong>{formatCurrency(totals[key])}</strong>
+                      <strong>{money(totals[key])}</strong>
                     </div>
 
                     <div className="att-bar">
@@ -775,96 +765,6 @@ export default function AttendantDashboard() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* QUICK ACTIONS */}
-          <div className="att-panel att-actions-panel">
-            <div className="att-panel-head compact">
-              <div>
-                <span className="att-panel-kicker">
-                  SHORTCUTS
-                </span>
-
-                <h2>
-                  Quick actions
-                </h2>
-              </div>
-            </div>
-
-            <div className="att-action-list">
-              <Link
-                to="/attendant/new-transaction"
-                className="att-action-card primary"
-              >
-                <div className="att-action-icon">
-                  <Plus size={19} />
-                </div>
-
-                <div>
-                  <strong>
-                    New transaction
-                  </strong>
-
-                  <span>
-                    Create a new customer
-                    bill
-                  </span>
-                </div>
-
-                <ArrowUpRight
-                  size={16}
-                />
-              </Link>
-
-              <Link
-                to="/attendant/transactions"
-                className="att-action-card"
-              >
-                <div className="att-action-icon">
-                  <ReceiptText
-                    size={18}
-                  />
-                </div>
-
-                <div>
-                  <strong>
-                    My transactions
-                  </strong>
-
-                  <span>
-                    Review your sales
-                    history
-                  </span>
-                </div>
-
-                <ArrowUpRight
-                  size={16}
-                />
-              </Link>
-
-              <Link
-                to="/attendant/cash"
-                className="att-action-card"
-              >
-                <div className="att-action-icon">
-                  <Banknote size={18} />
-                </div>
-
-                <div>
-                  <strong>
-                    Cash register
-                  </strong>
-
-                  <span>
-                    Manage counter cash
-                  </span>
-                </div>
-
-                <ArrowUpRight
-                  size={16}
-                />
-              </Link>
             </div>
           </div>
 

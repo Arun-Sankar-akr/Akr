@@ -13,7 +13,6 @@ import {
   Plus,
   ReceiptText,
   Search,
-  Sparkles,
   TrendingUp,
   UserRound,
   Users,
@@ -24,6 +23,8 @@ import {
   Trash2,
   Tags,
   ChevronRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -108,52 +109,52 @@ function formatTime(date) {
   }).format(date);
 }
 
-function MiniLineChart({ points }) {
-  const width = 720;
-  const height = 250;
-  const padX = 18;
-  const padY = 22;
-  const max = Math.max(...points.map((point) => point.value), 1);
-  const min = Math.min(...points.map((point) => point.value), 0);
-  const range = Math.max(max - min, 1);
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
-  const coordinates = points.map((point, index) => {
-    const x =
-      points.length === 1
-        ? width / 2
-        : padX + (index / (points.length - 1)) * (width - padX * 2);
-    const y = height - padY - ((point.value - min) / range) * (height - padY * 2);
-    return { ...point, x, y };
-  });
+const QUICK_ACTIONS = [
+  ["Sales", "/admin/transactions", ReceiptText],
+  ["Expenses", "/admin/expenses", WalletCards],
+  ["Stock", "/admin/inventory", Boxes],
+  ["Cash", "/admin/cash", Banknote],
+];
 
-  const line = coordinates.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ");
-  const area = `${line} L ${coordinates.at(-1).x} ${height - padY} L ${coordinates[0].x} ${height - padY} Z`;
+function FinanceBars({ points }) {
+  const max = Math.max(...points.flatMap((point) => [point.sales, point.profit]), 1);
+  const barHeight = (value) => (value > 0 ? Math.max(7, (value / max) * 100) : 3);
 
   return (
-    <div className="sales-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Sales trend">
-        <defs>
-          <linearGradient id="salesAreaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(124, 58, 237, .22)" />
-            <stop offset="100%" stopColor="rgba(124, 58, 237, 0)" />
-          </linearGradient>
-        </defs>
-
-        {[0, 1, 2, 3].map((row) => {
-          const y = padY + (row / 3) * (height - padY * 2);
-          return <line key={row} x1={padX} x2={width - padX} y1={y} y2={y} className="chart-grid-line" />;
-        })}
-
-        <path d={area} className="chart-area" />
-        <path d={line} className="chart-line" />
-
-        {coordinates.map((point) => (
-          <circle key={point.label} cx={point.x} cy={point.y} r="4" className="chart-dot" />
+    <div className="fd-bars" role="img" aria-label="Sales and profit for the last 7 days">
+      <div className="fd-bars-grid">
+        {points.map((point, index) => (
+          <div
+            className={`fd-bar-col${index === points.length - 1 ? " today" : ""}`}
+            key={point.label}
+          >
+            <div className="fd-bar-pair">
+              <span
+                className="fd-bar profit"
+                style={{ height: `${barHeight(point.profit)}%` }}
+                title={`Profit ${formatCurrency(point.profit)}`}
+              />
+              <span
+                className="fd-bar sales"
+                style={{ height: `${barHeight(point.sales)}%` }}
+                title={`Sales ${formatCurrency(point.sales)}`}
+              />
+            </div>
+            <em>{point.label}</em>
+          </div>
         ))}
-      </svg>
+      </div>
 
-      <div className="chart-labels">
-        {points.map((point) => <span key={point.label}>{point.label}</span>)}
+      <div className="fd-legend">
+        <span><i className="profit" /> Profit</span>
+        <span><i className="sales" /> Sales</span>
       </div>
     </div>
   );
@@ -201,6 +202,7 @@ export default function AdminDashboard() {
   const { transactions: rawTransactions, loading, error } = useTransactions(1000);
   const transactions = Array.isArray(rawTransactions) ? rawTransactions : [];
 
+  const [hideAmounts, setHideAmounts] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [serviceSaving, setServiceSaving] = useState(false);
   const [serviceMessage, setServiceMessage] = useState("");
@@ -419,24 +421,30 @@ export default function AdminDashboard() {
       date.setHours(0, 0, 0, 0);
       date.setDate(now.getDate() - i);
 
-      const value = transactions.reduce((sum, transaction) => {
-        const transactionDate = getTransactionDate(transaction);
-        if (!transactionDate) return sum;
+      const day = transactions.reduce(
+        (sum, transaction) => {
+          const transactionDate = getTransactionDate(transaction);
+          if (!transactionDate) return sum;
+          if (transactionDate.toDateString() !== date.toDateString()) return sum;
 
-        const sameDay = transactionDate.toDateString() === date.toDateString();
-        return sameDay
-          ? sum + (Number(transaction.total ?? transaction.amount ?? 0) || 0)
-          : sum;
-      }, 0);
+          sum.sales += Number(transaction.total ?? transaction.amount ?? 0) || 0;
+          sum.profit += Number(transaction.grossProfit ?? transaction.profit ?? 0) || 0;
+          return sum;
+        },
+        { sales: 0, profit: 0 }
+      );
 
       values.push({
         label: new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date),
-        value,
+        sales: day.sales,
+        profit: day.profit,
       });
     }
 
     return values;
   }, [transactions]);
+
+  const weekSales = weeklySales.reduce((sum, day) => sum + day.sales, 0);
 
   const payments = useMemo(() => {
     const colors = {
@@ -494,28 +502,49 @@ export default function AdminDashboard() {
   }).format(new Date());
 
   const userName = "Admin";
+  const money = (value) => (hideAmounts ? "₹ ••••" : formatCurrency(value));
 
   return (
     <div className="admin-dashboard">
-      <section className="dashboard-hero">
-        <div className="hero-copy">
-          <div className="hero-kicker"><Sparkles size={14} /> SHOP OVERVIEW</div>
-          <h1>Good morning, {userName}</h1>
-          <p>Everything important about today's Xerox shop activity, in one place.</p>
-          <div className="hero-meta">
-            <span><CalendarDays size={15} /> {dateText}</span>
-            <span className="live-pill"><i /> Live data</span>
+      <section className="fd-hero">
+        <div className="fd-hero-top">
+          <div className="fd-avatar">{userName.charAt(0)}</div>
+
+          <div className="fd-hello">
+            <span>{getGreeting()}!</span>
+            <strong>{userName}</strong>
           </div>
+
+          <span className="fd-live"><i /> Live</span>
         </div>
 
-        <Link to="/admin/new-transaction" className="hero-action">
-          <span><Plus size={19} /></span>
-          <div>
-            <strong>New transaction</strong>
-            <small>Create a customer bill</small>
-          </div>
-          <ArrowUpRight size={18} />
-        </Link>
+        <div className="fd-balance-label">
+          Today's sales
+          <button
+            type="button"
+            className="fd-eye"
+            onClick={() => setHideAmounts((value) => !value)}
+            aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
+          >
+            {hideAmounts ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </div>
+
+        <strong className="fd-balance">{money(totals.sales)}</strong>
+
+        <div className="fd-balance-sub">
+          <CalendarDays size={14} /> {dateText}
+        </div>
+
+        <div className="fd-hero-actions">
+          <Link to="/admin/new-transaction" className="fd-btn">
+            <Plus size={17} /> New transaction
+          </Link>
+
+          <button type="button" className="fd-btn" onClick={openAddService}>
+            <Tags size={17} /> Add service
+          </button>
+        </div>
       </section>
 
       {error && (
@@ -525,81 +554,81 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <section className="metric-grid">
-        <article className="metric-card metric-primary">
-          <div className="metric-icon"><IndianRupee size={19} /></div>
-          <div className="metric-content">
-            <span>Today's sales</span>
-            <strong>{formatCurrency(totals.sales)}</strong>
-            <small><TrendingUp size={13} /> From today's transactions</small>
-          </div>
-          <div className="metric-decoration" />
-        </article>
+      <section className="fd-quick-wrap">
+        <h3 className="fd-title">Quick Actions</h3>
 
-        <article className="metric-card">
-          <div className="metric-icon green"><TrendingUp size={19} /></div>
-          <div className="metric-content">
-            <span>Net profit</span>
-            <strong>{formatCurrency(totals.profit)}</strong>
-            <small>Based on stored transaction profit</small>
-          </div>
-        </article>
-
-        <article className="metric-card">
-          <div className="metric-icon blue"><ReceiptText size={19} /></div>
-          <div className="metric-content">
-            <span>Today's bills</span>
-            <strong>{todayTransactions.length}</strong>
-            <small>Completed transaction records</small>
-          </div>
-        </article>
-
-        <article className="metric-card">
-          <div className="metric-icon amber"><Banknote size={19} /></div>
-          <div className="metric-content">
-            <span>Cash sales</span>
-            <strong>{formatCurrency(totals.cashSales)}</strong>
-            <small>Cash payment transactions</small>
-          </div>
-        </article>
+        <div className="fd-quick">
+          {QUICK_ACTIONS.map(([label, to, Icon]) => (
+            <Link to={to} className="fd-quick-tile" key={to}>
+              <Icon size={22} />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </div>
       </section>
 
-      <section className="dashboard-main-grid">
-        <article className="dashboard-card sales-card">
-          <div className="card-heading">
+      <section className="fd-grid">
+        <article className="fd-stats">
+          <div className="fd-stats-head">
             <div>
-              <span className="section-label">REVENUE</span>
-              <h2>Sales performance</h2>
-              <p>Actual transaction totals from the last 7 days.</p>
+              <h2>Statistics</h2>
+              <p>{money(weekSales)} sales this week</p>
             </div>
-            <Link to="/admin/reports/sales" className="card-link">Full report <ArrowUpRight size={14} /></Link>
-          </div>
 
-          <div className="sales-summary">
-            <div>
-              <strong>{formatCurrency(totals.sales)}</strong>
-              <span>Today's collection</span>
-            </div>
-            <div className="summary-chip"><TrendingUp size={14} /> Live</div>
+            <span className="fd-pill">Last 7 days</span>
           </div>
 
           {loading ? (
             <div className="chart-loading">Loading sales activity…</div>
           ) : (
-            <MiniLineChart points={weeklySales} />
+            <FinanceBars points={weeklySales} />
           )}
         </article>
 
-        <article className="dashboard-card payment-card">
-          <div className="card-heading">
-            <div>
-              <span className="section-label">COLLECTION</span>
-              <h2>Payment methods</h2>
-              <p>Today's payment mix.</p>
-            </div>
+        <div className="fd-side">
+          <div className="fd-rows">
+            <Link to="/admin/reports/sales" className="fd-row">
+              <span className="fd-row-icon green"><TrendingUp size={20} /></span>
+              <div>
+                <strong>Net profit</strong>
+                <small>From stored transaction profit</small>
+              </div>
+              <b>{money(totals.profit)}</b>
+              <ChevronRight size={17} />
+            </Link>
+
+            <Link to="/admin/transactions" className="fd-row">
+              <span className="fd-row-icon violet"><ReceiptText size={20} /></span>
+              <div>
+                <strong>Today's bills</strong>
+                <small>Completed transaction records</small>
+              </div>
+              <b>{todayTransactions.length}</b>
+              <ChevronRight size={17} />
+            </Link>
+
+            <Link to="/admin/cash" className="fd-row">
+              <span className="fd-row-icon blue"><Banknote size={20} /></span>
+              <div>
+                <strong>Cash sales</strong>
+                <small>Cash payment transactions</small>
+              </div>
+              <b>{money(totals.cashSales)}</b>
+              <ChevronRight size={17} />
+            </Link>
           </div>
-          <PaymentRing payments={payments} total={totals.sales} />
-        </article>
+
+          <article className="dashboard-card payment-card">
+            <div className="card-heading">
+              <div>
+                <span className="section-label">COLLECTION</span>
+                <h2>Payment methods</h2>
+                <p>Today's payment mix.</p>
+              </div>
+            </div>
+            <PaymentRing payments={payments} total={totals.sales} />
+          </article>
+        </div>
       </section>
 
       <section className="add-service-section">
