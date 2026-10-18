@@ -931,10 +931,7 @@ const Home = () => {
                         <div className="section-container">
                             <div className="section-heading reveal-item">
                                 <div className="section-heading-left">
-                                    <span className="eyebrow">
-                                        <span className="eyebrow-icon"><Icon name="sparkle" size={14} /></span>
-                                        Print utilities
-                                    </span>
+                                   
                                     <h1>Print <span>Tools</span></h1>
                                     <p>Choose a tool to prepare your ID documents or passport photos for printing.</p>
                                 </div>
@@ -1096,12 +1093,7 @@ const Home = () => {
                     <div className="section-container">
                         <div className="tools-header reveal-item">
                             <div>
-                                <div className="eyebrow tools-eyebrow">
-                                    <span className="eyebrow-icon">
-                                        <Icon name="sparkle" size={14} />
-                                    </span>
-                                    Digital Tools
-                                </div>
+                                
 
                                 <h2>
                                     Prepare your files

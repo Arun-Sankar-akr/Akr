@@ -16,6 +16,7 @@ import {
   where,
   serverTimestamp,
   arrayUnion,
+  increment,
 } from "firebase/firestore";
 
 import { useNavigate } from "react-router-dom";
@@ -34,7 +35,6 @@ import {
   UnlockKeyhole,
   RefreshCw,
   CircleDollarSign,
-  ArrowUpRight,
   CheckCircle2,
   AlertCircle,
   X,
@@ -259,6 +259,49 @@ function getYearKey(date = new Date()) {
   return getDateKey(date).slice(0, 4);
 }
 
+// Notes / coins added to or taken out of the drawer today,
+// grouped by denomination, for the closing screen.
+function getMovementSummary(register, type) {
+  const list = (register?.cashMovements || []).filter(
+    (item) => item.type === type
+  );
+
+  const total = list.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
+  );
+
+  const chips = DENOMINATIONS.map((item) => ({
+    label: item.label,
+    pcs: list.reduce(
+      (sum, entry) =>
+        sum + (Number(entry.denominations?.[item.value]) || 0),
+      0
+    ),
+  })).filter((chip) => chip.pcs > 0);
+
+  // entries saved before denominations were tracked
+  const counted = list.reduce(
+    (sum, entry) =>
+      sum +
+      DENOMINATIONS.reduce(
+        (inner, item) =>
+          inner +
+          (Number(entry.denominations?.[item.value]) || 0) *
+            item.value,
+        0
+      ),
+    0
+  );
+
+  return {
+    count: list.length,
+    total,
+    chips,
+    other: Math.max(0, total - counted),
+  };
+}
+
 function emptyDenominations() {
   return DENOMINATIONS.reduce(
     (acc, item) => {
@@ -355,6 +398,22 @@ function getTotalMoney(register) {
   if (!register) return 0;
 
   return getDayTotals(register).net;
+}
+
+function formatTimeOnly(value) {
+  if (!value) return "";
+
+  const date =
+    value?.toDate && typeof value.toDate === "function"
+      ? value.toDate()
+      : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function getTimestampValue(value) {
@@ -726,6 +785,12 @@ export default function CashRegister() {
   const [savingExpense, setSavingExpense] =
     useState(false);
 
+  // Cash added to / taken out of the drawer (movements)
+  const [movementModal, setMovementModal] = useState(null); // "add" | "remove" | null
+  const [movementDen, setMovementDen] = useState(emptyDenominations());
+  const [movementReason, setMovementReason] = useState("");
+  const [savingMovement, setSavingMovement] = useState(false);
+
   // Transaction history CRUD (create / edit entry)
   const [entryModal, setEntryModal] = useState(null); // { mode, id, status }
   const [entryDate, setEntryDate] = useState("");
@@ -1008,6 +1073,23 @@ export default function CashRegister() {
     getOverallDifference(currentRegister);
 
   // ----------------------------------------------------------
+  // CARD INSIGHTS
+  // ----------------------------------------------------------
+
+  const openingDigitalAmount = Math.max(
+    0,
+    openingTotal - openingCash
+  );
+
+  const changeSinceOpening =
+    currentOverallTotal - openingTotal;
+
+  const statusTime =
+    currentRegister?.status === "closed"
+      ? formatTimeOnly(currentRegister?.closedAt)
+      : formatTimeOnly(currentRegister?.openedAt);
+
+  // ----------------------------------------------------------
   // DIGITAL MONEY + EXPENSES + DAY TOTAL
   // ----------------------------------------------------------
 
@@ -1045,6 +1127,24 @@ export default function CashRegister() {
 
   const digitalDraftTotal =
     calculateDigitalTotal(digitalDraft);
+
+  // Cash vs digital share of the total money (for the split bar)
+  const daySplitDigital = Math.max(
+    0,
+    Number(
+      openRegister ? digitalDraftTotal : dayTotals.digital
+    ) || 0
+  );
+  const daySplitCash = Math.max(0, Number(dayTotals.cash) || 0);
+  const daySplitSum = daySplitCash + daySplitDigital;
+  const daySplitCashPct =
+    daySplitSum > 0
+      ? Math.round((daySplitCash / daySplitSum) * 100)
+      : 0;
+  const daySplit = {
+    cash: daySplitSum > 0 ? daySplitCashPct : 0,
+    digital: daySplitSum > 0 ? 100 - daySplitCashPct : 0,
+  };
 
   const openingDigitalTotal =
     calculateDigitalTotal(openingDigital);
@@ -1577,6 +1677,142 @@ export default function CashRegister() {
         );
       }
     };
+
+  // ----------------------------------------------------------
+  // CASH MOVEMENTS  (add cash to / take cash out of the drawer)
+  //
+  // Each entry is saved in `cashMovements`; cashAdded / cashRemoved
+  // and expectedCash are kept in step with it using increment().
+  // ----------------------------------------------------------
+
+  const currentMovements = useMemo(
+    () =>
+      [...(currentRegister?.cashMovements || [])].sort(
+        (a, b) =>
+          Number(b?.createdAtMs || 0) -
+          Number(a?.createdAtMs || 0)
+      ),
+    [currentRegister]
+  );
+
+  const closeMovementModal = () => {
+    if (savingMovement) return;
+    setMovementModal(null);
+    setMovementDen(emptyDenominations());
+    setMovementReason("");
+  };
+
+  const handleSaveMovement = async () => {
+    if (!openRegister || !movementModal) return;
+
+    const type = movementModal; // "add" | "remove"
+    const reason = movementReason.trim();
+    const amount = calculateDenominationTotal(movementDen);
+
+    if (!amount || amount <= 0) {
+      alert("Please enter the notes / coins first.");
+      return;
+    }
+
+    if (!reason) {
+      alert("Please enter a reason.");
+      return;
+    }
+
+    if (type === "remove" && amount > storedExpectedCash) {
+      alert(
+        `The drawer only has ${formatCurrency(
+          storedExpectedCash
+        )}. You cannot take out more than that.`
+      );
+      return;
+    }
+
+    setSavingMovement(true);
+
+    try {
+      await updateDoc(
+        doc(db, "cashRegisters", openRegister.id),
+        {
+          cashMovements: arrayUnion({
+            id: `${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2, 8)}`,
+            type,
+            reason,
+            amount,
+            denominations: DENOMINATIONS.reduce((acc, item) => {
+              const pcs = Number(movementDen?.[item.value]) || 0;
+              if (pcs > 0) acc[item.value] = pcs;
+              return acc;
+            }, {}),
+            createdAtMs: Date.now(),
+            addedBy:
+              profile?.name ||
+              user?.displayName ||
+              user?.email ||
+              "Attendant",
+          }),
+
+          ...(type === "add"
+            ? { cashAdded: increment(amount) }
+            : { cashRemoved: increment(amount) }),
+
+          expectedCash: increment(
+            type === "add" ? amount : -amount
+          ),
+
+          updatedAt: serverTimestamp(),
+        }
+      );
+
+      setMovementDen(emptyDenominations());
+      setMovementReason("");
+    } catch (firebaseError) {
+      console.error("Cash movement error:", firebaseError);
+      alert(
+        firebaseError.message ||
+        "Unable to save this entry."
+      );
+    } finally {
+      setSavingMovement(false);
+    }
+  };
+
+  const handleDeleteMovement = async (item) => {
+    if (!openRegister) return;
+
+    if (!window.confirm("Delete this entry?")) return;
+
+    const amount = Number(item.amount || 0);
+
+    try {
+      await updateDoc(
+        doc(db, "cashRegisters", openRegister.id),
+        {
+          cashMovements: (
+            openRegister.cashMovements || []
+          ).filter((entry) => entry.id !== item.id),
+
+          ...(item.type === "add"
+            ? { cashAdded: increment(-amount) }
+            : { cashRemoved: increment(-amount) }),
+
+          expectedCash: increment(
+            item.type === "add" ? -amount : amount
+          ),
+
+          updatedAt: serverTimestamp(),
+        }
+      );
+    } catch (firebaseError) {
+      console.error("Delete movement error:", firebaseError);
+      alert(
+        firebaseError.message ||
+        "Unable to delete this entry."
+      );
+    }
+  };
 
   // ----------------------------------------------------------
   // EXPORT  (PDF / EXCEL)
@@ -2873,55 +3109,77 @@ export default function CashRegister() {
 
           </div>
 
-          <div className="cash-mini-grid">
+          <div className="cr-flow">
 
-            <div>
-              <span>
-                Opening
+            <div className="cr-flow-cell">
+              <span className="cr-flow-label">
+                <i className="cr-flow-sign">●</i>
+                Opening cash
               </span>
-
-              <strong>
-                {formatCurrency(
-                  openingCash
-                )}
+              <strong className="cr-flow-value">
+                {formatCurrency(openingCash)}
               </strong>
+              <small className="cr-flow-note">In drawer at start</small>
             </div>
 
-            <div>
-              <span>
+            <div className={`cr-flow-cell pos${cashSales > 0 ? " has-value" : ""}`}>
+              <span className="cr-flow-label">
+                <i className="cr-flow-sign">+</i>
                 Cash sales
               </span>
-
-              <strong>
-                {formatCurrency(
-                  cashSales
-                )}
+              <strong className="cr-flow-value">
+                {formatCurrency(cashSales)}
               </strong>
+              <small className="cr-flow-note">
+                {cashSales > 0 ? "From today's sales" : "Fills in as you sell"}
+              </small>
             </div>
 
-            <div>
-              <span>
+            <button
+              type="button"
+              className={`cr-flow-cell pos action${cashAdded > 0 ? " has-value" : ""}`}
+              disabled={!currentRegister}
+              onClick={() => setMovementModal("add")}
+            >
+              <span className="cr-flow-label">
+                <i className="cr-flow-sign">+</i>
                 Added
               </span>
-
-              <strong>
-                {formatCurrency(
-                  cashAdded
-                )}
+              <strong className="cr-flow-value">
+                {formatCurrency(cashAdded)}
               </strong>
-            </div>
+              <small className="cr-flow-note">
+                {openRegister
+                  ? "Tap to add cash"
+                  : cashAdded > 0
+                    ? "Tap to view"
+                    : "Nothing added"}
+              </small>
+              <ChevronRight size={15} className="cr-flow-go" />
+            </button>
 
-            <div>
-              <span>
+            <button
+              type="button"
+              className={`cr-flow-cell neg action${cashRemoved > 0 ? " has-value" : ""}`}
+              disabled={!currentRegister}
+              onClick={() => setMovementModal("remove")}
+            >
+              <span className="cr-flow-label">
+                <i className="cr-flow-sign">−</i>
                 Removed
               </span>
-
-              <strong>
-                {formatCurrency(
-                  cashRemoved
-                )}
+              <strong className="cr-flow-value">
+                {formatCurrency(cashRemoved)}
               </strong>
-            </div>
+              <small className="cr-flow-note">
+                {openRegister
+                  ? "Tap to take cash out"
+                  : cashRemoved > 0
+                    ? "Tap to view"
+                    : "Nothing removed"}
+              </small>
+              <ChevronRight size={15} className="cr-flow-go" />
+            </button>
 
           </div>
 
@@ -3045,30 +3303,23 @@ export default function CashRegister() {
           STATS
       ==================================================== */}
 
-      <section className="cash-stats-grid">
+      <section className="cr-kpis">
 
         {/* STATUS */}
 
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Today's Status
-            </span>
-
-            <div className="cash-stat-icon purple">
+        <article className="cr-kpi tone-purple">
+          <div className="cr-kpi-head">
+            <span className="cr-kpi-icon">
               {openRegister ? (
-                <UnlockKeyhole
-                  size={15}
-                />
+                <UnlockKeyhole size={16} />
               ) : (
-                <LockKeyhole
-                  size={15}
-                />
+                <LockKeyhole size={16} />
               )}
-            </div>
+            </span>
+            <span className="cr-kpi-label">Today's Status</span>
           </div>
 
-          <strong>
+          <strong className="cr-kpi-value">
             {openRegister
               ? "Open"
               : latestTodayRegister
@@ -3076,98 +3327,105 @@ export default function CashRegister() {
                 : "Not Opened"}
           </strong>
 
-          <small>
-            {openRegister
-              ? "Register is active"
-              : latestTodayRegister
-                ? "Today's register is closed"
-                : "No register opened today"}
-          </small>
-        </div>
-
-        {/* OPENING CASH */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Opening Overall Total
+          <div className="cr-kpi-foot">
+            <span className={`cr-chip${openRegister ? " live" : ""}`}>
+              <i />
+              {openRegister
+                ? `Opened at ${statusTime || "—"}`
+                : latestTodayRegister
+                  ? `Closed at ${statusTime || "—"}`
+                  : "Open the register to start"}
             </span>
+          </div>
+        </article>
 
-            <div className="cash-stat-icon blue">
-              <Banknote
-                size={15}
-              />
-            </div>
+        {/* OPENING TOTAL */}
+
+        <article className="cr-kpi tone-blue">
+          <div className="cr-kpi-head">
+            <span className="cr-kpi-icon">
+              <Banknote size={16} />
+            </span>
+            <span className="cr-kpi-label">Opening Overall Total</span>
           </div>
 
-          <strong>
-            {formatCurrency(
-              openingTotal
-            )}
+          <strong className="cr-kpi-value">
+            {formatCurrency(openingTotal)}
           </strong>
 
-          <small>
-            Cash + digital
-          </small>
-        </div>
-
-        {/* CASH SALES */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Cash Sales
+          <div className="cr-kpi-foot">
+            <span className="cr-chip">
+              Cash {formatCurrency(openingCash)}
             </span>
+            <span className="cr-chip">
+              Digital {formatCurrency(openingDigitalAmount)}
+            </span>
+          </div>
+        </article>
 
-            <div className="cash-stat-icon green">
-              <ArrowUpRight
-                size={15}
-              />
-            </div>
+        {/* CASH IN DRAWER */}
+
+        <article className="cr-kpi tone-green">
+          <div className="cr-kpi-head">
+            <span className="cr-kpi-icon">
+              <WalletCards size={16} />
+            </span>
+            <span className="cr-kpi-label">
+              {currentRegister?.status === "closed"
+                ? "Closing Cash"
+                : "Cash in Drawer"}
+            </span>
           </div>
 
-          <strong>
-            {formatCurrency(
-              cashSales
-            )}
+          <strong className="cr-kpi-value">
+            {formatCurrency(currentCash)}
           </strong>
 
-          <small>
-            Cash received today
-          </small>
-        </div>
+          <div className="cr-kpi-foot">
+            <span className="cr-chip">
+              {currentRegister?.status === "closed"
+                ? `Expected ${formatCurrency(storedExpectedCash)}`
+                : `Incl. ${formatCurrency(cashSales)} cash sales`}
+            </span>
+          </div>
+        </article>
 
-        {/* EXPECTED CASH */}
+        {/* OVERALL TOTAL */}
 
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              {currentRegister?.status ===
-                "closed"
+        <article className="cr-kpi tone-orange">
+          <div className="cr-kpi-head">
+            <span className="cr-kpi-icon">
+              <CircleDollarSign size={16} />
+            </span>
+            <span className="cr-kpi-label">
+              {currentRegister?.status === "closed"
                 ? "Closing Overall Total"
                 : "Current Overall Total"}
             </span>
-
-            <div className="cash-stat-icon orange">
-              <CircleDollarSign
-                size={15}
-              />
-            </div>
           </div>
 
-          <strong>
-            {formatCurrency(
-              currentOverallTotal
-            )}
+          <strong className="cr-kpi-value">
+            {formatCurrency(currentOverallTotal)}
           </strong>
 
-          <small>
-            {currentRegister?.status ===
-              "closed"
-              ? "Cash + digital"
-              : "Expected cash + digital"}
-          </small>
-        </div>
+          <div className="cr-kpi-foot">
+            <span
+              className={`cr-chip${
+                changeSinceOpening > 0
+                  ? " up"
+                  : changeSinceOpening < 0
+                    ? " down"
+                    : ""
+              }`}
+            >
+              {changeSinceOpening > 0
+                ? `▲ +${formatCurrency(changeSinceOpening)} since opening`
+                : changeSinceOpening < 0
+                  ? `▼ −${formatCurrency(Math.abs(changeSinceOpening))} since opening`
+                  : "No change since opening"}
+            </span>
+          </div>
+        </article>
 
       </section>
 
@@ -3314,75 +3572,109 @@ export default function CashRegister() {
 
           {/* DAY TOTAL */}
 
-          <div className="cash-day-total">
+          <div className="cr-day">
 
-            <div className="cash-day-total-head">
-              <div>
-                <div className="cash-section-label light">
-                  TOTAL MONEY
-                </div>
-                <strong>
-                  {formatCurrency(
-                    dayTotals.net
-                  )}
-                </strong>
-                <span>
-                  {formatDate(
-                    currentRegister.dateKey
-                  )}
-                  {" • "}
-                  {openRegister
-                    ? "Live (register open)"
-                    : "Final (register closed)"}
+            {/* LEFT: big number + cash/digital split */}
+
+            <div className="cr-day-hero">
+              <div className="cr-day-top">
+                <span className="cr-day-label">Day total</span>
+
+                <span className={`cr-day-status${openRegister ? " live" : ""}`}>
+                  <i />
+                  {openRegister ? "Live · register open" : "Final · register closed"}
                 </span>
               </div>
 
-              <div className="cash-day-total-icon">
-                <CircleDollarSign size={22} />
+              <strong className="cr-day-amount">
+                {formatCurrency(dayTotals.net)}
+              </strong>
+
+              <span className="cr-day-caption">
+                Total amount of the day · {formatDate(currentRegister.dateKey)}
+              </span>
+
+              <div className="cr-day-split">
+                <div className="cr-day-bar">
+                  <span style={{ width: `${daySplit.cash}%` }} />
+                  <span style={{ width: `${daySplit.digital}%` }} />
+                </div>
+
+                <div className="cr-day-legend">
+                  <span className="cash">
+                    <i />
+                    Cash {daySplit.cash}%
+                  </span>
+                  <span className="digital">
+                    <i />
+                    Digital {daySplit.digital}%
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="cash-day-total-lines">
-              <div>
-                <span>
-                  Cash{" "}
-                  {currentRegister.status === "closed"
-                    ? "(counted)"
-                    : "(expected)"}
+            {/* RIGHT: how the total is made */}
+
+            <div className="cr-day-statement">
+
+              <div className="cr-day-row cash">
+                <span className="cr-day-ico"><Banknote size={16} /></span>
+                <span className="cr-day-name">
+                  Cash
+                  <small>
+                    {currentRegister.status === "closed"
+                      ? "Counted at closing"
+                      : "Expected in drawer"}
+                  </small>
                 </span>
-                <strong>
+                <strong className="cr-day-value">
                   {formatCurrency(dayTotals.cash)}
                 </strong>
               </div>
 
-              <div>
-                <span>Digital money</span>
-                <strong>
+              <div className="cr-day-row digital">
+                <span className="cr-day-ico"><Landmark size={16} /></span>
+                <span className="cr-day-name">
+                  Digital money
+                  <small>Bank &amp; wallet balances</small>
+                </span>
+                <strong className="cr-day-value">
                   {formatCurrency(
-                    openRegister
-                      ? digitalDraftTotal
-                      : dayTotals.digital
+                    openRegister ? digitalDraftTotal : dayTotals.digital
                   )}
                 </strong>
               </div>
 
-              <div className="minus">
-                <span>Expenses</span>
-                <strong>
-                  −{formatCurrency(
-                    dayTotals.expenses
-                  )}
+              <div className="cr-day-row money">
+                <span className="cr-day-ico"><WalletCards size={16} /></span>
+                <span className="cr-day-name">
+                  Total money
+                  <small>Cash + digital</small>
+                </span>
+                <strong className="cr-day-value">
+                  {formatCurrency(dayTotals.totalMoney)}
                 </strong>
               </div>
 
-              <div className="sum">
-                <span>Total amount of the day</span>
-                <strong>
-                  {formatCurrency(
-                    dayTotals.net
-                  )}
+              <div className="cr-day-row expense">
+                <span className="cr-day-ico"><Receipt size={16} /></span>
+                <span className="cr-day-name">
+                  Expenses
+                  <small>Spent today</small>
+                </span>
+                <strong className="cr-day-value">
+                  −{formatCurrency(dayTotals.expenses)}
                 </strong>
               </div>
+
+              <div className="cr-day-row total">
+                <span className="cr-day-ico"><CircleDollarSign size={16} /></span>
+                <span className="cr-day-name">Total amount of the day</span>
+                <strong className="cr-day-value">
+                  {formatCurrency(dayTotals.net)}
+                </strong>
+              </div>
+
             </div>
 
           </div>
@@ -3890,6 +4182,64 @@ export default function CashRegister() {
                 </strong>
 
               </div>
+
+              {/* CASH IN / OUT DURING THE DAY */}
+              {(() => {
+                const added = getMovementSummary(openRegister, "add");
+                const removed = getMovementSummary(openRegister, "remove");
+
+                const renderSide = (summary, type) => (
+                  <div className={`cr-close-mv ${type}`}>
+                    <div className="cr-close-mv-head">
+                      <span>
+                        {type === "add" ? "+ Cash added" : "− Cash taken out"}
+                      </span>
+                      <strong>
+                        {type === "add" ? "+" : "−"}
+                        {formatCurrency(summary.total)}
+                      </strong>
+                    </div>
+
+                    {summary.count === 0 ? (
+                      <small>None today</small>
+                    ) : (
+                      <div className="cr-close-mv-chips">
+                        {summary.chips.map((chip) => (
+                          <span key={chip.label}>
+                            {chip.label} × {chip.pcs}
+                          </span>
+                        ))}
+                        {summary.other > 0 && (
+                          <span>Other {formatCurrency(summary.other)}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+
+                return (
+                  <div className="cash-modal-block">
+                    <div className="cash-modal-block-head">
+                      <div>
+                        <span className="cash-section-label">
+                          CASH IN / OUT
+                        </span>
+                        <p>
+                          Opening {formatCurrency(Number(openRegister.openingCash || 0))}
+                          {" + "}Sales {formatCurrency(Number(openRegister.cashSales || 0))}
+                          {" + "}Added {formatCurrency(added.total)}
+                          {" − "}Removed {formatCurrency(removed.total)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="cr-close-mv-grid">
+                      {renderSide(added, "add")}
+                      {renderSide(removed, "remove")}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {renderCashDigitalSplit(
                 closingDenominations,
@@ -4440,6 +4790,186 @@ export default function CashRegister() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {movementModal && currentRegister && (
+        <div
+          className="cash-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeMovementModal();
+            }
+          }}
+        >
+          <div className="cash-modal cash-movement-modal">
+            <div className="cash-modal-head">
+              <div className="cash-modal-title">
+                <div
+                  className={`cash-modal-icon${
+                    movementModal === "remove" ? " danger" : ""
+                  }`}
+                >
+                  {movementModal === "remove" ? (
+                    <Minus size={17} />
+                  ) : (
+                    <Plus size={17} />
+                  )}
+                </div>
+
+                <div>
+                  <strong>Cash in / out</strong>
+                  <span>
+                    Money you put into or take out of the drawer today
+                    (not sales, not expenses).
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="cash-modal-close"
+                onClick={closeMovementModal}
+                disabled={savingMovement}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            {openRegister ? (
+              <div className="cr-mv-form">
+                <div className="cr-mv-tabs">
+                  <button
+                    type="button"
+                    className={movementModal === "add" ? "active add" : ""}
+                    onClick={() => setMovementModal("add")}
+                  >
+                    <Plus size={14} /> Add cash
+                  </button>
+                  <button
+                    type="button"
+                    className={movementModal === "remove" ? "active remove" : ""}
+                    onClick={() => setMovementModal("remove")}
+                  >
+                    <Minus size={14} /> Take out
+                  </button>
+                </div>
+
+                <div className="cr-mv-notes">
+                  {renderDenominationEditor(
+                    movementDen,
+                    setMovementDen,
+                    true
+                  )}
+                </div>
+
+                <div className={`cr-mv-total ${movementModal}`}>
+                  <span>
+                    {movementModal === "add" ? "Total to add" : "Total to take out"}
+                  </span>
+                  <strong>
+                    {movementModal === "remove" ? "−" : "+"}
+                    {formatCurrency(calculateDenominationTotal(movementDen))}
+                  </strong>
+                </div>
+
+                <input
+                  type="text"
+                  className="cr-mv-input"
+                  maxLength={80}
+                  placeholder={
+                    movementModal === "add"
+                      ? "Reason (e.g. Change from bank, Owner top-up)"
+                      : "Reason (e.g. Deposited to bank, Owner took cash)"
+                  }
+                  value={movementReason}
+                  onChange={(event) => setMovementReason(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") handleSaveMovement();
+                  }}
+                />
+
+                <button
+                  type="button"
+                  className={`cr-mv-save ${movementModal}`}
+                  onClick={handleSaveMovement}
+                  disabled={savingMovement}
+                >
+                  {savingMovement
+                    ? "Saving…"
+                    : movementModal === "add"
+                      ? "Add to drawer"
+                      : "Take out of drawer"}
+                </button>
+
+                <p className="cr-mv-hint">
+                  Drawer now: <strong>{formatCurrency(storedExpectedCash)}</strong>
+                </p>
+              </div>
+            ) : (
+              <p className="cr-mv-hint">
+                The register is closed, so entries can't be changed.
+              </p>
+            )}
+
+            <div className="cr-mv-list">
+              <div className="cash-section-label">TODAY'S ENTRIES</div>
+
+              {currentMovements.length === 0 ? (
+                <div className="cr-mv-empty">No cash added or taken out yet.</div>
+              ) : (
+                currentMovements.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`cr-mv-item ${item.type === "remove" ? "remove" : "add"}`}
+                  >
+                    <span className="cr-mv-badge">
+                      {item.type === "remove" ? <Minus size={14} /> : <Plus size={14} />}
+                    </span>
+
+                    <span className="cr-mv-info">
+                      <strong>{item.reason}</strong>
+                      <small>
+                        {formatTimeOnly(item.createdAtMs)}
+                        {item.addedBy ? ` · ${item.addedBy}` : ""}
+                      </small>
+                      {DENOMINATIONS.some(
+                        (d) => Number(item.denominations?.[d.value]) > 0
+                      ) && (
+                        <small className="cr-mv-break">
+                          {DENOMINATIONS.filter(
+                            (d) => Number(item.denominations?.[d.value]) > 0
+                          )
+                            .map((d) =>
+                              d.type === "coin"
+                                ? `Coins ${formatCurrency(Number(item.denominations[d.value]))}`
+                                : `${item.denominations[d.value]} × ${d.label}`
+                            )
+                            .join(" · ")}
+                        </small>
+                      )}
+                    </span>
+
+                    <span className="cr-mv-amount">
+                      {item.type === "remove" ? "−" : "+"}
+                      {formatCurrency(Number(item.amount || 0))}
+                    </span>
+
+                    {openRegister && (
+                      <button
+                        type="button"
+                        className="cr-mv-del"
+                        onClick={() => handleDeleteMovement(item)}
+                        aria-label="Delete entry"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
