@@ -16,12 +16,10 @@ import {
   where,
   serverTimestamp,
   arrayUnion,
-  increment,
+  writeBatch,
 } from "firebase/firestore";
 
 import { useNavigate } from "react-router-dom";
-
-import FloatingCalculator from "./FloatingCalculator";
 
 import {
   Banknote,
@@ -35,6 +33,7 @@ import {
   UnlockKeyhole,
   RefreshCw,
   CircleDollarSign,
+  ArrowUpRight,
   CheckCircle2,
   AlertCircle,
   X,
@@ -158,6 +157,104 @@ function calculateExpenseTotal(expenses) {
   );
 }
 
+function getCreditList(register) {
+  return Array.isArray(register?.credits) ? register.credits : [];
+}
+
+// A credit keeps its ORIGINAL amount and a running `paid` total.
+// Balance (what is still owed) = amount - paid.
+function getCreditPaid(item) {
+  return Math.max(0, Number(item?.paid) || 0);
+}
+
+function getCreditBalance(item) {
+  return Math.max(
+    0,
+    (Number(item?.amount) || 0) - getCreditPaid(item)
+  );
+}
+
+// Returns a copy of a credit with one more payment logged in its history.
+function addPaymentToCredit(item, payment) {
+  return {
+    ...item,
+    paid: getCreditPaid(item) + payment,
+    payments: [
+      ...(Array.isArray(item.payments) ? item.payments : []),
+      { amount: payment, atMs: Date.now() },
+    ],
+  };
+}
+
+// Full payment history of a credit (newest first). Payments made
+// before history tracking existed are shown as one "earlier" line.
+function getCreditPayments(item) {
+  const list = (Array.isArray(item?.payments) ? item.payments : [])
+    .map((entry, idx) => ({
+      amount: Number(entry?.amount) || 0,
+      atMs: entry?.atMs || 0,
+      note: entry?.note || "",
+      idx,
+    }));
+
+  const logged = list.reduce((sum, entry) => sum + entry.amount, 0);
+  const missing = getCreditPaid(item) - logged;
+
+  if (missing > 0) {
+    list.push({
+      amount: missing,
+      atMs: item?.createdAtMs || 0,
+      note: "Earlier payment",
+      idx: -1,
+    });
+  }
+
+  return list.sort((a, b) => b.atMs - a.atMs);
+}
+
+// Totals use the outstanding balance, so every repayment reduces them.
+function calculateCreditTotal(credits) {
+  return (Array.isArray(credits) ? credits : []).reduce(
+    (total, item) => total + getCreditBalance(item),
+    0
+  );
+}
+
+// Credit flow of one register day.
+//   given   = credit handed out TODAY (not carried in from opening)
+//   paid    = money received against credits TODAY
+//   notPaid = what is still owed at the end
+function getCreditFlow(openingCredits, currentCredits) {
+  const before = new Map(
+    (Array.isArray(openingCredits) ? openingCredits : []).map(
+      (item) => [item?.id, getCreditPaid(item)]
+    )
+  );
+  const list = Array.isArray(currentCredits) ? currentCredits : [];
+  let given = 0;
+  let paid = 0;
+
+  list.forEach((item) => {
+    const known = item?.id != null && before.has(item.id);
+
+    if (!known) given += Number(item?.amount) || 0;
+
+    paid += Math.max(
+      0,
+      getCreditPaid(item) - (known ? before.get(item.id) : 0)
+    );
+  });
+
+  return { given, paid, notPaid: calculateCreditTotal(list) };
+}
+
+function getRegisterCreditFlow(register, credits) {
+  return getCreditFlow(
+    getOpeningCredits(register),
+    credits || getCreditList(register)
+  );
+}
+
 // ------------------------------------------------------------
 // DAY TOTALS
 //
@@ -174,6 +271,9 @@ function getDayTotals(register) {
       cash: 0,
       digital: 0,
       expenses: 0,
+      credits: 0,
+      creditGiven: 0,
+      creditPaid: 0,
       totalMoney: 0,
       net: 0,
     };
@@ -194,21 +294,77 @@ function getDayTotals(register) {
 
   const digital = calculateDigitalTotal(register.digitalBalances);
   const expenses = calculateExpenseTotal(register.expenses);
+  const creditList = getCreditList(register);
+
+  // Credit split: given = original amounts, paid = repaid so far,
+  // credits (not paid) = what is still owed.
+  const creditGiven = creditList.reduce(
+    (sum, item) => sum + (Number(item?.amount) || 0),
+    0
+  );
+  const creditPaid = creditList.reduce(
+    (sum, item) => sum + getCreditPaid(item),
+    0
+  );
+  const credits = calculateCreditTotal(creditList);
+
   const totalMoney = cash + digital;
 
-  // Day total = total money - expenses.
+  // Day total = total money - expenses + credit paid (paid / update).
+  // Credit given is only displayed, it is not deducted.
   return {
     cash,
     digital,
     expenses,
+    credits,
+    creditGiven,
+    creditPaid,
     totalMoney,
-    net: totalMoney - expenses,
+    net:
+      totalMoney -
+      expenses +
+      creditPaid,
   };
 }
 
 // ============================================================
 // HELPERS
 // ============================================================
+
+// Credits that are still unpaid on the most recent earlier register.
+// They are carried into every new day until fully paid, so a loan
+// stays visible on all days after it was given.
+function getCarryForwardCredits(registers, todayKey) {
+  const list = (Array.isArray(registers) ? registers : []).filter(
+    (item) => item?.dateKey && item.dateKey <= todayKey
+  );
+
+  if (list.length === 0) return [];
+
+  const stamp = (item) =>
+    Number(item?.createdAt?.seconds || 0) ||
+    Number(item?.openedAt?.seconds || 0) ||
+    0;
+
+  const latest = [...list].sort((a, b) =>
+    a.dateKey === b.dateKey
+      ? stamp(b) - stamp(a)
+      : a.dateKey < b.dateKey
+        ? 1
+        : -1
+  )[0];
+
+  const source =
+    latest.status === "closed" && Array.isArray(latest.closingCredits)
+      ? latest.closingCredits
+      : Array.isArray(latest.credits)
+        ? latest.credits
+        : [];
+
+  return source
+    .filter((item) => getCreditBalance(item) > 0)
+    .map((item) => ({ ...item, carriedOver: true }));
+}
 
 // The most recent CLOSED register (by date, then time). Its closing
 // notes / coins / digital money become the next opening values.
@@ -259,49 +415,6 @@ function getYearKey(date = new Date()) {
   return getDateKey(date).slice(0, 4);
 }
 
-// Notes / coins added to or taken out of the drawer today,
-// grouped by denomination, for the closing screen.
-function getMovementSummary(register, type) {
-  const list = (register?.cashMovements || []).filter(
-    (item) => item.type === type
-  );
-
-  const total = list.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
-
-  const chips = DENOMINATIONS.map((item) => ({
-    label: item.label,
-    pcs: list.reduce(
-      (sum, entry) =>
-        sum + (Number(entry.denominations?.[item.value]) || 0),
-      0
-    ),
-  })).filter((chip) => chip.pcs > 0);
-
-  // entries saved before denominations were tracked
-  const counted = list.reduce(
-    (sum, entry) =>
-      sum +
-      DENOMINATIONS.reduce(
-        (inner, item) =>
-          inner +
-          (Number(entry.denominations?.[item.value]) || 0) *
-            item.value,
-        0
-      ),
-    0
-  );
-
-  return {
-    count: list.length,
-    total,
-    chips,
-    other: Math.max(0, total - counted),
-  };
-}
-
 function emptyDenominations() {
   return DENOMINATIONS.reduce(
     (acc, item) => {
@@ -345,7 +458,9 @@ function getDenominationCount(denominations, item) {
   return Number(denominations?.[item.value]) || 0;
 }
 
-// Opening / closing snapshots of digital money.
+// Opening total = opening cash + opening digital + credit paid.
+// Credits are read live, so a deleted credit drops out of the total.
+// Opening / closing snapshots of digital money and credit (loan).
 // Older records that have no snapshot fall back to the live values.
 function getOpeningDigital(register) {
   if (!register) return {};
@@ -365,7 +480,26 @@ function getClosingDigital(register) {
     : register.digitalBalances || {};
 }
 
-function getOpeningTotal(register) {
+function getOpeningCredits(register) {
+  if (Array.isArray(register?.openingCredits)) {
+    return register.openingCredits;
+  }
+
+  return getCreditList(register);
+}
+
+function getClosingCredits(register) {
+  if (!register || register.status !== "closed") return null;
+
+  if (Array.isArray(register.closingCredits)) {
+    return register.closingCredits;
+  }
+
+  return getCreditList(register);
+}
+
+// Opening in-hand = opening cash + opening digital money (as counted).
+function getOpeningInHand(register) {
   if (!register) return 0;
 
   return (
@@ -374,7 +508,20 @@ function getOpeningTotal(register) {
   );
 }
 
-// Closing total = counted cash + digital (closed registers only).
+// Opening total (adjusted) =
+//   opening in-hand - credit given today + credit paid today.
+// Credit given is taken out of the opening amount (that money
+// left the drawer on credit); credit received is put back.
+// `credits` can be passed to use a list that is not saved yet.
+function getOpeningTotal(register, credits) {
+  if (!register) return 0;
+
+  const flow = getRegisterCreditFlow(register, credits);
+
+  return getOpeningInHand(register) - flow.given + flow.paid;
+}
+
+// Closing total = counted cash + digital money (closed registers only).
 function getClosingTotal(register) {
   if (!register || register.status !== "closed") return null;
 
@@ -383,8 +530,16 @@ function getClosingTotal(register) {
   return totals.cash + totals.digital;
 }
 
-// Overall difference = closing total - opening total
-// (cash + digital money, at close minus open).
+// Amount difference WITHOUT credit = closing in-hand - opening in-hand.
+function getDifferenceWithoutCredit(register) {
+  const closingTotal = getClosingTotal(register);
+
+  if (closingTotal === null) return 0;
+
+  return closingTotal - getOpeningInHand(register);
+}
+
+// Amount difference WITH credit = closing in-hand - adjusted opening.
 function getOverallDifference(register) {
   const closingTotal = getClosingTotal(register);
 
@@ -393,27 +548,15 @@ function getOverallDifference(register) {
   return closingTotal - getOpeningTotal(register);
 }
 
-// Total money = total amount of the day (cash + digital - expenses).
+// Total money = total amount of the day (net) + credit NOT paid yet.
+// Credit that was already paid is inside the net total (paid / update),
+// so only the unpaid balance is added - otherwise it would be counted twice.
 function getTotalMoney(register) {
   if (!register) return 0;
 
-  return getDayTotals(register).net;
-}
+  const totals = getDayTotals(register);
 
-function formatTimeOnly(value) {
-  if (!value) return "";
-
-  const date =
-    value?.toDate && typeof value.toDate === "function"
-      ? value.toDate()
-      : new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  return date.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return totals.net + totals.credits;
 }
 
 function getTimestampValue(value) {
@@ -542,6 +685,13 @@ function getStatusPill(status) {
     default:
       return { label: String(status).toUpperCase(), fg: C.red, bg: C.redBg };
   }
+}
+
+// Credit status: Paid (settled) / Partial (some paid) / Unpaid.
+function getCreditStatusLabel(credit, paid) {
+  if (credit > 0 && paid >= credit) return "Paid";
+  if (paid > 0) return "Partial";
+  return "Unpaid";
 }
 
 // Coloured header band + summary cards. Returns the y position
@@ -742,6 +892,10 @@ export default function CashRegister() {
   const [exporting, setExporting] =
     useState("");
 
+  // Which list the export box is exporting: "history" | "credit"
+  const [exportTarget, setExportTarget] =
+    useState("history");
+
   const [showCloseModal, setShowCloseModal] =
     useState(false);
 
@@ -785,11 +939,63 @@ export default function CashRegister() {
   const [savingExpense, setSavingExpense] =
     useState(false);
 
-  // Cash added to / taken out of the drawer (movements)
-  const [movementModal, setMovementModal] = useState(null); // "add" | "remove" | null
-  const [movementDen, setMovementDen] = useState(emptyDenominations());
-  const [movementReason, setMovementReason] = useState("");
-  const [savingMovement, setSavingMovement] = useState(false);
+  // Credit (reason / person + amount)
+  const [creditReason, setCreditReason] =
+    useState("");
+
+  const [creditAmount, setCreditAmount] =
+    useState("");
+
+  // Amount already paid by the person (reduces the initial amount)
+  const [creditPaid, setCreditPaid] =
+    useState("");
+
+  // Credit preview box: { id, source: "live" | "opening" | "closing" | "history", item? }
+  const [creditDetail, setCreditDetail] =
+    useState(null);
+
+  const [creditDetailPay, setCreditDetailPay] =
+    useState("");
+
+  const [creditDetailSaving, setCreditDetailSaving] =
+    useState(false);
+
+  // Edit mode inside the credit box: { reason, amount } | null
+  const [creditEdit, setCreditEdit] =
+    useState(null);
+
+  // Payment being edited inside the credit box: { idx, value } | null
+  const [creditPayEdit, setCreditPayEdit] =
+    useState(null);
+
+  const [savingCredit, setSavingCredit] =
+    useState(false);
+
+  // Credit entered while opening the register
+  const [openingCredits, setOpeningCredits] =
+    useState([]);
+
+  const [openingCreditReason, setOpeningCreditReason] =
+    useState("");
+
+  const [openingCreditAmount, setOpeningCreditAmount] =
+    useState("");
+
+  const [openingCreditPaid, setOpeningCreditPaid] =
+    useState("");
+
+  // Credit (loan) re-entered while closing the register
+  const [closingCredits, setClosingCredits] =
+    useState([]);
+
+  const [closingCreditReason, setClosingCreditReason] =
+    useState("");
+
+  const [closingCreditAmount, setClosingCreditAmount] =
+    useState("");
+
+  const [closingCreditPaid, setClosingCreditPaid] =
+    useState("");
 
   // Transaction history CRUD (create / edit entry)
   const [entryModal, setEntryModal] = useState(null); // { mode, id, status }
@@ -798,6 +1004,8 @@ export default function CashRegister() {
   const [entryOpenDigital, setEntryOpenDigital] = useState(emptyDigital());
   const [entryCloseDen, setEntryCloseDen] = useState(emptyDenominations());
   const [entryCloseDigital, setEntryCloseDigital] = useState(emptyDigital());
+  // Credit / loan rows of the entry: { key, reason, amount, paid, orig }
+  const [entryCredits, setEntryCredits] = useState([]);
   const [deletingId, setDeletingId] = useState(null);
 
   // ----------------------------------------------------------
@@ -1058,7 +1266,8 @@ export default function CashRegister() {
       )
       : storedExpectedCash;
 
-  // Overall register balance = drawer cash + digital balances.
+  // Overall register balance = drawer cash + digital balances
+  // + credit paid (credit given is only shown).
   const currentOverallTotal =
     currentRegister?.status === "closed"
       ? Number(getClosingTotal(currentRegister) || 0)
@@ -1071,23 +1280,6 @@ export default function CashRegister() {
 
   const difference =
     getOverallDifference(currentRegister);
-
-  // ----------------------------------------------------------
-  // CARD INSIGHTS
-  // ----------------------------------------------------------
-
-  const openingDigitalAmount = Math.max(
-    0,
-    openingTotal - openingCash
-  );
-
-  const changeSinceOpening =
-    currentOverallTotal - openingTotal;
-
-  const statusTime =
-    currentRegister?.status === "closed"
-      ? formatTimeOnly(currentRegister?.closedAt)
-      : formatTimeOnly(currentRegister?.openedAt);
 
   // ----------------------------------------------------------
   // DIGITAL MONEY + EXPENSES + DAY TOTAL
@@ -1103,6 +1295,17 @@ export default function CashRegister() {
     useMemo(
       () =>
         [...getExpenseList(currentRegister)].sort(
+          (a, b) =>
+            Number(b?.createdAtMs || 0) -
+            Number(a?.createdAtMs || 0)
+        ),
+      [currentRegister]
+    );
+
+  const currentCredits =
+    useMemo(
+      () =>
+        [...getCreditList(currentRegister)].sort(
           (a, b) =>
             Number(b?.createdAtMs || 0) -
             Number(a?.createdAtMs || 0)
@@ -1128,33 +1331,59 @@ export default function CashRegister() {
   const digitalDraftTotal =
     calculateDigitalTotal(digitalDraft);
 
-  // Cash vs digital share of the total money (for the split bar)
-  const daySplitDigital = Math.max(
-    0,
-    Number(
-      openRegister ? digitalDraftTotal : dayTotals.digital
-    ) || 0
-  );
-  const daySplitCash = Math.max(0, Number(dayTotals.cash) || 0);
-  const daySplitSum = daySplitCash + daySplitDigital;
-  const daySplitCashPct =
-    daySplitSum > 0
-      ? Math.round((daySplitCash / daySplitSum) * 100)
-      : 0;
-  const daySplit = {
-    cash: daySplitSum > 0 ? daySplitCashPct : 0,
-    digital: daySplitSum > 0 ? 100 - daySplitCashPct : 0,
-  };
-
   const openingDigitalTotal =
     calculateDigitalTotal(openingDigital);
 
   const closingDigitalTotal =
     calculateDigitalTotal(closingDigital);
 
+  const openingCreditTotal =
+    calculateCreditTotal(openingCredits);
+
+  const closingCreditTotal =
+    calculateCreditTotal(closingCredits);
+
   // ----------------------------------------------------------
   // HISTORY FILTER
   // ----------------------------------------------------------
+
+  // Every credit / loan from every day (latest state of each one),
+  // newest first. Used by the "Credit / Loan history" card.
+  const allCreditHistory = useMemo(() => {
+    const stamp = (item) =>
+      Number(item?.createdAt?.seconds || 0) ||
+      Number(item?.openedAt?.seconds || 0) ||
+      0;
+
+    const ordered = [...registers].sort((a, b) => {
+      const keyA = String(a?.dateKey || "");
+      const keyB = String(b?.dateKey || "");
+
+      if (keyA === keyB) return stamp(a) - stamp(b);
+      return keyA < keyB ? -1 : 1;
+    });
+
+    // Oldest register first, so a later (newer) copy of the same
+    // credit replaces the older one.
+    const map = new Map();
+
+    ordered.forEach((reg) => {
+      const list =
+        reg?.status === "closed" && Array.isArray(reg.closingCredits)
+          ? reg.closingCredits
+          : getCreditList(reg);
+
+      list.forEach((item) => {
+        const key = item.id || `${item.reason}-${item.createdAtMs}`;
+        map.set(key, { ...item });
+      });
+    });
+
+    return [...map.values()].sort(
+      (a, b) =>
+        Number(b?.createdAtMs || 0) - Number(a?.createdAtMs || 0)
+    );
+  }, [registers]);
 
   const filteredRegisters =
     useMemo(() => {
@@ -1256,6 +1485,126 @@ export default function CashRegister() {
   // OPEN REGISTER
   // ----------------------------------------------------------
 
+  const handleAddOpeningCredit = () => {
+    const reason = openingCreditReason.trim();
+    const amount = Number(openingCreditAmount);
+    const paid = Number(openingCreditPaid) || 0;
+
+    if (!reason) {
+      alert("Please enter the reason / person name.");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid credit amount.");
+      return;
+    }
+
+    if (paid < 0 || paid > amount) {
+      alert("Paid amount cannot be more than the credit amount.");
+      return;
+    }
+
+    setOpeningCredits((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`,
+        reason,
+        amount,
+        paid,
+        payments:
+          paid > 0
+            ? [
+              {
+                amount: paid,
+                atMs: Date.now(),
+                note: "Paid at entry",
+              },
+            ]
+            : [],
+        createdAtMs: Date.now(),
+        addedBy:
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant",
+      },
+    ]);
+
+    setOpeningCreditReason("");
+    setOpeningCreditAmount("");
+    setOpeningCreditPaid("");
+  };
+
+  const handleRemoveOpeningCredit = (creditId) => {
+    setOpeningCredits((prev) =>
+      prev.filter((item) => item.id !== creditId)
+    );
+  };
+
+  const handleAddClosingCredit = () => {
+    const reason = closingCreditReason.trim();
+    const amount = Number(closingCreditAmount);
+    const paid = Number(closingCreditPaid) || 0;
+
+    if (!reason) {
+      alert("Please enter the reason / person name.");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid credit amount.");
+      return;
+    }
+
+    if (paid < 0 || paid > amount) {
+      alert("Paid amount cannot be more than the credit amount.");
+      return;
+    }
+
+    setClosingCredits((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`,
+        reason,
+        amount,
+        paid,
+        payments:
+          paid > 0
+            ? [
+              {
+                amount: paid,
+                atMs: Date.now(),
+                note: "Paid at entry",
+              },
+            ]
+            : [],
+        createdAtMs: Date.now(),
+        addedBy:
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant",
+      },
+    ]);
+
+    setClosingCreditReason("");
+    setClosingCreditAmount("");
+    setClosingCreditPaid("");
+  };
+
+  const handleRemoveClosingCredit = (creditId) => {
+    setClosingCredits((prev) =>
+      prev.filter((item) => item.id !== creditId)
+    );
+  };
+
+  // Opening a new day pre-fills every credit that is still unpaid
+  // from the previous register, so loans show on all days.
   const openOpenModal = () => {
     // Pre-fill cash + digital money with the last closing values.
     const lastClosed = getLastClosedRegister(registers, getDateKey());
@@ -1278,6 +1627,12 @@ export default function CashRegister() {
       setOpeningDigital(emptyDigital());
     }
 
+    setOpeningCredits(
+      getCarryForwardCredits(registers, getDateKey())
+    );
+    setOpeningCreditReason("");
+    setOpeningCreditAmount("");
+    setOpeningCreditPaid("");
     setShowOpenModal(true);
   };
 
@@ -1365,6 +1720,11 @@ export default function CashRegister() {
 
             expenses: [],
 
+            credits: openingCredits,
+
+            // Snapshot of the credit (loan) entered at opening
+            openingCredits: openingCredits,
+
             cashAdded: 0,
 
             cashRemoved: 0,
@@ -1401,6 +1761,11 @@ export default function CashRegister() {
         setOpeningDigital(
           emptyDigital()
         );
+
+        setOpeningCredits([]);
+        setOpeningCreditReason("");
+        setOpeningCreditAmount("");
+        setOpeningCreditPaid("");
 
         setShowOpenModal(false);
       } catch (firebaseError) {
@@ -1485,7 +1850,12 @@ export default function CashRegister() {
         const difference =
           closingCash +
           calculateDigitalTotal(closingDigital) -
-          getOpeningTotal(openRegister);
+          getOpeningTotal(openRegister, closingCredits);
+
+        const closeFlow = getRegisterCreditFlow(
+          openRegister,
+          closingCredits
+        );
 
         await updateDoc(
           registerRef,
@@ -1509,7 +1879,21 @@ export default function CashRegister() {
             closingDigital:
               cleanDigital(closingDigital),
 
+            // Credit (loan) re-entered at closing. `credits` is
+            // kept in sync so day totals use the final list.
+            closingCredits: closingCredits,
+            credits: closingCredits,
+
             difference,
+
+            differenceWithoutCredit:
+              closingCash +
+              calculateDigitalTotal(closingDigital) -
+              getOpeningInHand(openRegister),
+
+            creditGiven: closeFlow.given,
+            creditPaid: closeFlow.paid,
+            creditNotPaid: closeFlow.notPaid,
 
             cashDifference,
 
@@ -1531,6 +1915,11 @@ export default function CashRegister() {
         setClosingDigital(
           emptyDigital()
         );
+
+        setClosingCredits([]);
+        setClosingCreditReason("");
+        setClosingCreditAmount("");
+        setClosingCreditPaid("");
 
         setShowCloseModal(false);
       } catch (firebaseError) {
@@ -1555,6 +1944,13 @@ export default function CashRegister() {
   const openCloseModal = () => {
     // Digital money starts blank so the final balances are re-entered
     setClosingDigital(emptyDigital());
+
+    // Start from the credit already on the register; the
+    // attendant can re-enter / edit it before closing.
+    setClosingCredits(getCreditList(openRegister));
+    setClosingCreditReason("");
+    setClosingCreditAmount("");
+    setClosingCreditPaid("");
 
     setShowCloseModal(true);
   };
@@ -1679,146 +2075,512 @@ export default function CashRegister() {
     };
 
   // ----------------------------------------------------------
-  // CASH MOVEMENTS  (add cash to / take cash out of the drawer)
-  //
-  // Each entry is saved in `cashMovements`; cashAdded / cashRemoved
-  // and expectedCash are kept in step with it using increment().
+  // CREDIT
   // ----------------------------------------------------------
 
-  const currentMovements = useMemo(
-    () =>
-      [...(currentRegister?.cashMovements || [])].sort(
-        (a, b) =>
-          Number(b?.createdAtMs || 0) -
-          Number(a?.createdAtMs || 0)
-      ),
-    [currentRegister]
-  );
+  const handleAddCredit =
+    async () => {
+      if (!openRegister) return;
 
-  const closeMovementModal = () => {
-    if (savingMovement) return;
-    setMovementModal(null);
-    setMovementDen(emptyDenominations());
-    setMovementReason("");
+      const reason =
+        creditReason.trim();
+
+      const amount =
+        Number(creditAmount);
+
+      const paid =
+        Number(creditPaid) || 0;
+
+      if (!reason) {
+        alert(
+          "Please enter the reason / person name."
+        );
+        return;
+      }
+
+      if (!amount || amount <= 0) {
+        alert(
+          "Please enter a valid credit amount."
+        );
+        return;
+      }
+
+      if (paid < 0 || paid > amount) {
+        alert(
+          "Paid amount cannot be more than the credit amount."
+        );
+        return;
+      }
+
+      setSavingCredit(true);
+
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            credits: arrayUnion({
+              id: `${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`,
+              reason,
+              amount,
+              paid,
+              payments:
+                paid > 0
+                  ? [
+                    {
+                      amount: paid,
+                      atMs: Date.now(),
+                      note: "Paid at entry",
+                    },
+                  ]
+                  : [],
+              createdAtMs: Date.now(),
+              addedBy:
+                profile?.name ||
+                user?.displayName ||
+                user?.email ||
+                "Attendant",
+            }),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+
+        setCreditReason("");
+        setCreditAmount("");
+        setCreditPaid("");
+      } catch (firebaseError) {
+        console.error(
+          "Add credit error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to add credit."
+        );
+      } finally {
+        setSavingCredit(false);
+      }
+    };
+
+  // ----------------------------------------------------------
+  // CREDIT PREVIEW BOX
+  // ----------------------------------------------------------
+
+  const openCreditDetail = (source, item) => {
+    setCreditDetailPay("");
+    setCreditEdit(null);
+    setCreditPayEdit(null);
+    setCreditDetail(
+      source === "history" || source === "all"
+        ? { source, id: item.id, item }
+        : { source, id: item.id }
+    );
   };
 
-  const handleSaveMovement = async () => {
-    if (!openRegister || !movementModal) return;
+  // Always read the latest copy so the box updates after a payment.
+  const creditDetailItem = (() => {
+    if (!creditDetail) return null;
 
-    const type = movementModal; // "add" | "remove"
-    const reason = movementReason.trim();
-    const amount = calculateDenominationTotal(movementDen);
+    if (creditDetail.source === "history") return creditDetail.item;
 
-    if (!amount || amount <= 0) {
-      alert("Please enter the notes / coins first.");
+    // All-days history: always use the latest copy so the box
+    // updates right after a payment.
+    if (creditDetail.source === "all") {
+      return (
+        allCreditHistory.find((item) => item.id === creditDetail.id) ||
+        creditDetail.item ||
+        null
+      );
+    }
+
+    const list =
+      creditDetail.source === "opening"
+        ? openingCredits
+        : creditDetail.source === "closing"
+          ? closingCredits
+          : getCreditList(openRegister);
+
+    return list.find((item) => item.id === creditDetail.id) || null;
+  })();
+
+  const handleCreditDetailPay = async () => {
+    if (!creditDetail || !creditDetailItem) return;
+
+    const payment = Number(creditDetailPay);
+    const balance = getCreditBalance(creditDetailItem);
+
+    if (!payment || payment <= 0) {
+      alert("Please enter the amount received.");
       return;
     }
 
-    if (!reason) {
-      alert("Please enter a reason.");
-      return;
-    }
-
-    if (type === "remove" && amount > storedExpectedCash) {
+    if (payment > balance) {
       alert(
-        `The drawer only has ${formatCurrency(
-          storedExpectedCash
-        )}. You cannot take out more than that.`
+        `Amount is more than the balance (${formatCurrency(balance)}).`
       );
       return;
     }
 
-    setSavingMovement(true);
+    const apply = (list) =>
+      list.map((item) =>
+        item.id === creditDetail.id
+          ? addPaymentToCredit(item, payment)
+          : item
+      );
+
+    if (creditDetail.source === "opening") {
+      setOpeningCredits(apply);
+      setCreditDetailPay("");
+      return;
+    }
+
+    if (creditDetail.source === "closing") {
+      setClosingCredits(apply);
+      setCreditDetailPay("");
+      return;
+    }
+
+    const isAll = creditDetail.source === "all";
+
+    if (!isAll && creditDetail.source !== "live") return;
+
+    if (!openRegister) {
+      alert("Open today's register to record a payment.");
+      return;
+    }
+
+    // A credit from the all-days list is paid inside today's open
+    // register, where every unpaid credit is carried forward.
+    if (
+      isAll &&
+      !getCreditList(openRegister).some(
+        (item) => item.id === creditDetail.id
+      )
+    ) {
+      alert("This credit is not in today's open register.");
+      return;
+    }
+
+    setCreditDetailSaving(true);
 
     try {
       await updateDoc(
         doc(db, "cashRegisters", openRegister.id),
         {
-          cashMovements: arrayUnion({
-            id: `${Date.now()}-${Math.random()
-              .toString(36)
-              .slice(2, 8)}`,
-            type,
-            reason,
-            amount,
-            denominations: DENOMINATIONS.reduce((acc, item) => {
-              const pcs = Number(movementDen?.[item.value]) || 0;
-              if (pcs > 0) acc[item.value] = pcs;
-              return acc;
-            }, {}),
-            createdAtMs: Date.now(),
-            addedBy:
-              profile?.name ||
-              user?.displayName ||
-              user?.email ||
-              "Attendant",
-          }),
-
-          ...(type === "add"
-            ? { cashAdded: increment(amount) }
-            : { cashRemoved: increment(amount) }),
-
-          expectedCash: increment(
-            type === "add" ? amount : -amount
-          ),
-
+          credits: apply(getCreditList(openRegister)),
           updatedAt: serverTimestamp(),
         }
       );
 
-      setMovementDen(emptyDenominations());
-      setMovementReason("");
+      setCreditDetailPay("");
     } catch (firebaseError) {
-      console.error("Cash movement error:", firebaseError);
+      console.error("Pay credit error:", firebaseError);
+
       alert(
         firebaseError.message ||
-        "Unable to save this entry."
+        "Unable to record payment."
       );
     } finally {
-      setSavingMovement(false);
+      setCreditDetailSaving(false);
     }
   };
 
-  const handleDeleteMovement = async (item) => {
-    if (!openRegister) return;
+  const handleRemoveCredit =
+    async (creditId) => {
+      if (!openRegister) return;
 
-    if (!window.confirm("Delete this entry?")) return;
+      if (
+        !window.confirm(
+          "Remove this credit entry?"
+        )
+      ) {
+        return;
+      }
 
-    const amount = Number(item.amount || 0);
+      try {
+        await updateDoc(
+          doc(
+            db,
+            "cashRegisters",
+            openRegister.id
+          ),
+          {
+            credits:
+              getCreditList(
+                openRegister
+              ).filter(
+                (item) =>
+                  item.id !== creditId
+              ),
+
+            ...(Array.isArray(openRegister.openingCredits)
+              ? {
+                openingCredits:
+                  openRegister.openingCredits.filter(
+                    (item) =>
+                      item.id !== creditId
+                  ),
+              }
+              : {}),
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+      } catch (firebaseError) {
+        console.error(
+          "Remove credit error:",
+          firebaseError
+        );
+
+        alert(
+          firebaseError.message ||
+          "Unable to remove credit."
+        );
+      }
+    };
+
+
+  // ----------------------------------------------------------
+  // CREDIT  -  EDIT / DELETE  (inside the credit box)
+  // Works on today's open register, where every unpaid credit lives.
+  // ----------------------------------------------------------
+
+  const closeCreditDetail = () => {
+    setCreditDetail(null);
+    setCreditEdit(null);
+    setCreditPayEdit(null);
+  };
+
+  // Applies `transform` to the open credit shown in the box and saves it.
+  const saveOpenCredit = async (transform) => {
+    if (!openRegister || !creditDetail) return false;
+
+    setCreditDetailSaving(true);
 
     try {
       await updateDoc(
         doc(db, "cashRegisters", openRegister.id),
         {
-          cashMovements: (
-            openRegister.cashMovements || []
-          ).filter((entry) => entry.id !== item.id),
-
-          ...(item.type === "add"
-            ? { cashAdded: increment(-amount) }
-            : { cashRemoved: increment(-amount) }),
-
-          expectedCash: increment(
-            item.type === "add" ? -amount : amount
+          credits: getCreditList(openRegister).map((item) =>
+            item.id === creditDetail.id ? transform(item) : item
           ),
-
           updatedAt: serverTimestamp(),
         }
       );
+
+      return true;
     } catch (firebaseError) {
-      console.error("Delete movement error:", firebaseError);
+      console.error("Update credit error:", firebaseError);
+
       alert(
         firebaseError.message ||
-        "Unable to delete this entry."
+        "Unable to update credit."
       );
+
+      return false;
+    } finally {
+      setCreditDetailSaving(false);
+    }
+  };
+
+  // UPDATE: change the name / reason and the total credit amount.
+  // Opens the credit box straight in edit mode (from the history table).
+  const startCreditEditFromTable = (item) => {
+    const inOpen =
+      Boolean(openRegister) &&
+      getCreditList(openRegister).some(
+        (entry) => entry.id === item.id
+      );
+
+    if (!inOpen) {
+      alert("Open today's register to edit this credit.");
+      return;
+    }
+
+    openCreditDetail("all", item);
+    setCreditEdit({
+      reason: item.reason || "",
+      amount: String(Number(item.amount) || 0),
+    });
+  };
+
+  const handleSaveCreditEdit = async () => {
+    if (!creditEdit || !creditDetailItem) return;
+
+    const reason = creditEdit.reason.trim();
+    const amount = Number(creditEdit.amount);
+    const paid = getCreditPaid(creditDetailItem);
+
+    if (!reason) {
+      alert("Please enter the reason / person name.");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid credit amount.");
+      return;
+    }
+
+    if (amount < paid) {
+      alert(
+        `Credit amount cannot be less than what is already paid (${formatCurrency(paid)}).`
+      );
+      return;
+    }
+
+    const ok = await saveOpenCredit((item) => ({
+      ...item,
+      reason,
+      amount,
+    }));
+
+    if (ok) setCreditEdit(null);
+  };
+
+  // UPDATE: change the amount of one payment.
+  const handleSavePaymentEdit = async () => {
+    if (!creditPayEdit || !creditDetailItem) return;
+
+    const value = Number(creditPayEdit.value);
+    const payments = Array.isArray(creditDetailItem.payments)
+      ? creditDetailItem.payments
+      : [];
+    const current = Number(payments[creditPayEdit.idx]?.amount) || 0;
+
+    if (!value || value <= 0) {
+      alert("Please enter a valid payment amount.");
+      return;
+    }
+
+    const newPaid = getCreditPaid(creditDetailItem) - current + value;
+
+    if (newPaid > (Number(creditDetailItem.amount) || 0)) {
+      alert("Total paid cannot be more than the credit amount.");
+      return;
+    }
+
+    const ok = await saveOpenCredit((item) => ({
+      ...item,
+      paid: newPaid,
+      payments: (Array.isArray(item.payments) ? item.payments : []).map(
+        (entry, index) =>
+          index === creditPayEdit.idx
+            ? { ...entry, amount: value }
+            : entry
+      ),
+    }));
+
+    if (ok) setCreditPayEdit(null);
+  };
+
+  // DELETE: remove one payment (the amount goes back to "Not paid").
+  const handleDeleteCreditPayment = async (entry) => {
+    if (!creditDetailItem) return;
+
+    if (
+      !window.confirm(
+        `Remove this payment of ${formatCurrency(entry.amount)}? It will be added back to "Not paid".`
+      )
+    ) {
+      return;
+    }
+
+    await saveOpenCredit((item) => {
+      const payments = Array.isArray(item.payments) ? item.payments : [];
+
+      // Payment made before history tracking existed ("Earlier payment")
+      if (entry.idx < 0) {
+        const logged = payments.reduce(
+          (sum, row) => sum + (Number(row?.amount) || 0),
+          0
+        );
+
+        return { ...item, paid: logged };
+      }
+
+      return {
+        ...item,
+        paid: Math.max(0, getCreditPaid(item) - entry.amount),
+        payments: payments.filter((_, index) => index !== entry.idx),
+      };
+    });
+  };
+
+  // DELETE: remove the whole credit from every day it appears in.
+  const handleDeleteCreditEverywhere = async (target = creditDetailItem) => {
+    if (!target) return;
+
+    if (
+      !window.confirm(
+        `Delete the credit "${target.reason}" (${formatCurrency(
+          Number(target.amount) || 0
+        )}) and all its payments? This also removes it from earlier days and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    const id = target.id;
+    const fields = ["credits", "openingCredits", "closingCredits"];
+
+    setCreditDetailSaving(true);
+
+    try {
+      const batch = writeBatch(db);
+      let touched = 0;
+
+      registers.forEach((register) => {
+        const patch = {};
+
+        fields.forEach((field) => {
+          if (
+            Array.isArray(register?.[field]) &&
+            register[field].some((item) => item?.id === id)
+          ) {
+            patch[field] = register[field].filter(
+              (item) => item?.id !== id
+            );
+          }
+        });
+
+        if (Object.keys(patch).length > 0) {
+          batch.update(doc(db, "cashRegisters", register.id), {
+            ...patch,
+            updatedAt: serverTimestamp(),
+          });
+          touched += 1;
+        }
+      });
+
+      if (touched > 0) await batch.commit();
+
+      if (creditDetail?.id === id) closeCreditDetail();
+    } catch (firebaseError) {
+      console.error("Delete credit error:", firebaseError);
+
+      alert(
+        firebaseError.message ||
+        "Unable to delete credit."
+      );
+    } finally {
+      setCreditDetailSaving(false);
     }
   };
 
   // ----------------------------------------------------------
   // EXPORT  (PDF / EXCEL)
   //
-  // Columns: Date | Opening (Cash, Digital, Total)
-  //          | Closing (Cash, Digital, Total) | Difference
+  // Columns: Date | Opening (Cash, Digital, Credit, Total)
+  //          | Closing (Cash, Digital, Credit, Total) | Difference
   // Open (not yet closed) registers show "—" for closing + difference.
   // ----------------------------------------------------------
 
@@ -1839,6 +2601,9 @@ export default function CashRegister() {
           openDigital: calculateDigitalTotal(
             getOpeningDigital(item)
           ),
+          openCredit: calculateCreditTotal(
+            getOpeningCredits(item)
+          ),
           openTotal: getOpeningTotal(item),
           closeCash: closed
             ? Number(item.closingCash || 0)
@@ -1848,8 +2613,18 @@ export default function CashRegister() {
               getClosingDigital(item)
             )
             : null,
+          closeCredit: closed
+            ? calculateCreditTotal(
+              getClosingCredits(item) || []
+            )
+            : null,
           closeTotal: closed
             ? getClosingTotal(item)
+            : null,
+          creditPaid: getRegisterCreditFlow(item).paid,
+          creditNotPaid: getRegisterCreditFlow(item).notPaid,
+          diffWithout: closed
+            ? getDifferenceWithoutCredit(item)
             : null,
           difference: closed
             ? getOverallDifference(item)
@@ -1869,7 +2644,7 @@ export default function CashRegister() {
     const XLSX = excelModule.default || excelModule;
     const C = EXPORT_COLORS;
 
-    const COLS = 10;
+    const COLS = 15;
     const LAST = COLS - 1;
     const HEAD_ROWS = 5;
 
@@ -1884,7 +2659,7 @@ export default function CashRegister() {
     const blank = (count) => Array(count).fill("");
 
     const legend =
-      "Total = Cash + Digital   |   Total Money = Total amount of the day (Cash + Digital - Expenses)";
+      "Opening total = Opening in-hand - Credit given + Credit paid   |   Diff without credit = Closing - Opening in-hand   |   Diff with credit = Closing - Opening total";
 
     const aoa = [
       ["Cash Register History", ...blank(LAST)],
@@ -1895,25 +2670,32 @@ export default function CashRegister() {
       blank(COLS),
       [
         "Date", "Status",
-        "Opening", "", "",
-        "Closing", "", "",
-        "Difference", "Total Money",
+        "Opening", "", "", "",
+        "Closing", "", "", "",
+        "Credit", "", "Amount Difference", "",
+        "Total Money",
       ],
       [
         "", "",
-        "Cash", "Digital Money", "Total",
-        "Cash", "Digital Money", "Total",
-        "", "",
+        "Cash", "Digital Money", "Credit (not paid)", "Opening Total",
+        "Cash", "Digital Money", "Credit (not paid)", "Total",
+        "Credit Paid", "Credit Not Paid", "Without Credit", "With Credit",
+        "",
       ],
       ...rows.map((row) => [
         row.date,
         row.status,
         money(row.openCash),
         money(row.openDigital),
+        money(row.openCredit),
         money(row.openTotal),
         money(row.closeCash),
         money(row.closeDigital),
+        money(row.closeCredit),
         money(row.closeTotal),
+        money(row.creditPaid),
+        money(row.creditNotPaid),
+        money(row.diffWithout),
         money(row.difference),
         money(row.totalMoney),
       ]),
@@ -1970,8 +2752,8 @@ export default function CashRegister() {
 
     // ---- header -------------------------------------------
     const headFill = (c, sub) => {
-      if (c >= 2 && c <= 4) return sub ? C.violetSoft : C.violet;
-      if (c >= 5 && c <= 7) return sub ? C.indigoSoft : C.indigo;
+      if (c >= 2 && c <= 5) return sub ? C.violetSoft : C.violet;
+      if (c >= 6 && c <= 9) return sub ? C.indigoSoft : C.indigo;
       return C.deep;
     };
 
@@ -2001,7 +2783,7 @@ export default function CashRegister() {
 
         let style = {
           fill: solid(band),
-          font: font(C.ink, { bold: c === 4 || c === 7 }),
+          font: font(C.ink, { bold: c === 5 || c === 9 }),
           border: box(C.line),
           alignment: { vertical: "center", horizontal: "right", indent: 1 },
         };
@@ -2026,17 +2808,18 @@ export default function CashRegister() {
         } else if (isDash) {
           style.font = font(C.faint);
           style.alignment = { vertical: "center", horizontal: "center" };
-        } else if (c === 8) {
+        } else if (c === 12 || c === 13) {
+          const diffValue = c === 12 ? row.diffWithout : row.difference;
           const diffColor =
-            row.difference > 0
+            diffValue > 0
               ? C.green
-              : row.difference < 0
+              : diffValue < 0
                 ? C.red
                 : C.muted;
 
           style.font = font(diffColor, { bold: true });
           numFmt = "+#,##0.00;-#,##0.00;0.00";
-        } else if (c === 9) {
+        } else if (c === 14) {
           style.fill = solid(C.pale);
           style.font = font(C.deep, { bold: true });
         }
@@ -2066,10 +2849,11 @@ export default function CashRegister() {
       { s: { r: 1, c: 0 }, e: { r: 1, c: LAST } },
       { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } },
       { s: { r: 3, c: 1 }, e: { r: 4, c: 1 } },
-      { s: { r: 3, c: 2 }, e: { r: 3, c: 4 } },
-      { s: { r: 3, c: 5 }, e: { r: 3, c: 7 } },
-      { s: { r: 3, c: 8 }, e: { r: 4, c: 8 } },
-      { s: { r: 3, c: 9 }, e: { r: 4, c: 9 } },
+      { s: { r: 3, c: 2 }, e: { r: 3, c: 5 } },
+      { s: { r: 3, c: 6 }, e: { r: 3, c: 9 } },
+      { s: { r: 3, c: 10 }, e: { r: 3, c: 11 } },
+      { s: { r: 3, c: 12 }, e: { r: 3, c: 13 } },
+      { s: { r: 3, c: 14 }, e: { r: 4, c: 14 } },
       { s: { r: legendRow, c: 0 }, e: { r: legendRow, c: LAST } },
     ];
 
@@ -2078,11 +2862,17 @@ export default function CashRegister() {
       { wch: 12 },
       { wch: 14 },
       { wch: 16 },
+      { wch: 19 },
       { wch: 14 },
       { wch: 14 },
       { wch: 16 },
+      { wch: 19 },
       { wch: 14 },
       { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 17 },
+      { wch: 17 },
       { wch: 17 },
     ];
 
@@ -2158,7 +2948,7 @@ export default function CashRegister() {
         },
       ],
       legend:
-        "Total = Cash + Digital   |   Total Money = Total amount of the day (Cash + Digital - Expenses)",
+        "Opening total = Opening in-hand - Credit given + Credit paid   |   Diff without credit = Closing - Opening in-hand   |   Diff with credit = Closing - Opening total",
     });
 
     autoTable(pdf, {
@@ -2169,18 +2959,25 @@ export default function CashRegister() {
         [
           { content: "Date", rowSpan: 2 },
           { content: "Status", rowSpan: 2 },
-          { content: "Opening", colSpan: 3 },
-          { content: "Closing", colSpan: 3 },
-          { content: "Difference", rowSpan: 2 },
+          { content: "Opening", colSpan: 4 },
+          { content: "Closing", colSpan: 4 },
+          { content: "Credit", colSpan: 2 },
+          { content: "Amount Difference", colSpan: 2 },
           { content: "Total Money", rowSpan: 2 },
         ],
         [
           "Cash",
           "Digital Money",
-          "Total",
+          "Credit (not paid)",
+          "Opening Total",
           "Cash",
           "Digital Money",
+          "Credit (not paid)",
           "Total",
+          "Paid",
+          "Not Paid",
+          "Without Credit",
+          "With Credit",
         ],
       ],
       body: rows.map((row) => [
@@ -2188,10 +2985,17 @@ export default function CashRegister() {
         "",
         money(row.openCash),
         money(row.openDigital),
+        money(row.openCredit),
         money(row.openTotal),
         money(row.closeCash),
         money(row.closeDigital),
+        money(row.closeCredit),
         money(row.closeTotal),
+        money(row.creditPaid),
+        money(row.creditNotPaid),
+        row.diffWithout === null
+          ? "—"
+          : `${row.diffWithout > 0 ? "+" : ""}${money(row.diffWithout)}`,
         row.difference === null
           ? "—"
           : `${row.difference > 0 ? "+" : ""}${money(row.difference)}`,
@@ -2199,8 +3003,8 @@ export default function CashRegister() {
       ]),
       styles: {
         font: "helvetica",
-        fontSize: 8.5,
-        cellPadding: { top: 8, bottom: 8, left: 6, right: 8 },
+        fontSize: 7,
+        cellPadding: { top: 8, bottom: 8, left: 4, right: 5 },
         halign: "right",
         valign: "middle",
         lineWidth: 0,
@@ -2219,10 +3023,11 @@ export default function CashRegister() {
       columnStyles: {
         0: { halign: "left", fontStyle: "bold", cellWidth: 66 },
         1: { halign: "center", cellWidth: 66 },
-        4: { fontStyle: "bold" },
-        7: { fontStyle: "bold" },
-        8: { fontStyle: "bold" },
+        5: { fontStyle: "bold" },
         9: { fontStyle: "bold" },
+        12: { fontStyle: "bold" },
+        13: { fontStyle: "bold" },
+        14: { fontStyle: "bold" },
       },
       didParseCell: (data) => {
         const col = data.column.index;
@@ -2230,9 +3035,9 @@ export default function CashRegister() {
         if (data.section === "head") {
           const sub = data.row.index === 1;
 
-          if (col >= 2 && col <= 4) {
+          if (col >= 2 && col <= 5) {
             data.cell.styles.fillColor = sub ? C.violetSoft : C.violet;
-          } else if (col >= 5 && col <= 7) {
+          } else if (col >= 6 && col <= 9) {
             data.cell.styles.fillColor = sub ? C.indigoSoft : C.indigo;
           }
 
@@ -2248,17 +3053,19 @@ export default function CashRegister() {
           data.cell.styles.halign = "center";
         }
 
-        if (col === 8 && row) {
-          if (row.difference > 0) {
+        if ((col === 12 || col === 13) && row) {
+          const diffValue = col === 12 ? row.diffWithout : row.difference;
+
+          if (diffValue > 0) {
             data.cell.styles.textColor = C.green;
-          } else if (row.difference < 0) {
+          } else if (diffValue < 0) {
             data.cell.styles.textColor = C.red;
-          } else if (row.difference === 0) {
+          } else if (diffValue === 0) {
             data.cell.styles.textColor = C.muted;
           }
         }
 
-        if (col === 9) {
+        if (col === 14) {
           data.cell.styles.fillColor = C.pale;
           data.cell.styles.textColor = C.deep;
         }
@@ -2281,8 +3088,443 @@ export default function CashRegister() {
     pdf.save(`cash-register-history-${todayKey}.pdf`);
   };
 
+  // ----------------------------------------------------------
+  // CREDIT / LOAN HISTORY EXPORT (all days)
+  //
+  // Columns: Date | Name / Reason | Status | Amount Credit
+  //          | Amount Paid | Amount Not Paid | Progress
+  //          (+ a Total row)
+  // ----------------------------------------------------------
+
+  const buildCreditExportRows = () =>
+    [...allCreditHistory]
+      .sort(
+        (a, b) =>
+          Number(a?.createdAtMs || 0) - Number(b?.createdAtMs || 0)
+      )
+      .map((item) => {
+        const credit = Number(item.amount) || 0;
+        const paid = getCreditPaid(item);
+
+        return {
+          date: item.createdAtMs ? formatDate(item.createdAtMs) : "—",
+          name: item.reason || "",
+          status: getCreditStatusLabel(credit, paid),
+          credit,
+          paid,
+          notPaid: getCreditBalance(item),
+          percent: credit > 0 ? Math.min(1, paid / credit) : 1,
+        };
+      });
+
+  const sumCreditRows = (rows) => {
+    const totals = rows.reduce(
+      (sum, row) => ({
+        credit: sum.credit + row.credit,
+        paid: sum.paid + row.paid,
+        notPaid: sum.notPaid + row.notPaid,
+      }),
+      { credit: 0, paid: 0, notPaid: 0 }
+    );
+
+    return {
+      ...totals,
+      percent: totals.credit > 0 ? Math.min(1, totals.paid / totals.credit) : 1,
+    };
+  };
+
+  const exportCreditExcel = async (rows) => {
+    const excelModule = await import("xlsx-js-style");
+    const XLSX = excelModule.default || excelModule;
+    const C = EXPORT_COLORS;
+
+    const COLS = 7;
+    const LAST = COLS - 1;
+    const HEAD_ROW = 3;
+    const FIRST = HEAD_ROW + 1;
+
+    const totals = sumCreditRows(rows);
+    const blank = (count) => Array(count).fill("");
+
+    const settled = rows.filter((row) => row.status === "Paid").length;
+
+    const aoa = [
+      ["Credit / Loan History", ...blank(LAST)],
+      [
+        `Amounts in ₹   |   ${rows.length} record(s)   |   ${settled} settled   |   Generated ${formatDateTime(new Date())}`,
+        ...blank(LAST),
+      ],
+      blank(COLS),
+      [
+        "Date",
+        "Name / Reason",
+        "Status",
+        "Amount Credit",
+        "Amount Paid",
+        "Amount Not Paid",
+        "% Paid",
+      ],
+      ...rows.map((row) => [
+        row.date,
+        row.name,
+        row.status,
+        row.credit,
+        row.paid,
+        row.notPaid,
+        row.percent,
+      ]),
+      [
+        "Total",
+        "",
+        "",
+        totals.credit,
+        totals.paid,
+        totals.notPaid,
+        totals.percent,
+      ],
+    ];
+
+    const sheet = XLSX.utils.aoa_to_sheet(aoa);
+
+    const rgb = (color) => ({ rgb: rgbToHex(color) });
+    const solid = (color) => ({
+      patternType: "solid",
+      fgColor: rgb(color),
+    });
+    const thin = (color) => ({ style: "thin", color: rgb(color) });
+    const box = (color) => ({
+      top: thin(color),
+      bottom: thin(color),
+      left: thin(color),
+      right: thin(color),
+    });
+    const font = (color, extra = {}) => ({
+      name: "Calibri",
+      sz: 11,
+      color: rgb(color),
+      ...extra,
+    });
+
+    const put = (r, c, style) => {
+      const address = XLSX.utils.encode_cell({ r, c });
+
+      if (!sheet[address]) sheet[address] = { t: "s", v: "" };
+
+      sheet[address].s = style;
+
+      return sheet[address];
+    };
+
+    for (let c = 0; c < COLS; c += 1) {
+      put(0, c, {
+        fill: solid(C.deep),
+        font: font(C.white, { sz: 20, bold: true }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+
+      put(1, c, {
+        fill: solid(C.deep),
+        font: font([190, 235, 228], { sz: 10 }),
+        alignment: { vertical: "center", horizontal: "left", indent: 1 },
+      });
+
+      put(HEAD_ROW, c, {
+        fill: solid(C.violet),
+        font: font(C.white, { bold: true }),
+        alignment: {
+          horizontal: c <= 1 ? "left" : "center",
+          vertical: "center",
+          indent: c <= 1 ? 1 : 0,
+        },
+        border: box(C.white),
+      });
+    }
+
+    rows.forEach((row, index) => {
+      const r = FIRST + index;
+      const band = index % 2 === 1 ? C.zebra : C.white;
+
+      for (let c = 0; c < COLS; c += 1) {
+        let style = {
+          fill: solid(band),
+          font: font(C.ink),
+          border: box(C.line),
+          alignment: { vertical: "center", horizontal: "right", indent: 1 },
+        };
+        let numFmt = "#,##0.00";
+
+        if (c === 0) {
+          style.font = font(C.ink, { bold: true });
+          style.alignment = { vertical: "center", horizontal: "left", indent: 1 };
+        } else if (c === 1) {
+          style.alignment = { vertical: "center", horizontal: "left", indent: 1 };
+        } else if (c === 2) {
+          const pill = getStatusPill(row.status);
+
+          style = {
+            fill: solid(pill.bg),
+            font: font(pill.fg, { bold: true }),
+            border: box(C.white),
+            alignment: { vertical: "center", horizontal: "center" },
+          };
+        } else if (c === 4) {
+          style.font = font(C.green, { bold: true });
+        } else if (c === 5) {
+          style.font = font(row.notPaid > 0 ? C.red : C.green, { bold: true });
+        } else if (c === 6) {
+          style.alignment = { vertical: "center", horizontal: "center" };
+          style.font = font(
+            row.percent >= 1 ? C.green : row.percent > 0 ? C.amber : C.red,
+            { bold: true }
+          );
+          numFmt = "0%";
+        }
+
+        const cell = put(r, c, style);
+
+        if (typeof cell.v === "number") {
+          cell.t = "n";
+          cell.z = numFmt;
+        }
+      }
+    });
+
+    const totalRow = FIRST + rows.length;
+
+    for (let c = 0; c < COLS; c += 1) {
+      const cell = put(totalRow, c, {
+        fill: solid(C.deep),
+        font: font(C.white, { bold: true, sz: 12 }),
+        border: box(C.deep),
+        alignment: {
+          vertical: "center",
+          horizontal: c === 0 ? "left" : c === 6 ? "center" : "right",
+          indent: c === 6 ? 0 : 1,
+        },
+      });
+
+      if (typeof cell.v === "number") {
+        cell.t = "n";
+        cell.z = c === 6 ? "0%" : "#,##0.00";
+      }
+    }
+
+    sheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: LAST } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: LAST } },
+    ];
+
+    sheet["!cols"] = [
+      { wch: 15 },
+      { wch: 32 },
+      { wch: 13 },
+      { wch: 17 },
+      { wch: 17 },
+      { wch: 19 },
+      { wch: 11 },
+    ];
+
+    sheet["!rows"] = [
+      { hpt: 36 },
+      { hpt: 22 },
+      { hpt: 8 },
+      { hpt: 26 },
+      ...rows.map(() => ({ hpt: 24 })),
+      { hpt: 28 },
+    ];
+
+    const book = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(book, sheet, "Credit History");
+
+    XLSX.writeFile(book, `credit-loan-history-${todayKey}.xlsx`);
+  };
+
+  const exportCreditPdf = async (rows) => {
+    const { jsPDF } = await import("jspdf");
+    const autoTableModule = await import("jspdf-autotable");
+    const autoTable =
+      autoTableModule.default || autoTableModule.autoTable;
+    const C = EXPORT_COLORS;
+
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "a4",
+    });
+
+    const money = (value) =>
+      Number(value).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+    const totals = sumCreditRows(rows);
+
+    const tableTop = drawExportHeader(pdf, {
+      title: "Credit / Loan History",
+      subtitle: "All days  |  All amounts in Rs.",
+      generated: formatDateTime(new Date()),
+      cards: [
+        { label: "Total credit (Rs.)", value: money(totals.credit), accent: C.violet },
+        { label: "Amount paid (Rs.)", value: money(totals.paid), accent: C.green },
+        { label: "Not paid (Rs.)", value: money(totals.notPaid), accent: C.red },
+        {
+          label: "Recovered",
+          value: `${Math.round(totals.percent * 100)}%`,
+          accent: C.violetSoft,
+        },
+      ],
+      legend: `Not Paid = Credit - Paid   |   ${rows.length} record(s)`,
+    });
+
+    const progressColor = (percent) =>
+      percent >= 1 ? C.green : percent > 0 ? [217, 119, 6] : C.red;
+
+    autoTable(pdf, {
+      startY: tableTop + 6,
+      theme: "plain",
+      margin: { top: 40, left: 40, right: 40, bottom: 46 },
+      head: [
+        [
+          "Date",
+          "Name / Reason",
+          "Status",
+          "Amount Credit",
+          "Amount Paid",
+          "Amount Not Paid",
+          "Progress",
+        ],
+      ],
+      body: [
+        ...rows.map((row) => [
+          row.date,
+          row.name,
+          "",
+          money(row.credit),
+          money(row.paid),
+          money(row.notPaid),
+          "",
+        ]),
+        [
+          "Total",
+          "",
+          "",
+          money(totals.credit),
+          money(totals.paid),
+          money(totals.notPaid),
+          `${Math.round(totals.percent * 100)}%`,
+        ],
+      ],
+      styles: {
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: { top: 8, bottom: 8, left: 8, right: 10 },
+        halign: "right",
+        valign: "middle",
+        lineWidth: 0,
+        textColor: C.ink,
+      },
+      headStyles: {
+        fillColor: C.violet,
+        textColor: C.white,
+        halign: "center",
+        valign: "middle",
+        fontStyle: "bold",
+        lineWidth: 0.6,
+        lineColor: C.white,
+      },
+      alternateRowStyles: { fillColor: C.zebra },
+      columnStyles: {
+        0: { halign: "left", fontStyle: "bold", cellWidth: 80 },
+        1: { halign: "left" },
+        2: { halign: "center", cellWidth: 84 },
+        5: { fontStyle: "bold" },
+        6: { halign: "center", cellWidth: 130 },
+      },
+      didParseCell: (data) => {
+        if (data.section !== "body") return;
+
+        const col = data.column.index;
+        const row = rows[data.row.index];
+
+        if (!row) {
+          // Total row
+          data.cell.styles.fillColor = C.deep;
+          data.cell.styles.textColor = C.white;
+          data.cell.styles.fontStyle = "bold";
+          return;
+        }
+
+        if (col === 4) {
+          data.cell.styles.textColor = C.green;
+        } else if (col === 5) {
+          data.cell.styles.textColor = row.notPaid > 0 ? C.red : C.green;
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.section !== "body") return;
+
+        const row = rows[data.row.index];
+        const col = data.column.index;
+
+        if (row) drawCellRule(pdf, data.cell);
+
+        if (!row) return;
+
+        if (col === 2) {
+          drawStatusPill(pdf, data.cell, getStatusPill(row.status));
+        }
+
+        if (col === 6) {
+          const cell = data.cell;
+          const pad = 10;
+          const pctWidth = 28;
+          const barH = 5;
+          const barW = cell.width - pad * 2 - pctWidth;
+          const barX = cell.x + pad;
+          const barY = cell.y + (cell.height - barH) / 2;
+
+          pdf.setFillColor(226, 232, 240);
+          pdf.roundedRect(barX, barY, barW, barH, 2.5, 2.5, "F");
+
+          if (row.percent > 0) {
+            pdf.setFillColor(...progressColor(row.percent));
+            pdf.roundedRect(
+              barX,
+              barY,
+              Math.max(5, barW * row.percent),
+              barH,
+              2.5,
+              2.5,
+              "F"
+            );
+          }
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(...C.ink);
+          pdf.text(
+            `${Math.round(row.percent * 100)}%`,
+            cell.x + cell.width - pad,
+            cell.y + cell.height / 2,
+            { align: "right", baseline: "middle" }
+          );
+        }
+      },
+    });
+
+    drawExportFooter(pdf, "Credit / Loan History");
+
+    pdf.save(`credit-loan-history-${todayKey}.pdf`);
+  };
+
   const handleExport = async (format) => {
-    if (filteredRegisters.length === 0) {
+    const isCredit = exportTarget === "credit";
+
+    if (
+      (isCredit ? allCreditHistory : filteredRegisters).length === 0
+    ) {
       alert("No records available to export.");
       return;
     }
@@ -2290,12 +3532,22 @@ export default function CashRegister() {
     setExporting(format);
 
     try {
-      const rows = buildExportRows();
+      if (isCredit) {
+        const creditRows = buildCreditExportRows();
 
-      if (format === "pdf") {
-        await exportPdf(rows);
+        if (format === "pdf") {
+          await exportCreditPdf(creditRows);
+        } else {
+          await exportCreditExcel(creditRows);
+        }
       } else {
-        await exportExcel(rows);
+        const rows = buildExportRows();
+
+        if (format === "pdf") {
+          await exportPdf(rows);
+        } else {
+          await exportExcel(rows);
+        }
       }
 
       setShowExportModal(false);
@@ -2554,7 +3806,96 @@ export default function CashRegister() {
       return acc;
     }, {});
 
+  const makeCreditRow = (orig = null) => ({
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    reason: orig?.reason || "",
+    amount: orig ? String(Number(orig.amount) || 0) : "",
+    paid: orig ? String(getCreditPaid(orig) || "") : "",
+    orig,
+  });
+
+  const updateEntryCredit = (key, field, value) =>
+    setEntryCredits((rows) =>
+      rows.map((row) =>
+        row.key === key ? { ...row, [field]: value } : row
+      )
+    );
+
+  // Turns the form rows into credit records. Returns { error } when a row
+  // is invalid. Existing credits keep their id, date and payment history.
+  const buildEntryCredits = (rows, stampMs) => {
+    const list = [];
+
+    for (const row of rows) {
+      const reason = row.reason.trim();
+      const amount = Number(row.amount);
+      const paid = Number(row.paid) || 0;
+
+      // completely empty row -> ignore
+      if (!reason && !row.amount && !row.paid) continue;
+
+      if (!reason) {
+        return { error: "Please enter the name / reason for every credit." };
+      }
+
+      if (!amount || amount <= 0) {
+        return { error: `Please enter a valid credit amount for "${reason}".` };
+      }
+
+      if (paid < 0 || paid > amount) {
+        return {
+          error: `Paid amount for "${reason}" cannot be more than the credit amount.`,
+        };
+      }
+
+      if (row.orig) {
+        const paidChanged = paid !== getCreditPaid(row.orig);
+
+        list.push({
+          ...row.orig,
+          reason,
+          amount,
+          paid,
+          ...(paidChanged
+            ? {
+              payments:
+                paid > 0
+                  ? [
+                    {
+                      amount: paid,
+                      atMs: row.orig.createdAtMs || stampMs,
+                      note: "Edited entry",
+                    },
+                  ]
+                  : [],
+            }
+            : {}),
+        });
+      } else {
+        list.push({
+          id: row.key,
+          reason,
+          amount,
+          paid,
+          payments:
+            paid > 0
+              ? [{ amount: paid, atMs: stampMs, note: "Paid at entry" }]
+              : [],
+          createdAtMs: stampMs,
+          addedBy:
+            profile?.name ||
+            user?.displayName ||
+            user?.email ||
+            "Attendant",
+        });
+      }
+    }
+
+    return { list };
+  };
+
   const openCreateEntry = () => {
+    setEntryCredits([]);
     setEntryDate(getDateKey());
     setEntryOpenDen(emptyDenominations());
     setEntryOpenDigital(emptyDigital());
@@ -2564,6 +3905,7 @@ export default function CashRegister() {
   };
 
   const openEditEntry = (item) => {
+    setEntryCredits(getCreditList(item).map((credit) => makeCreditRow(credit)));
     setEntryDate(item.dateKey || getDateKey());
     setEntryOpenDen(denominationsToInputs(item.openingDenominations));
     setEntryOpenDigital(digitalToInputs(getOpeningDigital(item)));
@@ -2611,6 +3953,19 @@ export default function CashRegister() {
       return;
     }
 
+    const [entryYear, entryMonth, entryDay] = entryDate.split("-").map(Number);
+    const credited = buildEntryCredits(
+      entryCredits,
+      new Date(entryYear, entryMonth - 1, entryDay, 12, 0, 0).getTime()
+    );
+
+    if (credited.error) {
+      alert(credited.error);
+      return;
+    }
+
+    const entryCreditList = credited.list;
+
     setSaving(true);
 
     try {
@@ -2645,6 +4000,9 @@ export default function CashRegister() {
           closingDigital: cleanDigital(entryCloseDigital),
 
           expenses: [],
+          credits: entryCreditList,
+          openingCredits: [],
+          closingCredits: entryCreditList,
 
           cashAdded: 0,
           cashRemoved: 0,
@@ -2657,6 +4015,13 @@ export default function CashRegister() {
 
           cashDifference: closeCash - openCash,
           difference:
+            closeCash +
+            closeDigitalAmount -
+            (openCash +
+              openDigitalAmount -
+              getCreditFlow([], entryCreditList).given +
+              getCreditFlow([], entryCreditList).paid),
+          differenceWithoutCredit:
             closeCash +
             closeDigitalAmount -
             (openCash + openDigitalAmount),
@@ -2689,10 +4054,12 @@ export default function CashRegister() {
           openingDenominations: { ...entryOpenDen },
           openingDigital: newOpeningDigital,
           expectedCash,
+          credits: entryCreditList,
           updatedAt: serverTimestamp(),
         };
 
         if (hasClosing) {
+          payload.closingCredits = entryCreditList;
           const newClosingDigital = cleanDigital(entryCloseDigital);
 
           payload.closingCash = closeCash;
@@ -2700,7 +4067,19 @@ export default function CashRegister() {
           payload.closingDigital = newClosingDigital;
           payload.digitalBalances = newClosingDigital;
           payload.cashDifference = closeCash - expectedCash;
+          const editFlow = getCreditFlow(
+            getOpeningCredits(item),
+            entryCreditList
+          );
+
           payload.difference =
+            closeCash +
+            closeDigitalAmount -
+            (openCash +
+              openDigitalAmount -
+              editFlow.given +
+              editFlow.paid);
+          payload.differenceWithoutCredit =
             closeCash +
             closeDigitalAmount -
             (openCash + openDigitalAmount);
@@ -2806,6 +4185,89 @@ export default function CashRegister() {
       </div>
     );
 
+  // Shared "Credit ₹X · Paid ₹Y" detail line for a credit entry
+  const creditDetailText = (item) => {
+    const paid = getCreditPaid(item);
+    const parts = [`Credit ${formatCurrency(Number(item.amount) || 0)}`];
+
+    if (paid > 0) parts.push(`Paid ${formatCurrency(paid)}`);
+    if (getCreditBalance(item) <= 0) parts.push("Settled");
+    if (item.carriedOver) parts.push("Carried forward");
+
+    return parts.join(" · ");
+  };
+
+  const renderCreditRows = (
+    list,
+    removable = false,
+    source = removable ? "live" : "history"
+  ) =>
+    list.length === 0 ? (
+      <div className="cash-expense-empty">
+        <Receipt size={16} />
+        No credit added yet
+      </div>
+    ) : (
+      <div className="cash-expense-list">
+        {list.map((item) => (
+          <div
+            className={`cash-expense-item cash-credit-item clickable${getCreditBalance(item) <= 0 ? " settled" : ""}`}
+            key={item.id || `${item.reason}-${item.createdAtMs}`}
+            role="button"
+            tabIndex={0}
+            title="View payment details"
+            onClick={() => openCreditDetail(source, item)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                openCreditDetail(source, item);
+              }
+            }}
+          >
+            <div className="cash-expense-text">
+              <strong>{item.reason}</strong>
+              <span>
+                {item.createdAtMs
+                  ? formatDateTime(
+                    item.createdAtMs
+                  )
+                  : ""}
+              </span>
+              <span className="cash-credit-detail">
+                {creditDetailText(item)}
+              </span>
+            </div>
+
+            <div className="cash-credit-amount">
+              {formatCurrency(
+                getCreditBalance(item)
+              )}
+            </div>
+
+            {removable && (
+              <button
+                type="button"
+                className="cash-expense-remove"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleRemoveCredit(
+                    item.id
+                  );
+                }}
+                aria-label="Remove credit"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+
+            <ChevronRight
+              size={15}
+              className="cash-credit-chevron"
+            />
+          </div>
+        ))}
+      </div>
+    );
+
   // History detail: opening / closing digital money card
   const renderHistoryDigitalCard = (kind, title, digital) => (
     <div className="cash-history-breakdown-card">
@@ -2868,6 +4330,47 @@ export default function CashRegister() {
     </div>
   );
 
+  // History detail: opening / closing credit (loan) card
+  const renderHistoryCreditCard = (kind, title, list) => (
+    <div className="cash-history-breakdown-card">
+      <div className="cash-history-breakdown-head">
+        <div>
+          <span
+            className={`cash-breakdown-kicker ${kind === "CLOSE" ? "close" : ""}`}
+          >
+            {kind}
+          </span>
+          <h3>{title}</h3>
+          <p>Reasons / people and amounts on credit.</p>
+        </div>
+        <div
+          className={`cash-breakdown-total ${kind === "CLOSE" ? "close" : ""}`}
+        >
+          {list ? formatCurrency(calculateCreditTotal(list)) : "—"}
+        </div>
+      </div>
+
+      {list ? (
+        <div className="cash-history-expense-body">
+          {renderCreditRows(
+            [...list].sort(
+              (a, b) =>
+                Number(b?.createdAtMs || 0) -
+                Number(a?.createdAtMs || 0)
+            ),
+            false
+          )}
+        </div>
+      ) : (
+        <div className="cash-history-not-closed">
+          <LockKeyhole size={18} />
+          <strong>Register is still open</strong>
+          <span>Closing credit will appear after the register is closed.</span>
+        </div>
+      )}
+    </div>
+  );
+
   const openingModalTotal =
     calculateDenominationTotal(
       openingDenominations
@@ -2882,7 +4385,13 @@ export default function CashRegister() {
   const closeOverallDifference =
     closingModalTotal +
     closingDigitalTotal -
-    getOpeningTotal(openRegister);
+    getOpeningTotal(openRegister, closingCredits);
+
+  const closeDiffWithoutCredit =
+    closingModalTotal +
+    closingDigitalTotal -
+    getOpeningInHand(openRegister);
+
 
   // ----------------------------------------------------------
   // BOTTOM NAVIGATION  (curved-notch bar)
@@ -2896,6 +4405,7 @@ export default function CashRegister() {
       ...(currentRegister
         ? [{ id: "cash-sec-money", label: "Money", Icon: Landmark }]
         : []),
+      { id: "cash-sec-credit", label: "Credit", Icon: Receipt },
       { id: "cash-sec-history", label: "History", Icon: HistoryIcon },
     ],
     [Boolean(currentRegister)] // eslint-disable-line react-hooks/exhaustive-deps
@@ -3109,77 +4619,55 @@ export default function CashRegister() {
 
           </div>
 
-          <div className="cr-flow">
+          <div className="cash-mini-grid">
 
-            <div className="cr-flow-cell">
-              <span className="cr-flow-label">
-                <i className="cr-flow-sign">●</i>
-                Opening cash
+            <div>
+              <span>
+                Opening
               </span>
-              <strong className="cr-flow-value">
-                {formatCurrency(openingCash)}
+
+              <strong>
+                {formatCurrency(
+                  openingCash
+                )}
               </strong>
-              <small className="cr-flow-note">In drawer at start</small>
             </div>
 
-            <div className={`cr-flow-cell pos${cashSales > 0 ? " has-value" : ""}`}>
-              <span className="cr-flow-label">
-                <i className="cr-flow-sign">+</i>
+            <div>
+              <span>
                 Cash sales
               </span>
-              <strong className="cr-flow-value">
-                {formatCurrency(cashSales)}
+
+              <strong>
+                {formatCurrency(
+                  cashSales
+                )}
               </strong>
-              <small className="cr-flow-note">
-                {cashSales > 0 ? "From today's sales" : "Fills in as you sell"}
-              </small>
             </div>
 
-            <button
-              type="button"
-              className={`cr-flow-cell pos action${cashAdded > 0 ? " has-value" : ""}`}
-              disabled={!currentRegister}
-              onClick={() => setMovementModal("add")}
-            >
-              <span className="cr-flow-label">
-                <i className="cr-flow-sign">+</i>
+            <div>
+              <span>
                 Added
               </span>
-              <strong className="cr-flow-value">
-                {formatCurrency(cashAdded)}
-              </strong>
-              <small className="cr-flow-note">
-                {openRegister
-                  ? "Tap to add cash"
-                  : cashAdded > 0
-                    ? "Tap to view"
-                    : "Nothing added"}
-              </small>
-              <ChevronRight size={15} className="cr-flow-go" />
-            </button>
 
-            <button
-              type="button"
-              className={`cr-flow-cell neg action${cashRemoved > 0 ? " has-value" : ""}`}
-              disabled={!currentRegister}
-              onClick={() => setMovementModal("remove")}
-            >
-              <span className="cr-flow-label">
-                <i className="cr-flow-sign">−</i>
+              <strong>
+                {formatCurrency(
+                  cashAdded
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>
                 Removed
               </span>
-              <strong className="cr-flow-value">
-                {formatCurrency(cashRemoved)}
+
+              <strong>
+                {formatCurrency(
+                  cashRemoved
+                )}
               </strong>
-              <small className="cr-flow-note">
-                {openRegister
-                  ? "Tap to take cash out"
-                  : cashRemoved > 0
-                    ? "Tap to view"
-                    : "Nothing removed"}
-              </small>
-              <ChevronRight size={15} className="cr-flow-go" />
-            </button>
+            </div>
 
           </div>
 
@@ -3287,6 +4775,7 @@ export default function CashRegister() {
               type="button"
               className="cash-quick-btn"
               onClick={() => {
+                setExportTarget("history");
                 setShowExportModal(true);
               }}
             >
@@ -3303,23 +4792,30 @@ export default function CashRegister() {
           STATS
       ==================================================== */}
 
-      <section className="cr-kpis">
+      <section className="cash-stats-grid">
 
         {/* STATUS */}
 
-        <article className="cr-kpi tone-purple">
-          <div className="cr-kpi-head">
-            <span className="cr-kpi-icon">
-              {openRegister ? (
-                <UnlockKeyhole size={16} />
-              ) : (
-                <LockKeyhole size={16} />
-              )}
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              Today's Status
             </span>
-            <span className="cr-kpi-label">Today's Status</span>
+
+            <div className="cash-stat-icon purple">
+              {openRegister ? (
+                <UnlockKeyhole
+                  size={15}
+                />
+              ) : (
+                <LockKeyhole
+                  size={15}
+                />
+              )}
+            </div>
           </div>
 
-          <strong className="cr-kpi-value">
+          <strong>
             {openRegister
               ? "Open"
               : latestTodayRegister
@@ -3327,105 +4823,98 @@ export default function CashRegister() {
                 : "Not Opened"}
           </strong>
 
-          <div className="cr-kpi-foot">
-            <span className={`cr-chip${openRegister ? " live" : ""}`}>
-              <i />
-              {openRegister
-                ? `Opened at ${statusTime || "—"}`
-                : latestTodayRegister
-                  ? `Closed at ${statusTime || "—"}`
-                  : "Open the register to start"}
+          <small>
+            {openRegister
+              ? "Register is active"
+              : latestTodayRegister
+                ? "Today's register is closed"
+                : "No register opened today"}
+          </small>
+        </div>
+
+        {/* OPENING CASH */}
+
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              Opening Overall Total
             </span>
-          </div>
-        </article>
 
-        {/* OPENING TOTAL */}
-
-        <article className="cr-kpi tone-blue">
-          <div className="cr-kpi-head">
-            <span className="cr-kpi-icon">
-              <Banknote size={16} />
-            </span>
-            <span className="cr-kpi-label">Opening Overall Total</span>
+            <div className="cash-stat-icon blue">
+              <Banknote
+                size={15}
+              />
+            </div>
           </div>
 
-          <strong className="cr-kpi-value">
-            {formatCurrency(openingTotal)}
+          <strong>
+            {formatCurrency(
+              openingTotal
+            )}
           </strong>
 
-          <div className="cr-kpi-foot">
-            <span className="cr-chip">
-              Cash {formatCurrency(openingCash)}
-            </span>
-            <span className="cr-chip">
-              Digital {formatCurrency(openingDigitalAmount)}
-            </span>
-          </div>
-        </article>
+          <small>
+            Cash + digital + credit paid
+          </small>
+        </div>
 
-        {/* CASH IN DRAWER */}
+        {/* CASH SALES */}
 
-        <article className="cr-kpi tone-green">
-          <div className="cr-kpi-head">
-            <span className="cr-kpi-icon">
-              <WalletCards size={16} />
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              Cash Sales
             </span>
-            <span className="cr-kpi-label">
-              {currentRegister?.status === "closed"
-                ? "Closing Cash"
-                : "Cash in Drawer"}
-            </span>
+
+            <div className="cash-stat-icon green">
+              <ArrowUpRight
+                size={15}
+              />
+            </div>
           </div>
 
-          <strong className="cr-kpi-value">
-            {formatCurrency(currentCash)}
+          <strong>
+            {formatCurrency(
+              cashSales
+            )}
           </strong>
 
-          <div className="cr-kpi-foot">
-            <span className="cr-chip">
-              {currentRegister?.status === "closed"
-                ? `Expected ${formatCurrency(storedExpectedCash)}`
-                : `Incl. ${formatCurrency(cashSales)} cash sales`}
-            </span>
-          </div>
-        </article>
+          <small>
+            Cash received today
+          </small>
+        </div>
 
-        {/* OVERALL TOTAL */}
+        {/* EXPECTED CASH */}
 
-        <article className="cr-kpi tone-orange">
-          <div className="cr-kpi-head">
-            <span className="cr-kpi-icon">
-              <CircleDollarSign size={16} />
-            </span>
-            <span className="cr-kpi-label">
-              {currentRegister?.status === "closed"
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              {currentRegister?.status ===
+                "closed"
                 ? "Closing Overall Total"
                 : "Current Overall Total"}
             </span>
+
+            <div className="cash-stat-icon orange">
+              <CircleDollarSign
+                size={15}
+              />
+            </div>
           </div>
 
-          <strong className="cr-kpi-value">
-            {formatCurrency(currentOverallTotal)}
+          <strong>
+            {formatCurrency(
+              currentOverallTotal
+            )}
           </strong>
 
-          <div className="cr-kpi-foot">
-            <span
-              className={`cr-chip${
-                changeSinceOpening > 0
-                  ? " up"
-                  : changeSinceOpening < 0
-                    ? " down"
-                    : ""
-              }`}
-            >
-              {changeSinceOpening > 0
-                ? `▲ +${formatCurrency(changeSinceOpening)} since opening`
-                : changeSinceOpening < 0
-                  ? `▼ −${formatCurrency(Math.abs(changeSinceOpening))} since opening`
-                  : "No change since opening"}
-            </span>
-          </div>
-        </article>
+          <small>
+            {currentRegister?.status ===
+              "closed"
+              ? "Cash + digital + credit paid"
+              : "Expected cash + digital + credit paid"}
+          </small>
+        </div>
 
       </section>
 
@@ -3471,7 +4960,7 @@ export default function CashRegister() {
               )}
             </div>
 
-            {/* EXPENSES */}
+            {/* EXPENSES + CREDIT (stacked) */}
 
             <div className="cash-panel-stack">
 
@@ -3566,121 +5055,433 @@ export default function CashRegister() {
 
               </div>
 
+              {/* CREDIT */}
+
+              <div className="cash-panel">
+
+                <div className="cash-panel-head">
+                  <div className="cash-panel-icon green">
+                    <WalletCards size={16} />
+                  </div>
+
+                  <div>
+                    <div className="cash-section-label">
+                      CREDIT
+                    </div>
+                    <h3>Credit / Loan (all days)</h3>
+                  </div>
+
+                  <div className="cash-panel-total green">
+                    {formatCurrency(
+                      dayTotals.credits
+                    )}
+                  </div>
+                </div>
+
+                {openRegister && (
+                  <div className="cash-expense-form cash-credit-form">
+                    <input
+                      type="text"
+                      className="cash-expense-reason"
+                      placeholder="Reason / Person"
+                      value={creditReason}
+                      onChange={(event) =>
+                        setCreditReason(
+                          event.target.value
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleAddCredit();
+                        }
+                      }}
+                      maxLength={80}
+                    />
+
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Amount"
+                        value={creditAmount}
+                        onChange={(event) =>
+                          setCreditAmount(
+                            event.target.value
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleAddCredit();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Paid"
+                        title="Amount already paid - reduces the credit amount"
+                        value={creditPaid}
+                        onChange={(event) =>
+                          setCreditPaid(event.target.value)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleAddCredit();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="cash-expense-add"
+                      onClick={handleAddCredit}
+                      disabled={savingCredit}
+                    >
+                      {savingCredit ? (
+                        <RefreshCw
+                          size={14}
+                          className="spin"
+                        />
+                      ) : (
+                        <Plus size={14} />
+                      )}
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                {renderCreditRows(
+                  currentCredits,
+                  Boolean(openRegister)
+                )}
+
+              </div>
+
             </div>
 
           </div>
 
           {/* DAY TOTAL */}
 
-          <div className="cr-day">
+          <div className="cash-day-total">
+            {(() => {
+              const dtCash = Number(dayTotals.cash) || 0;
+              const dtDigital = Number(
+                openRegister ? digitalDraftTotal : dayTotals.digital
+              ) || 0;
+              const dtBase = Math.max(dtCash, 0) + Math.max(dtDigital, 0);
+              const cashPct = dtBase > 0
+                ? Math.round((Math.max(dtCash, 0) / dtBase) * 100)
+                : 0;
+              const digitalPct = dtBase > 0 ? 100 - cashPct : 0;
 
-            {/* LEFT: big number + cash/digital split */}
+              return (
+                <>
+                  {/* LEFT - hero total */}
+                  <div className="cdt-left">
+                    <div className="cdt-left-top">
+                      <span className="cdt-eyebrow">TOTAL MONEY</span>
+                      <span className="cdt-pill">
+                        <i />
+                        {openRegister
+                          ? "Live · register open"
+                          : "Final · register closed"}
+                      </span>
+                    </div>
 
-            <div className="cr-day-hero">
-              <div className="cr-day-top">
-                <span className="cr-day-label">Day total</span>
+                    <strong className="cdt-big">
+                      {formatCurrency(
+                        dayTotals.net + dayTotals.credits
+                      )}
+                    </strong>
+                    <span className="cdt-sub">
+                      Cash + digital + credit not paid ·{" "}
+                      {formatDate(currentRegister.dateKey)}
+                    </span>
 
-                <span className={`cr-day-status${openRegister ? " live" : ""}`}>
-                  <i />
-                  {openRegister ? "Live · register open" : "Final · register closed"}
-                </span>
-              </div>
+                    <div className="cdt-split">
+                      <div className="cdt-bar">
+                        <span
+                          className="cdt-bar-cash"
+                          style={{ width: `${cashPct}%` }}
+                        />
+                        <span
+                          className="cdt-bar-digital"
+                          style={{ width: `${digitalPct}%` }}
+                        />
+                      </div>
+                      <div className="cdt-legend">
+                        <span className="cash">
+                          <i /> Cash {cashPct}%
+                        </span>
+                        <span className="digital">
+                          <i /> Digital {digitalPct}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-              <strong className="cr-day-amount">
-                {formatCurrency(dayTotals.net)}
-              </strong>
+                  {/* RIGHT - breakdown */}
+                  <div className="cdt-right">
+                    <div className="cdt-row">
+                      <span className="cdt-ico cash">
+                        <Banknote size={18} />
+                      </span>
+                      <div className="cdt-txt">
+                        <b>Cash</b>
+                        <small>
+                          {currentRegister.status === "closed"
+                            ? "Counted at closing"
+                            : "Expected in drawer"}
+                        </small>
+                      </div>
+                      <strong>{formatCurrency(dayTotals.cash)}</strong>
+                    </div>
 
-              <span className="cr-day-caption">
-                Total amount of the day · {formatDate(currentRegister.dateKey)}
-              </span>
+                    <div className="cdt-row">
+                      <span className="cdt-ico digital">
+                        <Landmark size={18} />
+                      </span>
+                      <div className="cdt-txt">
+                        <b>Digital money</b>
+                        <small>Bank &amp; wallet balances</small>
+                      </div>
+                      <strong>
+                        {formatCurrency(
+                          openRegister
+                            ? digitalDraftTotal
+                            : dayTotals.digital
+                        )}
+                      </strong>
+                    </div>
 
-              <div className="cr-day-split">
-                <div className="cr-day-bar">
-                  <span style={{ width: `${daySplit.cash}%` }} />
-                  <span style={{ width: `${daySplit.digital}%` }} />
-                </div>
+                    <div className="cdt-row">
+                      <span className="cdt-ico expense">
+                        <Receipt size={18} />
+                      </span>
+                      <div className="cdt-txt">
+                        <b>Expenses</b>
+                        <small>Spent today</small>
+                      </div>
+                      <strong className="neg">
+                        −{formatCurrency(dayTotals.expenses)}
+                      </strong>
+                    </div>
 
-                <div className="cr-day-legend">
-                  <span className="cash">
-                    <i />
-                    Cash {daySplit.cash}%
-                  </span>
-                  <span className="digital">
-                    <i />
-                    Digital {daySplit.digital}%
-                  </span>
-                </div>
-              </div>
-            </div>
+                    <div className="cdt-row">
+                      <span className="cdt-ico credit">
+                        <WalletCards size={18} />
+                      </span>
+                      <div className="cdt-txt">
+                        <b>Credit given</b>
+                        <small>Shown only</small>
+                      </div>
+                      <strong>
+                        {formatCurrency(dayTotals.creditGiven)}
+                      </strong>
+                    </div>
 
-            {/* RIGHT: how the total is made */}
+                    <div className="cdt-row">
+                      <span className="cdt-ico paid">
+                        <CheckCircle2 size={18} />
+                      </span>
+                      <div className="cdt-txt">
+                        <b>Paid / update</b>
+                        <small>Added to the total</small>
+                      </div>
+                      <strong className="pos">
+                        +{formatCurrency(dayTotals.creditPaid)}
+                      </strong>
+                    </div>
 
-            <div className="cr-day-statement">
+                    <div className="cdt-row">
+                      <span className="cdt-ico due">
+                        <AlertCircle size={18} />
+                      </span>
+                      <div className="cdt-txt">
+                        <b>Not paid</b>
+                        <small>Credit still pending</small>
+                      </div>
+                      <strong className="due">
+                        {formatCurrency(dayTotals.credits)}
+                      </strong>
+                    </div>
 
-              <div className="cr-day-row cash">
-                <span className="cr-day-ico"><Banknote size={16} /></span>
-                <span className="cr-day-name">
-                  Cash
-                  <small>
-                    {currentRegister.status === "closed"
-                      ? "Counted at closing"
-                      : "Expected in drawer"}
-                  </small>
-                </span>
-                <strong className="cr-day-value">
-                  {formatCurrency(dayTotals.cash)}
-                </strong>
-              </div>
-
-              <div className="cr-day-row digital">
-                <span className="cr-day-ico"><Landmark size={16} /></span>
-                <span className="cr-day-name">
-                  Digital money
-                  <small>Bank &amp; wallet balances</small>
-                </span>
-                <strong className="cr-day-value">
-                  {formatCurrency(
-                    openRegister ? digitalDraftTotal : dayTotals.digital
-                  )}
-                </strong>
-              </div>
-
-              <div className="cr-day-row money">
-                <span className="cr-day-ico"><WalletCards size={16} /></span>
-                <span className="cr-day-name">
-                  Total money
-                  <small>Cash + digital</small>
-                </span>
-                <strong className="cr-day-value">
-                  {formatCurrency(dayTotals.totalMoney)}
-                </strong>
-              </div>
-
-              <div className="cr-day-row expense">
-                <span className="cr-day-ico"><Receipt size={16} /></span>
-                <span className="cr-day-name">
-                  Expenses
-                  <small>Spent today</small>
-                </span>
-                <strong className="cr-day-value">
-                  −{formatCurrency(dayTotals.expenses)}
-                </strong>
-              </div>
-
-              <div className="cr-day-row total">
-                <span className="cr-day-ico"><CircleDollarSign size={16} /></span>
-                <span className="cr-day-name">Total amount of the day</span>
-                <strong className="cr-day-value">
-                  {formatCurrency(dayTotals.net)}
-                </strong>
-              </div>
-
-            </div>
-
+                    <div className="cdt-sum">
+                      <CircleDollarSign size={20} />
+                      <b>Total amount of the day</b>
+                      <strong>{formatCurrency(dayTotals.net)}</strong>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
         </section>
       )}
+
+      {/* ====================================================
+          CREDIT / LOAN HISTORY (all days)
+      ==================================================== */}
+
+      <section className="cash-history-card cash-credit-history-card" id="cash-sec-credit">
+        <div className="cash-history-head">
+          <div>
+            <div className="cash-section-label">
+              CREDIT
+            </div>
+
+            <h2>Credit / Loan history (all days)</h2>
+
+            <p>
+              Every credit given on any day. Tap one to see its
+              payment history.
+            </p>
+          </div>
+
+          <div className="cash-history-head-actions">
+            <div className="cash-panel-total green">
+              {formatCurrency(calculateCreditTotal(allCreditHistory))}
+            </div>
+
+            <button
+              type="button"
+              className="cash-export-btn"
+              onClick={() => {
+                setExportTarget("credit");
+                setShowExportModal(true);
+              }}
+            >
+              <Download size={14} />
+              Export
+            </button>
+          </div>
+        </div>
+
+        {allCreditHistory.length === 0 ? (
+          <div className="cash-expense-empty">
+            <Receipt size={16} />
+            No credit added yet
+          </div>
+        ) : (
+          <div className="cash-table-wrap">
+            <table className="cash-table cash-credit-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Name / Reason</th>
+                  <th>Amount Credit</th>
+                  <th>Amount Paid</th>
+                  <th>Amount Not Paid</th>
+                  <th className="cash-credit-actions-th">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {allCreditHistory.map((item) => {
+                  const total = Number(item.amount) || 0;
+                  const paid = getCreditPaid(item);
+                  const balance = getCreditBalance(item);
+                  const percent =
+                    total > 0 ? Math.min(1, paid / total) : 1;
+
+                  // 0 = red (nothing paid) ... 135 = green (fully paid)
+                  const hue = Math.round(percent * 135);
+
+                  return (
+                    <tr
+                      key={item.id || `${item.reason}-${item.createdAtMs}`}
+                      className={`cash-row-clickable cash-credit-row${balance <= 0 ? " settled" : ""}`}
+                      style={{ "--credit-hue": hue }}
+                      tabIndex={0}
+                      title="View payment details"
+                      onClick={() => openCreditDetail("all", item)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          openCreditDetail("all", item);
+                        }
+                      }}
+                    >
+                      <td data-label="Date">
+                        <strong>
+                          {item.createdAtMs
+                            ? formatDate(item.createdAtMs)
+                            : "—"}
+                        </strong>
+                        <small>
+                          {item.createdAtMs
+                            ? formatDateTime(item.createdAtMs)
+                            : ""}
+                        </small>
+                      </td>
+
+                      <td data-label="Name / Reason">
+                        <strong>{item.reason}</strong>
+                        {item.carriedOver && <small>Carried forward</small>}
+                      </td>
+
+                      <td data-label="Credit">
+                        <strong>{formatCurrency(total)}</strong>
+                      </td>
+
+                      <td className="cash-credit-paid-cell" data-label="Paid">
+                        <strong>{formatCurrency(paid)}</strong>
+                      </td>
+
+                      <td className="cash-credit-due-cell" data-label="Not paid">
+                        <strong>{formatCurrency(balance)}</strong>
+                      </td>
+
+                      <td className="cash-credit-actions-cell" data-label="">
+                        <div className="cash-credit-row-tools">
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn"
+                            title="Edit credit"
+                            disabled={creditDetailSaving}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startCreditEditFromTable(item);
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <Pencil size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn danger"
+                            title="Delete credit"
+                            disabled={creditDetailSaving}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteCreditEverywhere(item);
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {/* ====================================================
           HISTORY
@@ -3719,6 +5520,7 @@ export default function CashRegister() {
             <button
               className="cash-export-btn"
               onClick={() => {
+                setExportTarget("history");
                 setShowExportModal(true);
               }}
             >
@@ -3846,7 +5648,10 @@ export default function CashRegister() {
                   <th>Date</th>
                   <th>Opening Total</th>
                   <th>Closing Total</th>
-                  <th>Overall Difference</th>
+                  <th>Credit Paid</th>
+                  <th>Credit Not Paid</th>
+                  <th>Diff Without Credit</th>
+                  <th>Diff With Credit</th>
                   <th>Total Money</th>
                   <th className="cash-actions-th">Actions</th>
                 </tr>
@@ -3856,7 +5661,9 @@ export default function CashRegister() {
 
                 {filteredRegisters.map((item) => {
                   const itemDifference = getOverallDifference(item);
+                  const itemDiffWithout = getDifferenceWithoutCredit(item);
                   const itemClosingTotal = getClosingTotal(item);
+                  const itemCreditFlow = getRegisterCreditFlow(item);
 
                   return (
                     <tr
@@ -3895,7 +5702,33 @@ export default function CashRegister() {
                         )}
                       </td>
 
-                      <td data-label="Difference">
+                      <td data-label="Credit paid">
+                        <strong>{formatCurrency(itemCreditFlow.paid)}</strong>
+                      </td>
+
+                      <td data-label="Credit not paid">
+                        <strong>{formatCurrency(itemCreditFlow.notPaid)}</strong>
+                      </td>
+
+                      <td data-label="Diff without credit">
+                        {item.status === "closed" ? (
+                          <span
+                            className={`cash-difference ${itemDiffWithout > 0
+                              ? "positive"
+                              : itemDiffWithout < 0
+                                ? "negative"
+                                : "zero"
+                              }`}
+                          >
+                            {itemDiffWithout > 0 ? "+" : ""}
+                            {formatCurrency(itemDiffWithout)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+
+                      <td data-label="Diff with credit">
                         {item.status === "closed" ? (
                           <span
                             className={`cash-difference ${itemDifference > 0
@@ -4032,6 +5865,146 @@ export default function CashRegister() {
               setOpeningDigital
             )}
 
+            <div className="cash-modal-block">
+              <div className="cash-modal-block-head">
+                <div>
+                  <span className="cash-section-label">
+                    CREDIT (LOAN)
+                  </span>
+                  <p>
+                    Add the reason / person, amount and amount already paid.
+                  </p>
+                </div>
+
+                <strong>
+                  {formatCurrency(
+                    openingCreditTotal
+                  )}
+                </strong>
+              </div>
+
+              <div className="cash-expense-form cash-credit-form">
+                <input
+                  type="text"
+                  className="cash-expense-reason"
+                  placeholder="Reason / Person"
+                  value={openingCreditReason}
+                  onChange={(event) =>
+                    setOpeningCreditReason(
+                      event.target.value
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleAddOpeningCredit();
+                    }
+                  }}
+                  maxLength={80}
+                />
+
+                <div className="cash-expense-money">
+                  <b>₹</b>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder="Amount"
+                    value={openingCreditAmount}
+                    onChange={(event) =>
+                      setOpeningCreditAmount(
+                        event.target.value
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        handleAddOpeningCredit();
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="cash-expense-money">
+                  <b>₹</b>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder="Paid"
+                    title="Amount already paid - reduces the credit amount"
+                    value={openingCreditPaid}
+                    onChange={(event) =>
+                      setOpeningCreditPaid(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        handleAddOpeningCredit();
+                      }
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="cash-expense-add"
+                  onClick={handleAddOpeningCredit}
+                >
+                  <Plus size={14} />
+                  Add
+                </button>
+              </div>
+
+              {openingCredits.length === 0 ? (
+                <div className="cash-expense-empty">
+                  <Receipt size={16} />
+                  No credit added yet
+                </div>
+              ) : (
+                <div className="cash-expense-list">
+                  {openingCredits.map((item) => (
+                    <div
+                      className={`cash-expense-item cash-credit-item clickable${getCreditBalance(item) <= 0 ? " settled" : ""}`}
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      title="View payment details"
+                      onClick={() =>
+                        openCreditDetail("opening", item)
+                      }
+                    >
+                      <div className="cash-expense-text">
+                        <strong>{item.reason}</strong>
+                        <span className="cash-credit-detail">
+                          {creditDetailText(item)}
+                        </span>
+                      </div>
+
+                      <div className="cash-credit-amount">
+                        {formatCurrency(
+                          getCreditBalance(item)
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="cash-expense-remove"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleRemoveOpeningCredit(
+                            item.id
+                          );
+                        }}
+                        aria-label="Remove credit"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="cash-modal-grand">
               <div>
                 <span>Cash</span>
@@ -4040,6 +6013,10 @@ export default function CashRegister() {
               <div>
                 <span>Digital</span>
                 <strong>{formatCurrency(openingDigitalTotal)}</strong>
+              </div>
+              <div>
+                <span>Credit (not paid)</span>
+                <strong>{formatCurrency(openingCreditTotal)}</strong>
               </div>
               <div className="sum">
                 <span>Total</span>
@@ -4183,64 +6160,6 @@ export default function CashRegister() {
 
               </div>
 
-              {/* CASH IN / OUT DURING THE DAY */}
-              {(() => {
-                const added = getMovementSummary(openRegister, "add");
-                const removed = getMovementSummary(openRegister, "remove");
-
-                const renderSide = (summary, type) => (
-                  <div className={`cr-close-mv ${type}`}>
-                    <div className="cr-close-mv-head">
-                      <span>
-                        {type === "add" ? "+ Cash added" : "− Cash taken out"}
-                      </span>
-                      <strong>
-                        {type === "add" ? "+" : "−"}
-                        {formatCurrency(summary.total)}
-                      </strong>
-                    </div>
-
-                    {summary.count === 0 ? (
-                      <small>None today</small>
-                    ) : (
-                      <div className="cr-close-mv-chips">
-                        {summary.chips.map((chip) => (
-                          <span key={chip.label}>
-                            {chip.label} × {chip.pcs}
-                          </span>
-                        ))}
-                        {summary.other > 0 && (
-                          <span>Other {formatCurrency(summary.other)}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-
-                return (
-                  <div className="cash-modal-block">
-                    <div className="cash-modal-block-head">
-                      <div>
-                        <span className="cash-section-label">
-                          CASH IN / OUT
-                        </span>
-                        <p>
-                          Opening {formatCurrency(Number(openRegister.openingCash || 0))}
-                          {" + "}Sales {formatCurrency(Number(openRegister.cashSales || 0))}
-                          {" + "}Added {formatCurrency(added.total)}
-                          {" − "}Removed {formatCurrency(removed.total)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="cr-close-mv-grid">
-                      {renderSide(added, "add")}
-                      {renderSide(removed, "remove")}
-                    </div>
-                  </div>
-                );
-              })()}
-
               {renderCashDigitalSplit(
                 closingDenominations,
                 setClosingDenominations,
@@ -4278,6 +6197,146 @@ export default function CashRegister() {
                 )}
               </div>
 
+              <div className="cash-modal-block">
+                <div className="cash-modal-block-head">
+                  <div>
+                    <span className="cash-section-label">
+                      CREDIT (LOAN)
+                    </span>
+                    <p>
+                      Re-enter the final credit / loan list.
+                    </p>
+                  </div>
+
+                  <strong>
+                    {formatCurrency(
+                      closingCreditTotal
+                    )}
+                  </strong>
+                </div>
+
+                <div className="cash-expense-form cash-credit-form">
+                  <input
+                    type="text"
+                    className="cash-expense-reason"
+                    placeholder="Reason / Person"
+                    value={closingCreditReason}
+                    onChange={(event) =>
+                      setClosingCreditReason(
+                        event.target.value
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        handleAddClosingCredit();
+                      }
+                    }}
+                    maxLength={80}
+                  />
+
+                  <div className="cash-expense-money">
+                    <b>₹</b>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      placeholder="Amount"
+                      value={closingCreditAmount}
+                      onChange={(event) =>
+                        setClosingCreditAmount(
+                          event.target.value
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleAddClosingCredit();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div className="cash-expense-money">
+                    <b>₹</b>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      placeholder="Paid"
+                      title="Amount already paid - reduces the credit amount"
+                      value={closingCreditPaid}
+                      onChange={(event) =>
+                        setClosingCreditPaid(event.target.value)
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleAddClosingCredit();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="cash-expense-add"
+                    onClick={handleAddClosingCredit}
+                  >
+                    <Plus size={14} />
+                    Add
+                  </button>
+                </div>
+
+                {closingCredits.length === 0 ? (
+                  <div className="cash-expense-empty">
+                    <Receipt size={16} />
+                    No credit added yet
+                  </div>
+                ) : (
+                  <div className="cash-expense-list">
+                    {[...closingCredits].map((item) => (
+                      <div
+                        className={`cash-expense-item cash-credit-item clickable${getCreditBalance(item) <= 0 ? " settled" : ""}`}
+                        key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        title="View payment details"
+                        onClick={() =>
+                          openCreditDetail("closing", item)
+                        }
+                      >
+                        <div className="cash-expense-text">
+                          <strong>{item.reason}</strong>
+                          <span className="cash-credit-detail">
+                            {creditDetailText(item)}
+                          </span>
+                        </div>
+
+                        <div className="cash-credit-amount">
+                          {formatCurrency(
+                            getCreditBalance(item)
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="cash-expense-remove"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleRemoveClosingCredit(
+                              item.id
+                            );
+                          }}
+                          aria-label="Remove credit"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="cash-close-preview">
 
                 <div>
@@ -4294,6 +6353,29 @@ export default function CashRegister() {
 
                 <div
                   className={
+                    closeDiffWithoutCredit > 0
+                      ? "positive"
+                      : closeDiffWithoutCredit < 0
+                        ? "negative"
+                        : "zero"
+                  }
+                >
+                  <span>
+                    Diff without credit
+                  </span>
+
+                  <strong>
+                    {closeDiffWithoutCredit > 0
+                      ? "+"
+                      : ""}
+                    {formatCurrency(
+                      closeDiffWithoutCredit
+                    )}
+                  </strong>
+                </div>
+
+                <div
+                  className={
                     closeOverallDifference > 0
                       ? "positive"
                       : closeOverallDifference < 0
@@ -4302,7 +6384,7 @@ export default function CashRegister() {
                   }
                 >
                   <span>
-                    Overall difference
+                    Diff with credit
                   </span>
 
                   <strong>
@@ -4336,6 +6418,14 @@ export default function CashRegister() {
                     )}
                   </strong>
                 </div>
+                <div>
+                  <span>Credit (not paid)</span>
+                  <strong>
+                    {formatCurrency(
+                      closingCreditTotal
+                    )}
+                  </strong>
+                </div>
                 <div className="sum">
                   <span>Total of the day</span>
                   <strong>
@@ -4345,6 +6435,7 @@ export default function CashRegister() {
                         status: "closed",
                         closingCash: closingModalTotal,
                         digitalBalances: closingDigital,
+                        credits: closingCredits,
                       }).net
                     )}
                   </strong>
@@ -4490,6 +6581,98 @@ export default function CashRegister() {
                   )}
                 </>
               )}
+
+            <div className="cash-entry-section-title">
+              <WalletCards size={14} />
+              Credit / Loan
+            </div>
+
+            <div className="cash-entry-credit">
+              {entryCredits.length === 0 ? (
+                <div className="cash-expense-empty">
+                  <Receipt size={16} />
+                  No credit on this day
+                </div>
+              ) : (
+                <>
+                  <div className="cash-entry-credit-head">
+                    <span>Name / reason</span>
+                    <span>Credit</span>
+                    <span>Paid</span>
+                    <span />
+                  </div>
+
+                  {entryCredits.map((row) => (
+                    <div className="cash-entry-credit-row" key={row.key}>
+                      <div className="cash-expense-money">
+                        <input
+                          type="text"
+                          placeholder="Name / reason"
+                          value={row.reason}
+                          onChange={(event) =>
+                            updateEntryCredit(row.key, "reason", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="cash-expense-money">
+                        <b>₹</b>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          placeholder="Amount"
+                          value={row.amount}
+                          onChange={(event) =>
+                            updateEntryCredit(row.key, "amount", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="cash-expense-money">
+                        <b>₹</b>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          placeholder="Paid"
+                          value={row.paid}
+                          onChange={(event) =>
+                            updateEntryCredit(row.key, "paid", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="cash-credit-icon-btn danger"
+                        title="Remove credit"
+                        onClick={() =>
+                          setEntryCredits((rows) =>
+                            rows.filter((entry) => entry.key !== row.key)
+                          )
+                        }
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <button
+                type="button"
+                className="cash-credit-action-btn cash-entry-credit-add"
+                onClick={() =>
+                  setEntryCredits((rows) => [...rows, makeCreditRow()])
+                }
+              >
+                <Plus size={14} />
+                Add credit
+              </button>
+            </div>
 
             <div className="cash-modal-actions">
               <button
@@ -4700,6 +6883,24 @@ export default function CashRegister() {
 
             <div className="cash-history-section-title">
               <Receipt size={14} />
+              Credit (Loan)
+            </div>
+
+            <div className="cash-history-extra-grid cash-history-pair-grid">
+              {renderHistoryCreditCard(
+                "OPEN",
+                "Opening Credit (Loan)",
+                getOpeningCredits(selectedHistoryRegister)
+              )}
+              {renderHistoryCreditCard(
+                "CLOSE",
+                "Closing Credit (Loan)",
+                getClosingCredits(selectedHistoryRegister)
+              )}
+            </div>
+
+            <div className="cash-history-section-title">
+              <Receipt size={14} />
               Expenses
             </div>
 
@@ -4745,6 +6946,18 @@ export default function CashRegister() {
                 <span>Expenses</span>
                 <strong>−{formatCurrency(getDayTotals(selectedHistoryRegister).expenses)}</strong>
               </div>
+              <div>
+                <span>Credit Given</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).creditGiven)}</strong>
+              </div>
+              <div>
+                <span>Credit Paid (+)</span>
+                <strong>+{formatCurrency(getDayTotals(selectedHistoryRegister).creditPaid)}</strong>
+              </div>
+              <div>
+                <span>Credit Not Paid</span>
+                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).credits)}</strong>
+              </div>
               <div className="sum">
                 <span>Day Total</span>
                 <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).net)}</strong>
@@ -4761,7 +6974,34 @@ export default function CashRegister() {
                 <strong>{formatCurrency(Number(selectedHistoryRegister.cashRemoved || 0))}</strong>
               </div>
               <div>
-                <span>Overall Difference</span>
+                <span>Credit Paid</span>
+                <strong>{formatCurrency(getRegisterCreditFlow(selectedHistoryRegister).paid)}</strong>
+              </div>
+              <div>
+                <span>Credit Not Paid</span>
+                <strong>{formatCurrency(getRegisterCreditFlow(selectedHistoryRegister).notPaid)}</strong>
+              </div>
+              <div>
+                <span>Amt Diff Without Credit</span>
+                <strong className={
+                  getDifferenceWithoutCredit(selectedHistoryRegister) > 0
+                    ? "positive"
+                    : getDifferenceWithoutCredit(selectedHistoryRegister) < 0
+                      ? "negative"
+                      : "zero"
+                }>
+                  {selectedHistoryRegister.status !== "closed"
+                    ? "—"
+                    : (
+                      <>
+                        {getDifferenceWithoutCredit(selectedHistoryRegister) > 0 ? "+" : ""}
+                        {formatCurrency(getDifferenceWithoutCredit(selectedHistoryRegister))}
+                      </>
+                    )}
+                </strong>
+              </div>
+              <div>
+                <span>Amt Diff With Credit</span>
                 <strong className={
                   getOverallDifference(selectedHistoryRegister) > 0
                     ? "positive"
@@ -4795,186 +7035,6 @@ export default function CashRegister() {
         </div>
       )}
 
-      {movementModal && currentRegister && (
-        <div
-          className="cash-modal-overlay"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeMovementModal();
-            }
-          }}
-        >
-          <div className="cash-modal cash-movement-modal">
-            <div className="cash-modal-head">
-              <div className="cash-modal-title">
-                <div
-                  className={`cash-modal-icon${
-                    movementModal === "remove" ? " danger" : ""
-                  }`}
-                >
-                  {movementModal === "remove" ? (
-                    <Minus size={17} />
-                  ) : (
-                    <Plus size={17} />
-                  )}
-                </div>
-
-                <div>
-                  <strong>Cash in / out</strong>
-                  <span>
-                    Money you put into or take out of the drawer today
-                    (not sales, not expenses).
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="cash-modal-close"
-                onClick={closeMovementModal}
-                disabled={savingMovement}
-              >
-                <X size={17} />
-              </button>
-            </div>
-
-            {openRegister ? (
-              <div className="cr-mv-form">
-                <div className="cr-mv-tabs">
-                  <button
-                    type="button"
-                    className={movementModal === "add" ? "active add" : ""}
-                    onClick={() => setMovementModal("add")}
-                  >
-                    <Plus size={14} /> Add cash
-                  </button>
-                  <button
-                    type="button"
-                    className={movementModal === "remove" ? "active remove" : ""}
-                    onClick={() => setMovementModal("remove")}
-                  >
-                    <Minus size={14} /> Take out
-                  </button>
-                </div>
-
-                <div className="cr-mv-notes">
-                  {renderDenominationEditor(
-                    movementDen,
-                    setMovementDen,
-                    true
-                  )}
-                </div>
-
-                <div className={`cr-mv-total ${movementModal}`}>
-                  <span>
-                    {movementModal === "add" ? "Total to add" : "Total to take out"}
-                  </span>
-                  <strong>
-                    {movementModal === "remove" ? "−" : "+"}
-                    {formatCurrency(calculateDenominationTotal(movementDen))}
-                  </strong>
-                </div>
-
-                <input
-                  type="text"
-                  className="cr-mv-input"
-                  maxLength={80}
-                  placeholder={
-                    movementModal === "add"
-                      ? "Reason (e.g. Change from bank, Owner top-up)"
-                      : "Reason (e.g. Deposited to bank, Owner took cash)"
-                  }
-                  value={movementReason}
-                  onChange={(event) => setMovementReason(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") handleSaveMovement();
-                  }}
-                />
-
-                <button
-                  type="button"
-                  className={`cr-mv-save ${movementModal}`}
-                  onClick={handleSaveMovement}
-                  disabled={savingMovement}
-                >
-                  {savingMovement
-                    ? "Saving…"
-                    : movementModal === "add"
-                      ? "Add to drawer"
-                      : "Take out of drawer"}
-                </button>
-
-                <p className="cr-mv-hint">
-                  Drawer now: <strong>{formatCurrency(storedExpectedCash)}</strong>
-                </p>
-              </div>
-            ) : (
-              <p className="cr-mv-hint">
-                The register is closed, so entries can't be changed.
-              </p>
-            )}
-
-            <div className="cr-mv-list">
-              <div className="cash-section-label">TODAY'S ENTRIES</div>
-
-              {currentMovements.length === 0 ? (
-                <div className="cr-mv-empty">No cash added or taken out yet.</div>
-              ) : (
-                currentMovements.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`cr-mv-item ${item.type === "remove" ? "remove" : "add"}`}
-                  >
-                    <span className="cr-mv-badge">
-                      {item.type === "remove" ? <Minus size={14} /> : <Plus size={14} />}
-                    </span>
-
-                    <span className="cr-mv-info">
-                      <strong>{item.reason}</strong>
-                      <small>
-                        {formatTimeOnly(item.createdAtMs)}
-                        {item.addedBy ? ` · ${item.addedBy}` : ""}
-                      </small>
-                      {DENOMINATIONS.some(
-                        (d) => Number(item.denominations?.[d.value]) > 0
-                      ) && (
-                        <small className="cr-mv-break">
-                          {DENOMINATIONS.filter(
-                            (d) => Number(item.denominations?.[d.value]) > 0
-                          )
-                            .map((d) =>
-                              d.type === "coin"
-                                ? `Coins ${formatCurrency(Number(item.denominations[d.value]))}`
-                                : `${item.denominations[d.value]} × ${d.label}`
-                            )
-                            .join(" · ")}
-                        </small>
-                      )}
-                    </span>
-
-                    <span className="cr-mv-amount">
-                      {item.type === "remove" ? "−" : "+"}
-                      {formatCurrency(Number(item.amount || 0))}
-                    </span>
-
-                    {openRegister && (
-                      <button
-                        type="button"
-                        className="cr-mv-del"
-                        onClick={() => handleDeleteMovement(item)}
-                        aria-label="Delete entry"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {showExportModal && (
         <div
           className="cash-modal-overlay"
@@ -4993,10 +7053,14 @@ export default function CashRegister() {
 
                 <div>
                   <strong>
-                    Export history
+                    {exportTarget === "credit"
+                      ? "Export credit / loan history"
+                      : "Export history"}
                   </strong>
                   <span>
-                    Choose a file type. Date, status, opening, closing, total and difference.
+                    {exportTarget === "credit"
+                      ? "Choose a file type. Date, name, status, credit, paid and not paid."
+                      : "Choose a file type. Date, status, opening, closing, total and difference."}
                   </span>
                 </div>
               </div>
@@ -5044,11 +7108,376 @@ export default function CashRegister() {
             </div>
 
             <p className="cash-export-note">
-              {`Exports the ${filteredRegisters.length} record(s) shown in the list below, using the current search and status filter.`}
+              {exportTarget === "credit"
+                ? `Exports all ${allCreditHistory.length} credit / loan record(s) from every day.`
+                : `Exports the ${filteredRegisters.length} record(s) shown in the list below, using the current search and status filter.`}
             </p>
           </div>
         </div>
       )}
+
+      {creditDetail && creditDetailItem && (() => {
+        const total = Number(creditDetailItem.amount) || 0;
+        const paid = getCreditPaid(creditDetailItem);
+        const balance = getCreditBalance(creditDetailItem);
+        const percent = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+        const payments = getCreditPayments(creditDetailItem);
+        const inOpenRegister =
+          Boolean(openRegister) &&
+          getCreditList(openRegister).some(
+            (item) => item.id === creditDetailItem.id
+          );
+        const canPay =
+          balance > 0 &&
+          (creditDetail.source === "all"
+            ? inOpenRegister
+            : creditDetail.source !== "history");
+
+        // Edit / delete only for credits that live in today's open register
+        const canManage =
+          inOpenRegister &&
+          (creditDetail.source === "all" ||
+            creditDetail.source === "live");
+
+        return (
+          <div
+            className="cash-modal-overlay cash-credit-overlay"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closeCreditDetail();
+              }
+            }}
+          >
+            <div className="cash-modal cash-credit-modal">
+              <div className="cash-modal-head">
+                <div className="cash-modal-title">
+                  <div className="cash-modal-icon">
+                    <WalletCards size={17} />
+                  </div>
+
+                  <div>
+                    <strong>{creditDetailItem.reason}</strong>
+                    <span>
+                      {creditDetailItem.createdAtMs
+                        ? `Credit given ${formatDateTime(creditDetailItem.createdAtMs)}`
+                        : "Credit details"}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="cash-modal-close"
+                  onClick={closeCreditDetail}
+                >
+                  <X size={17} />
+                </button>
+              </div>
+
+              <div className={`cash-credit-summary${balance <= 0 ? " settled" : ""}`}>
+                <div>
+                  <span>Total credit</span>
+                  <strong>{formatCurrency(total)}</strong>
+                </div>
+                <div className="paid">
+                  <span>Paid</span>
+                  <strong>{formatCurrency(paid)}</strong>
+                </div>
+                <div className="due">
+                  <span>Not paid</span>
+                  <strong>{formatCurrency(balance)}</strong>
+                </div>
+              </div>
+
+              <div className="cash-credit-progress">
+                <i style={{ width: `${percent}%` }} />
+              </div>
+
+              {canManage && !creditEdit && (
+                <div className="cash-credit-actions">
+                  <button
+                    type="button"
+                    className="cash-credit-action-btn"
+                    disabled={creditDetailSaving}
+                    onClick={() =>
+                      setCreditEdit({
+                        reason: creditDetailItem.reason || "",
+                        amount: String(total),
+                      })
+                    }
+                  >
+                    <Pencil size={14} />
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="cash-credit-action-btn danger"
+                    disabled={creditDetailSaving}
+                    onClick={() => handleDeleteCreditEverywhere()}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              )}
+
+              {canManage && creditEdit && (
+                <div className="cash-credit-update cash-credit-edit">
+                  <span className="cash-section-label">
+                    EDIT CREDIT
+                  </span>
+
+                  <div className="cash-credit-edit-form">
+                    <div className="cash-expense-money">
+                      <input
+                        type="text"
+                        placeholder="Name / reason"
+                        value={creditEdit.reason}
+                        onChange={(event) =>
+                          setCreditEdit((prev) => ({
+                            ...prev,
+                            reason: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Credit amount"
+                        value={creditEdit.amount}
+                        onChange={(event) =>
+                          setCreditEdit((prev) => ({
+                            ...prev,
+                            amount: event.target.value,
+                          }))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleSaveCreditEdit();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="cash-credit-edit-buttons">
+                      <button
+                        type="button"
+                        className="cash-expense-add"
+                        onClick={handleSaveCreditEdit}
+                        disabled={creditDetailSaving}
+                      >
+                        {creditDetailSaving ? (
+                          <RefreshCw size={14} className="spin" />
+                        ) : (
+                          <CheckCircle2 size={14} />
+                        )}
+                        Save
+                      </button>
+
+                      <button
+                        type="button"
+                        className="cash-credit-action-btn"
+                        onClick={() => setCreditEdit(null)}
+                        disabled={creditDetailSaving}
+                      >
+                        <X size={14} />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {canPay ? (
+                <div className="cash-credit-update">
+                  <span className="cash-section-label">
+                    UPDATE PAYMENT
+                  </span>
+
+                  <div className="cash-credit-update-row">
+                    <div className="cash-expense-money">
+                      <b>₹</b>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        placeholder="Amount received"
+                        value={creditDetailPay}
+                        onChange={(event) =>
+                          setCreditDetailPay(event.target.value)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleCreditDetailPay();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="cash-expense-add"
+                      onClick={handleCreditDetailPay}
+                      disabled={creditDetailSaving}
+                    >
+                      {creditDetailSaving ? (
+                        <RefreshCw size={14} className="spin" />
+                      ) : (
+                        <Plus size={14} />
+                      )}
+                      Update
+                    </button>
+                  </div>
+                </div>
+              ) : balance <= 0 ? (
+                <div className="cash-credit-settled">
+                  <CheckCircle2 size={16} />
+                  Fully paid
+                </div>
+              ) : creditDetail.source === "all" ? (
+                <div className="cash-expense-empty">
+                  <LockKeyhole size={16} />
+                  Open today's register to record a payment
+                </div>
+              ) : null}
+
+              <div className="cash-credit-history">
+                <span className="cash-section-label">
+                  PAYMENT HISTORY
+                </span>
+
+                {payments.length === 0 ? (
+                  <div className="cash-expense-empty">
+                    <Receipt size={16} />
+                    No payments yet
+                  </div>
+                ) : (
+                  payments.map((entry, index) => (
+                    <div
+                      className="cash-credit-history-row"
+                      key={`${entry.atMs}-${index}`}
+                    >
+                      <div>
+                        <strong>
+                          {entry.note || "Payment received"}
+                        </strong>
+                        <span>
+                          {entry.atMs ? formatDateTime(entry.atMs) : "—"}
+                        </span>
+                      </div>
+
+                      {canManage &&
+                        creditPayEdit &&
+                        creditPayEdit.idx === entry.idx &&
+                        entry.idx >= 0 ? (
+                        <div className="cash-credit-pay-tools">
+                          <div className="cash-expense-money">
+                            <b>₹</b>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              inputMode="decimal"
+                              value={creditPayEdit.value}
+                              onChange={(event) =>
+                                setCreditPayEdit((prev) => ({
+                                  ...prev,
+                                  value: event.target.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  handleSavePaymentEdit();
+                                }
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn ok"
+                            title="Save"
+                            disabled={creditDetailSaving}
+                            onClick={handleSavePaymentEdit}
+                          >
+                            <CheckCircle2 size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="cash-credit-icon-btn"
+                            title="Cancel"
+                            onClick={() => setCreditPayEdit(null)}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="cash-credit-pay-tools">
+                          <b>{formatCurrency(entry.amount)}</b>
+
+                          {canManage && (
+                            <>
+                              {entry.idx >= 0 && (
+                                <button
+                                  type="button"
+                                  className="cash-credit-icon-btn"
+                                  title="Edit payment"
+                                  disabled={creditDetailSaving}
+                                  onClick={() =>
+                                    setCreditPayEdit({
+                                      idx: entry.idx,
+                                      value: String(entry.amount),
+                                    })
+                                  }
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                className="cash-credit-icon-btn danger"
+                                title="Delete payment"
+                                disabled={creditDetailSaving}
+                                onClick={() =>
+                                  handleDeleteCreditPayment(entry)
+                                }
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+
+                <div className="cash-credit-history-row start">
+                  <div>
+                    <strong>Credit given</strong>
+                    <span>
+                      {creditDetailItem.createdAtMs
+                        ? formatDateTime(creditDetailItem.createdAtMs)
+                        : "—"}
+                    </span>
+                  </div>
+                  <b>{formatCurrency(total)}</b>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ====================================================
           BOTTOM NAVIGATION
@@ -5092,8 +7521,6 @@ export default function CashRegister() {
           </span>
         </button>
       </nav>
-
-      <FloatingCalculator theme={theme} />
 
     </div>
   );

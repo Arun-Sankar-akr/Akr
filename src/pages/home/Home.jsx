@@ -910,22 +910,27 @@ const Home = () => {
                             ))}
                         </div>
                     </div>
-                    <section className="cgpa-home-tool-section" id="student">
-                        <div className="section-container">
-                            <div className="section-heading reveal-item">
-                                <div className="section-heading-left">
-                                    <h1>
-                                        CGPA
-                                        <span> Calculator</span>
-                                    </h1>
-                                </div>
-                            </div>
 
-                            <div className="cgpa-home-tool-grid">
-                                <CgpaPercentageCalculator />
+                     <div className="section-container" id="govt">
+                        <div className="section-heading reveal-item">
+                            <div className="section-heading-left">
+                                <h1>
+                                    Govt.
+                                    <span> Exams</span>
+                                </h1>
                             </div>
                         </div>
-                    </section>
+
+                        <div className="services-grid">
+                            {govtExams.map((service, index) => (
+                                <GovernmentCard
+                                    key={service.title}
+                                    service={service}
+                                    index={index}
+                                />
+                            ))}
+                        </div>
+                    </div>
 
                     <section className="print-tools-section" id="print-tools">
                         <div className="section-container">
@@ -1064,26 +1069,24 @@ const Home = () => {
                         </div>
                     )}
 
-                    <div className="section-container" id="govt">
-                        <div className="section-heading reveal-item">
-                            <div className="section-heading-left">
-                                <h1>
-                                    Govt.
-                                    <span> Exams</span>
-                                </h1>
+                     <section className="cgpa-home-tool-section" id="student">
+                        <div className="section-container">
+                            <div className="section-heading reveal-item">
+                                <div className="section-heading-left">
+                                    <h1>
+                                        CGPA
+                                        <span> Calculator</span>
+                                    </h1>
+                                </div>
+                            </div>
+
+                            <div className="cgpa-home-tool-grid">
+                                <CgpaPercentageCalculator />
                             </div>
                         </div>
+                    </section>
 
-                        <div className="services-grid">
-                            {govtExams.map((service, index) => (
-                                <GovernmentCard
-                                    key={service.title}
-                                    service={service}
-                                    index={index}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                   
                 </section>
 
                 {/* =================================================
