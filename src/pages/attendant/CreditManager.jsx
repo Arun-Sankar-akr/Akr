@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import {
   collection,
-  addDoc,
+  setDoc,
+  arrayUnion,
   updateDoc,
   deleteDoc,
   doc,
@@ -694,14 +695,18 @@ export default function CreditManager() {
     try {
       const now = Date.now();
 
-      await addDoc(collection(db, "credits"), {
+      const creditRef = doc(collection(db, "credits"));
+
+      const payments =
+        paid > 0
+          ? [{ amount: paid, atMs: now, note: "Paid at entry" }]
+          : [];
+
+      await setDoc(creditRef, {
         reason,
         amount,
         paid,
-        payments:
-          paid > 0
-            ? [{ amount: paid, atMs: now, note: "Paid at entry" }]
-            : [],
+        payments,
         createdAtMs: now,
         attendantId: user.uid,
         attendantName: editorName,
@@ -709,6 +714,43 @@ export default function CreditManager() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // Also add it to today's open cash register (same id), so it
+      // shows on the Cash Register page too. Never blocks the save.
+      try {
+        const regQuery =
+          role === "admin"
+            ? query(
+              collection(db, "cashRegisters"),
+              where("dateKey", "==", getDateKey()),
+              where("status", "==", "open")
+            )
+            : query(
+              collection(db, "cashRegisters"),
+              where("attendantId", "==", user.uid),
+              where("dateKey", "==", getDateKey()),
+              where("status", "==", "open")
+            );
+
+        const regSnap = await getDocs(regQuery);
+
+        if (!regSnap.empty) {
+          await updateDoc(regSnap.docs[0].ref, {
+            credits: arrayUnion({
+              id: creditRef.id,
+              reason,
+              amount,
+              paid,
+              payments,
+              createdAtMs: now,
+              addedBy: editorName,
+            }),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } catch (syncError) {
+        console.warn("Cash register sync failed:", syncError);
+      }
 
       setCreditReason("");
       setCreditAmount("");

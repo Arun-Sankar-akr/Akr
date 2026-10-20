@@ -7,6 +7,7 @@ import React, {
 import {
   collection,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   Timestamp,
@@ -330,6 +331,46 @@ function getDayTotals(register) {
 // ============================================================
 // HELPERS
 // ============================================================
+
+// Copies NEW credits into the standalone "credits" collection (the
+// Credit Manager page). The register's credit id is reused as the
+// document id, so a credit is never duplicated. Credits whose id is in
+// `skipIds` (carried forward from an earlier day) already exist there
+// and are not touched. A failure here never blocks the register.
+async function mirrorCreditsToManager(
+  list,
+  user,
+  editorName,
+  skipIds = []
+) {
+  const skip = new Set(skipIds);
+  const items = Array.isArray(list) ? list : [];
+
+  for (const item of items) {
+    if (!item?.id || skip.has(item.id)) continue;
+
+    try {
+      await setDoc(doc(db, "credits", item.id), {
+        reason: item.reason || "",
+        amount: Number(item.amount) || 0,
+        paid: getCreditPaid(item),
+        payments: Array.isArray(item.payments) ? item.payments : [],
+        createdAtMs: Number(item.createdAtMs) || Date.now(),
+        attendantId: item.attendantId || user?.uid || "",
+        attendantName: item.attendantName || editorName,
+        addedBy: item.addedBy || editorName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Credit Manager sync failed:", error);
+      alert(
+        "Credit saved in the register, but could not be added to Credit Manager: " +
+          (error?.message || "unknown error")
+      );
+    }
+  }
+}
 
 // Credits that are still unpaid on the most recent earlier register.
 // They are carried into every new day until fully paid, so a loan
@@ -1754,6 +1795,16 @@ export default function CashRegister() {
           }
         );
 
+        // Credits entered while opening also go to the Credit Manager.
+        await mirrorCreditsToManager(
+          openingCredits,
+          user,
+          attendantName,
+          getCarryForwardCredits(registers, getDateKey()).map(
+            (item) => item.id
+          )
+        );
+
         setOpeningDenominations(
           emptyDenominations()
         );
@@ -1906,6 +1957,20 @@ export default function CashRegister() {
             updatedAt:
               serverTimestamp(),
           }
+        );
+
+        // Credits entered while closing also go to the Credit Manager.
+        await mirrorCreditsToManager(
+          closingCredits,
+          user,
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant",
+          [
+            ...getOpeningCredits(openRegister),
+            ...getCreditList(openRegister),
+          ].map((item) => item.id)
         );
 
         setClosingDenominations(
@@ -2115,6 +2180,33 @@ export default function CashRegister() {
       setSavingCredit(true);
 
       try {
+        const editorName =
+          profile?.name ||
+          user?.displayName ||
+          user?.email ||
+          "Attendant";
+
+        const newCredit = {
+          id: `${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}`,
+          reason,
+          amount,
+          paid,
+          payments:
+            paid > 0
+              ? [
+                {
+                  amount: paid,
+                  atMs: Date.now(),
+                  note: "Paid at entry",
+                },
+              ]
+              : [],
+          createdAtMs: Date.now(),
+          addedBy: editorName,
+        };
+
         await updateDoc(
           doc(
             db,
@@ -2122,34 +2214,18 @@ export default function CashRegister() {
             openRegister.id
           ),
           {
-            credits: arrayUnion({
-              id: `${Date.now()}-${Math.random()
-                .toString(36)
-                .slice(2, 8)}`,
-              reason,
-              amount,
-              paid,
-              payments:
-                paid > 0
-                  ? [
-                    {
-                      amount: paid,
-                      atMs: Date.now(),
-                      note: "Paid at entry",
-                    },
-                  ]
-                  : [],
-              createdAtMs: Date.now(),
-              addedBy:
-                profile?.name ||
-                user?.displayName ||
-                user?.email ||
-                "Attendant",
-            }),
+            credits: arrayUnion(newCredit),
 
             updatedAt:
               serverTimestamp(),
           }
+        );
+
+        // Also add it to the Credit Manager page.
+        await mirrorCreditsToManager(
+          [newCredit],
+          user,
+          editorName
         );
 
         setCreditReason("");
