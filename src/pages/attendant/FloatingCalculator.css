@@ -15,7 +15,7 @@
     --fc-ink-2: #5b6080;
     --fc-key: #f1f2fb;
     --fc-key-hover: #e6e8f8;
-    --fc-danger: #dc2626;
+    --fc-danger: #4f55e8;
     --fc-danger-soft: #fee2e2;
     --fc-shadow: 0 18px 40px rgba(40, 44, 120, .24);
     --fc-fab-shadow: 0 10px 24px rgba(67, 56, 202, .38);
@@ -39,6 +39,10 @@
     --fc-danger-soft: rgba(248, 113, 113, .14);
     --fc-shadow: 0 18px 40px rgba(0, 0, 0, .6);
     --fc-fab-shadow: 0 10px 24px rgba(0, 0, 0, .55);
+}
+
+.fcalc {
+    direction: ltr;
 }
 
 .fcalc *,
@@ -177,29 +181,48 @@
 }
 
 .fcalc-expr {
+    display: flex;
+    justify-content: flex-end;   /* long text overflows on the left, latest part stays visible */
     max-width: 100%;
     font-size: 12px;
     color: var(--fc-ink-2);
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    direction: rtl;
+    direction: ltr;              /* normal left-to-right reading order */
+}
+
+.fcalc-expr-text {
+    flex: none;
+    direction: ltr;
+    unicode-bidi: isolate;
+    white-space: pre;
+    font-variant-numeric: tabular-nums;
 }
 
 .fcalc-result {
+    display: flex;
+    justify-content: flex-end;   /* newest typed part always stays visible on the right */
     max-width: 100%;
     font-size: calc(28px * var(--s));
     font-weight: 800;
     line-height: 1.15;
     color: var(--fc-ink);
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    direction: ltr;
     font-variant-numeric: tabular-nums;
 }
 
+.fcalc-result-text {
+    flex: none;
+    white-space: pre;
+    unicode-bidi: isolate;
+}
+
 .fcalc-result.small {
-    font-size: calc(20px * var(--s));
+    font-size: calc(21px * var(--s));
+}
+
+.fcalc-result.tiny {
+    font-size: calc(15px * var(--s));
 }
 
 .fcalc-result.error {
@@ -456,3 +479,196 @@
     --fc-shadow: 0 18px 40px rgba(0, 0, 0, .6);
     --fc-fab-shadow: 0 10px 24px rgba(0, 0, 0, .55);
 }
+
+/* =========================================================
+   NEOMORPHIC LOOK  (light + dark)
+   Soft raised keys, orange operators, no hard borders.
+   ========================================================= */
+
+.fcalc {
+    --nm-bg: #eff1f6;
+    --nm-ink: #0f1530;
+    --nm-fn: #6b7288;
+    --nm-op: #4f55e8;
+    --nm-hi: #ffffff;
+    --nm-lo: rgba(150, 163, 190, .55);
+    --nm-raise: 5px 5px 11px var(--nm-lo), -5px -5px 11px var(--nm-hi);
+    --nm-raise-sm: 3px 3px 7px var(--nm-lo), -3px -3px 7px var(--nm-hi);
+    --nm-press: inset 3px 3px 7px var(--nm-lo), inset -3px -3px 7px var(--nm-hi);
+    --nm-panel: 12px 16px 32px rgba(120, 134, 165, .38), -4px -4px 14px rgba(255, 255, 255, .7);
+
+    /* re-map the older variables so history / opacity / header match */
+    --fc-card: var(--nm-bg);
+    --fc-card-2: var(--nm-bg);
+    --fc-key: #e6e9f1;
+    --fc-key-hover: #e0e4ee;
+    --fc-line: rgba(150, 163, 190, .28);
+    --fc-ink: var(--nm-ink);
+    --fc-ink-2: var(--nm-fn);
+    --fc-accent: var(--nm-op);
+    --fc-accent-2: #ffb347;
+    --fc-accent-soft: rgba(245, 154, 27, .16);
+    --fc-on-accent: #ffffff;
+    --fc-shadow: var(--nm-panel);
+}
+
+.fcalc[data-theme="dark"] {
+    --nm-bg: #28354a;
+    --nm-ink: #ffffff;
+    --nm-fn: #9aa6bd;
+    --nm-op: #f59a1b;
+    --nm-hi: rgba(255, 255, 255, .06);
+    --nm-lo: rgba(10, 16, 30, .55);
+    --nm-panel: 14px 18px 36px rgba(8, 12, 24, .55), -3px -3px 12px rgba(255, 255, 255, .04);
+
+    --fc-key: #2f3d55;
+    --fc-key-hover: #33425c;
+    --fc-line: rgba(255, 255, 255, .08);
+    --fc-accent-soft: rgba(245, 154, 27, .18);
+    --fc-on-accent: #ffffff;
+    --fc-danger-soft: rgba(248, 113, 113, .16);
+}
+
+/* keep the palette prop from recolouring the neomorphic surface */
+.fcalc[data-palette="teal"],
+.fcalc[data-palette="teal"][data-theme="dark"] {
+    --fc-accent: var(--nm-op);
+    --fc-accent-2: #ffb347;
+    --fc-accent-soft: rgba(245, 154, 27, .16);
+    --fc-card: var(--nm-bg);
+    --fc-card-2: var(--nm-bg);
+    --fc-ink: var(--nm-ink);
+    --fc-ink-2: var(--nm-fn);
+    --fc-shadow: var(--nm-panel);
+}
+
+/* ---------- floating button ---------- */
+.fcalc-fab {
+    color: var(--nm-op);
+    background: var(--nm-bg);
+    box-shadow: var(--nm-raise);
+}
+
+.fcalc-fab:active {
+    box-shadow: var(--nm-press);
+}
+
+/* ---------- panel ---------- */
+.fcalc-panel {
+    padding: calc(10px * var(--s)) calc(12px * var(--s)) calc(14px * var(--s));
+    border: 0;
+    border-radius: 28px;
+    background: var(--nm-bg);
+    box-shadow: var(--nm-panel);
+}
+
+.fcalc-icon-btn {
+    border-radius: 10px;
+}
+
+.fcalc-icon-btn:hover {
+    background: transparent;
+    box-shadow: var(--nm-raise-sm);
+}
+
+.fcalc-icon-btn.active {
+    color: var(--nm-op);
+    background: transparent;
+    box-shadow: var(--nm-press);
+}
+
+/* ---------- display ---------- */
+.fcalc-display {
+    position: relative;
+    min-height: calc(76px * var(--s));
+    margin-bottom: calc(12px * var(--s));
+    padding: 6px 8px 6px 40px;
+    border-radius: 0;
+    background: transparent;
+}
+
+.fcalc-expr {
+    font-size: calc(13px * var(--s));
+}
+
+.fcalc-result {
+    font-size: calc(36px * var(--s));
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+.fcalc-result.small { font-size: calc(26px * var(--s)); }
+.fcalc-result.tiny  { font-size: calc(18px * var(--s)); }
+
+.fcalc-back {
+    position: absolute;
+    left: 2px;
+    bottom: 8px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: var(--nm-fn);
+    background: var(--nm-bg);
+    box-shadow: var(--nm-raise-sm);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.fcalc-back:active { box-shadow: var(--nm-press); }
+
+/* ---------- keypad ---------- */
+.fcalc-keys {
+    gap: calc(11px * var(--s));
+}
+
+.fcalc-key {
+    height: calc(46px * var(--s));
+    border-radius: 16px;
+    font-size: calc(18px * var(--s));
+    font-weight: 700;
+    color: var(--nm-ink);
+    background: var(--nm-bg);
+    box-shadow: var(--nm-raise);
+    transition: box-shadow .12s ease, color .12s ease;
+}
+
+.fcalc-key:hover { background: var(--nm-bg); }
+
+.fcalc-key:active {
+    transform: none;
+    box-shadow: var(--nm-press);
+}
+
+.fcalc-key.zero { grid-column: span 2; justify-items: start; padding-left: calc(20px * var(--s)); }
+
+.fcalc-key.fn,
+.fcalc-key.clear {
+    color: var(--nm-fn);
+    background: var(--nm-bg);
+}
+
+.fcalc-key.clear { font-size: calc(17px * var(--s)); }
+
+.fcalc-key.op,
+.fcalc-key.equals {
+    color: var(--nm-op);
+    background: var(--nm-bg);
+    font-size: calc(22px * var(--s));
+}
+
+.fcalc-key.equals:hover { filter: none; }
+
+/* ---------- history, opacity ---------- */
+.fcalc-log,
+.fcalc-opacity {
+    background: var(--nm-bg);
+    box-shadow: var(--nm-press);
+}
+
+.fcalc-log-item:hover { background: var(--fc-key); }
+
+.fcalc-resize { opacity: .4; }

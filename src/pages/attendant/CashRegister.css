@@ -3009,3 +3009,156 @@ body:has(.cash-modal-overlay) {
         height: 34px;
     }
 }
+
+/* ---------------------------------------------------------
+   SESSION DETAIL POPUP - window modes (minimize / maximize)
+   --------------------------------------------------------- */
+
+.cash-modal-window-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.cash-history-totals-merged {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.cash-history-totals-merged .positive { color: var(--cr-green); }
+.cash-history-totals-merged .negative { color: var(--cr-red); }
+
+.cash-history-detail-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.cash-history-detail-footer .cash-cancel-btn { min-width: 140px; }
+
+.cash-history-detail-modal { transition: width .25s ease, max-height .25s ease; }
+
+/* maximized: fills the screen */
+.cash-history-detail-modal.mode-max {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+}
+
+.cash-modal-overlay:has(.cash-history-detail-modal.mode-max) { padding: 0; }
+.cash-history-detail-modal.mode-max { border-radius: 0; }
+
+/* minimized: small bar docked at bottom-right, page stays usable */
+.cash-modal-overlay.is-minimized {
+    padding: 0;
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.cash-history-detail-modal.mode-min {
+    pointer-events: auto;
+    width: min(360px, calc(100% - 24px));
+    max-height: none;
+    margin: 0 18px 18px 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--cr-line);
+}
+
+.cash-history-detail-modal.mode-min .cash-modal-head {
+    position: static;
+    margin-bottom: 0;
+    padding-bottom: var(--cr-mp);
+    border-bottom: 0;
+}
+
+.cash-history-detail-modal.mode-min .cash-modal-head::before { display: none; }
+
+.cash-history-detail-modal.mode-min > :not(.cash-modal-head) { display: none; }
+
+.cash-history-detail-modal.mode-min .cash-modal-max-btn { display: none; }
+
+@media (max-width: 640px) {
+    .cash-history-detail-modal.mode-max { border-radius: 0; }
+
+    .cash-history-detail-modal.mode-min {
+        width: calc(100% - 20px);
+        margin: 0 10px 10px;
+        border-radius: 18px;
+        animation: cash-pop .25s ease both;
+    }
+
+    .cash-history-totals-merged { grid-template-columns: repeat(2, 1fr); }
+    .cash-history-detail-footer .cash-cancel-btn { width: 100%; }
+}
+
+.cash-history-denomination-right .positive { color: var(--cr-green); }
+.cash-history-denomination-right .negative { color: var(--cr-red); }
+
+.cash-history-denomination.sum-row {
+    background: var(--cr-hero-sum);
+}
+
+.cash-history-denomination.sum-row strong,
+.cash-history-denomination.sum-row span { color: var(--cr-panel-text); }
+
+.cash-history-denomination.sum-row .cash-history-denomination-icon {
+    color: var(--cr-panel-text);
+    background: rgba(255, 255, 255, .18);
+}
+
+/* Day Result box (below Opening / Closing cards) */
+.cash-history-result-card { margin-top: 14px; }
+
+.cash-history-result-card .cash-history-breakdown-head { margin-bottom: 12px; }
+
+.cash-history-result-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.cash-history-result-grid > div {
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--cr-line);
+    border-radius: var(--cr-r-md);
+    background: var(--cr-surface-2);
+}
+
+.cash-history-result-grid span {
+    display: block;
+    color: var(--cr-text-2);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.cash-history-result-grid strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--cr-ink);
+    font-size: 16px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.cash-history-result-grid .positive { color: var(--cr-green); }
+.cash-history-result-grid .negative { color: var(--cr-red); }
+
+.cash-history-result-grid .sum {
+    border: 0;
+    background: var(--cr-hero-sum);
+}
+
+.cash-history-result-grid .sum span { color: rgba(255, 255, 255, .72); }
+.cash-history-result-grid .sum strong { color: var(--cr-panel-text); }
+
+@media (max-width: 900px) {
+    .cash-history-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* minimized bar: no print button */
+.cash-history-detail-modal.mode-min .cash-modal-print-btn { display: none; }

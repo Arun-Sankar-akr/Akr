@@ -35,7 +35,7 @@ const MIN_W = 200;
 const MAX_W = 460;
 const EXPANDED_W = 340;
 const EDGE = 12;
-const DEFAULT_PANEL_H = 352;
+const DEFAULT_PANEL_H = 384;
 
 const POS_KEY = "attendant-calc-layout";
 const STATE_KEY = "attendant-calc-state";
@@ -43,11 +43,11 @@ const STATE_KEY = "attendant-calc-state";
 const OPS = ["+", "-", "×", "÷"];
 
 const KEYS = [
-  ["C", "back", "%", "÷"],
+  ["C", "±", "%", "÷"],
   ["7", "8", "9", "×"],
   ["4", "5", "6", "-"],
   ["1", "2", "3", "+"],
-  ["±", "0", ".", "="],
+  ["0", ".", "="],
 ];
 
 /* ---------- math helpers (no eval) ---------- */
@@ -174,22 +174,38 @@ export default function FloatingCalculator({ theme, palette }) {
     };
   }, []);
 
-  /* theme: prop wins, otherwise follow <html data-theme> */
-  const [docTheme, setDocTheme] = useState(() =>
-    typeof document !== "undefined"
-      ? document.documentElement.getAttribute("data-theme")
-      : null
-  );
+  /* theme: prop wins, otherwise follow the app's dark mode
+     (<html>/<body> data-theme, data-bs-theme, or a "dark" class) */
+  const readDocTheme = () => {
+    if (typeof document === "undefined") return null;
+
+    const roots = [document.documentElement, document.body].filter(Boolean);
+
+    for (const el of roots) {
+      const attr =
+        el.getAttribute("data-theme") || el.getAttribute("data-bs-theme");
+
+      if (attr) return /dark/i.test(attr) ? "dark" : "light";
+
+      if (el.classList.contains("dark") || el.classList.contains("dark-mode") || el.classList.contains("theme-dark")) {
+        return "dark";
+      }
+    }
+
+    return null;
+  };
+
+  const [docTheme, setDocTheme] = useState(readDocTheme);
 
   useEffect(() => {
-    const observer = new MutationObserver(() =>
-      setDocTheme(document.documentElement.getAttribute("data-theme"))
-    );
-
-    observer.observe(document.documentElement, {
+    const observer = new MutationObserver(() => setDocTheme(readDocTheme()));
+    const options = {
       attributes: true,
-      attributeFilter: ["data-theme"],
-    });
+      attributeFilter: ["data-theme", "data-bs-theme", "class"],
+    };
+
+    observer.observe(document.documentElement, options);
+    if (document.body) observer.observe(document.body, options);
 
     return () => observer.disconnect();
   }, []);
@@ -631,12 +647,13 @@ export default function FloatingCalculator({ theme, palette }) {
   const liveText =
     liveValue !== null && !Number.isNaN(liveValue) ? fmt(liveValue) : null;
 
+  // What you type is always the BIG line (the way a normal calculator works).
+  // While typing a sum, the live answer is shown small above it as "= 8".
+  // After pressing "=", the answer becomes the big line and the sum goes small.
   const bigText = error
     ? "Error"
     : hasOperator
-      ? liveText !== null
-        ? groupNumber(liveText)
-        : "—"
+      ? prettyExpr(expr)
       : expr
         ? groupNumber(expr)
         : "0";
@@ -646,8 +663,13 @@ export default function FloatingCalculator({ theme, palette }) {
     : done
       ? history
       : hasOperator
-        ? prettyExpr(expr)
+        ? liveText !== null
+          ? `= ${groupNumber(liveText)}`
+          : ""
         : history;
+
+  const bigSize =
+    bigText.length > 24 ? " tiny" : bigText.length > 12 ? " small" : "";
 
   const opacity = clamp(layout.opacity ?? 1, MIN_OPACITY, 1);
 
@@ -779,11 +801,22 @@ export default function FloatingCalculator({ theme, palette }) {
           )}
 
           <div className="fcalc-display" aria-live="polite">
-            <span className="fcalc-expr">{smallText || "\u00A0"}</span>
-            <strong
-              className={`fcalc-result${bigText.length > 12 ? " small" : ""}${error ? " error" : ""}`}
+            <button
+              type="button"
+              className="fcalc-back"
+              onClick={() => press("back")}
+              aria-label="Backspace"
+              title="Backspace"
             >
-              {bigText}
+              <Delete size={15} />
+            </button>
+            <span className="fcalc-expr">
+              <span className="fcalc-expr-text">{smallText || "\u00A0"}</span>
+            </span>
+            <strong
+              className={`fcalc-result${bigSize}${error ? " error" : ""}`}
+            >
+              <span className="fcalc-result-text">{bigText}</span>
             </strong>
           </div>
 
@@ -840,9 +873,11 @@ export default function FloatingCalculator({ theme, palette }) {
                     ? "clear"
                     : isOp
                       ? "op"
-                      : key === "back" || key === "%" || key === "±"
+                      : key === "%" || key === "±"
                         ? "fn"
-                        : "num";
+                        : key === "0"
+                          ? "num zero"
+                          : "num";
 
               return (
                 <button
@@ -858,7 +893,7 @@ export default function FloatingCalculator({ theme, palette }) {
                         : key
                   }
                 >
-                  {key === "back" ? <Delete size={17} /> : key === "-" ? "−" : key}
+                  {key === "C" ? "AC" : key === "-" ? "−" : key}
                 </button>
               );
             })}

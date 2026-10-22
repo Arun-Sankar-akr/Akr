@@ -53,7 +53,12 @@ import {
   Sun,
   Moon,
   ArrowLeft,
+  Maximize2,
+  Minimize2,
+  Printer,
 } from "lucide-react";
+
+import FloatingCalculator from "./FloatingCalculator";
 
 import { db } from "../../services/firebase";
 import { useAuth } from "../../context/AuthContext";
@@ -366,7 +371,7 @@ async function mirrorCreditsToManager(
       console.error("Credit Manager sync failed:", error);
       alert(
         "Credit saved in the register, but could not be added to Credit Manager: " +
-          (error?.message || "unknown error")
+        (error?.message || "unknown error")
       );
     }
   }
@@ -959,6 +964,239 @@ export default function CashRegister() {
 
   const [selectedHistoryRegister, setSelectedHistoryRegister] =
     useState(null);
+
+  // popup window mode for Cash Session Details: "normal" | "max" | "min"
+  const [historyViewMode, setHistoryViewMode] = useState("normal");
+
+  useEffect(() => {
+    setHistoryViewMode("normal");
+  }, [selectedHistoryRegister]);
+
+  // Print the Cash Session Details.
+  // A standalone printable page is built from the session data (with its own
+  // small stylesheet), so it never depends on the app CSS or on what is
+  // currently visible on screen.
+  const handlePrintSession = () => {
+    const r = selectedHistoryRegister;
+    if (!r) return;
+
+    const esc = (value) =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const money = (value) => esc(formatCurrency(Number(value) || 0));
+    const isClosed = r.status === "closed";
+    const totals = getDayTotals(r);
+    const flow = getRegisterCreditFlow(r);
+
+    const signed = (value) =>
+      isClosed
+        ? `<span class="${value > 0 ? "pos" : value < 0 ? "neg" : ""}">${value > 0 ? "+" : ""}${money(value)}</span>`
+        : "—";
+
+    const row = (label, value, cls = "") =>
+      `<tr class="${cls}"><td>${esc(label)}</td><td class="r">${value}</td></tr>`;
+
+    const card = (kicker, title, pill, body, closeStyle = false) => `
+      <div class="card">
+        <div class="card-head">
+          <div><span class="tag ${closeStyle ? "close" : ""}">${esc(kicker)}</span><h3>${esc(title)}</h3></div>
+          ${pill === null ? "" : `<div class="pill ${closeStyle ? "close" : ""}">${pill}</div>`}
+        </div>
+        ${body}
+      </div>`;
+
+    const denomBody = (denominations) =>
+      `<table>${DENOMINATIONS.map((item) => {
+        const pcs = getDenominationCount(denominations, item);
+        return row(
+          item.type === "note" ? `${item.label} note` : item.label,
+          item.type === "coin"
+            ? money(pcs * item.value)
+            : `${pcs} pcs &nbsp; ${money(pcs * item.value)}`
+        );
+      }).join("")}</table>`;
+
+    const digitalBody = (digital) =>
+      digital
+        ? `<table>${DIGITAL_ACCOUNTS.map((item) =>
+          row(item.label, money(digital?.[item.key]))
+        ).join("")}</table>`
+        : `<p class="muted">Available after the register is closed.</p>`;
+
+    const creditBody = (list) =>
+      list
+        ? list.length === 0
+          ? `<p class="muted">No credit added.</p>`
+          : `<table>${list
+            .map((item) => {
+              const paid = getCreditPaid(item);
+              const detail = [
+                `Credit ${formatCurrency(Number(item.amount) || 0)}`,
+                paid > 0 ? `Paid ${formatCurrency(paid)}` : "",
+                getCreditBalance(item) <= 0 ? "Settled" : "",
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return `<tr><td>${esc(item.reason)}<br><small>${esc(detail)}</small></td><td class="r">${money(getCreditBalance(item))}</td></tr>`;
+            })
+            .join("")}</table>`
+        : `<p class="muted">Available after the register is closed.</p>`;
+
+    const expenseList = [...getExpenseList(r)].sort(
+      (x, y) => Number(y?.createdAtMs || 0) - Number(x?.createdAtMs || 0)
+    );
+
+    const expenseBody =
+      expenseList.length === 0
+        ? `<p class="muted">No expenses added.</p>`
+        : `<table>${expenseList
+          .map(
+            (item) =>
+              `<tr><td>${esc(item.reason)}<br><small>${item.createdAtMs ? esc(formatDateTime(item.createdAtMs)) : ""}</small></td><td class="r">−${money(item.amount)}</td></tr>`
+          )
+          .join("")}</table>`;
+
+    const closeCashBody = isClosed
+      ? denomBody(r.closingDenominations)
+      : `<p class="muted">Available after the register is closed.</p>`;
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cash Session ${esc(formatDate(r.dateKey))}</title>
+<style>
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #1b1b2f; font-size: 10.5px; background: #fff; }
+  .page { width: 194mm; margin: 0 auto; }
+  h1 { margin: 0; font-size: 17px; }
+  .sub { margin: 2px 0 6px; color: #666; font-size: 11px; }
+  h2 { margin: 8px 0 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #3d33b8; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .box { padding: 5px 8px; border: 1px solid #ddd; border-radius: 8px; background: #f6f6fb; }
+  .box span { display: block; color: #666; font-size: 10.5px; }
+  .box strong { display: block; margin-top: 1px; font-size: 12.5px; }
+  .box.sum { background: #3d33b8; border-color: #3d33b8; }
+  .box.sum span { color: #dcdcff; }
+  .box.sum strong { color: #fff; }
+  .card { padding: 6px 9px; border: 1px solid #ddd; border-radius: 10px; break-inside: avoid; page-break-inside: avoid; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 3px; }
+  .card-head h3 { margin: 3px 0 0; font-size: 11.5px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #e8e6ff; color: #3d33b8; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+  .tag.close { background: #fde4e8; color: #c62840; }
+  .pill { padding: 3px 8px; border-radius: 99px; background: #e8e6ff; color: #3d33b8; font-weight: 700; font-size: 11px; white-space: nowrap; }
+  .pill.close { background: #fde4e8; color: #c62840; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 2px 3px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.r { text-align: right; font-weight: 700; white-space: nowrap; }
+  tr.sum td { background: #3d33b8; color: #fff; }
+  small { color: #777; font-weight: 400; }
+  .muted { margin: 3px 0; color: #888; font-style: italic; }
+  .pos { color: #1b8a4f; } .neg { color: #c62840; }
+  @page { size: A4; margin: 8mm; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Cash Session Details</h1>
+  <div class="sub">${esc(formatDate(r.dateKey))} &bull; ${isClosed ? "Closed Session" : "Open Session"}</div>
+
+  <h2>Cash in Hand</h2>
+  <div class="grid2">
+    ${card("OPEN", "Opening Cash in Hand", money(r.openingCash), denomBody(r.openingDenominations))}
+    ${card("CLOSE", "Closing Cash in Hand", isClosed ? money(r.closingCash) : "—", closeCashBody, true)}
+  </div>
+
+  <h2>Digital Money</h2>
+  <div class="grid2">
+    ${card("OPEN", "Opening Digital Money", money(calculateDigitalTotal(getOpeningDigital(r))), digitalBody(getOpeningDigital(r)))}
+    ${card("CLOSE", "Closing Digital Money", getClosingDigital(r) ? money(calculateDigitalTotal(getClosingDigital(r))) : "—", digitalBody(getClosingDigital(r)), true)}
+  </div>
+
+  <h2>Credit (Loan)</h2>
+  <div class="grid2">
+    ${card("OPEN", "Opening Credit (Loan)", money(calculateCreditTotal(getOpeningCredits(r))), creditBody(getOpeningCredits(r)))}
+    ${card("CLOSE", "Closing Credit (Loan)", getClosingCredits(r) ? money(calculateCreditTotal(getClosingCredits(r))) : "—", creditBody(getClosingCredits(r)), true)}
+  </div>
+
+  <h2>Expenses</h2>
+  ${card("EXPENSES", "Expenses", money(totals.expenses), expenseBody, true)}
+
+  <h2>Opening &amp; Closing Register</h2>
+  <div class="grid2">
+    ${card("OPEN", "Opening Register", money(getOpeningInHand(r)),
+      `<table>
+        ${row("Cash", money(r.openingCash))}
+        ${row("Digital", money(calculateDigitalTotal(getOpeningDigital(r))))}
+        ${row("Credit Not Paid", money(calculateCreditTotal(getOpeningCredits(r))))}
+      </table>`)}
+    ${card("CLOSE", "Closing Register", isClosed ? money(getClosingTotal(r)) : "—",
+        isClosed
+          ? `<table>
+        ${row("Cash", money(totals.cash))}
+        ${row("Digital", money(totals.digital))}
+        ${row("Credit Given", money(totals.creditGiven))}
+        ${row("Credit Paid", money(flow.paid))}
+        ${row("Credit Not Paid", money(flow.notPaid))}
+      </table>`
+          : `<p class="muted">Available after the register is closed.</p>`, true)}
+  </div>
+
+  <h2>Day Result</h2>
+  <div class="grid4">
+    <div class="box"><span>Amt Diff Without Credit</span><strong>${signed(getDifferenceWithoutCredit(r))}</strong></div>
+    <div class="box"><span>Amt Diff With Credit</span><strong>${signed(getOverallDifference(r))}</strong></div>
+    <div class="box sum"><span>Day Total</span><strong>${money(totals.net)}</strong></div>
+    <div class="box sum"><span>Total Money</span><strong>${money(getTotalMoney(r))}</strong></div>
+  </div>
+
+</div>
+  <script>
+    // shrink to fit ONE A4 page, then print
+    window.onload = function () {
+      var page = document.querySelector(".page");
+      var avail = ((297 - 16) / 25.4) * 96 - 6;
+      var h = page.offsetHeight;
+      if (h > avail) page.style.zoom = (avail / h).toFixed(3);
+      if (!window.frameElement) {
+        setTimeout(function () { window.focus(); window.print(); }, 250);
+      }
+    };
+  </script>
+</body>
+</html>`;
+
+    // Open the printable page in its own window (opened right inside the
+    // click so the browser does not block it).
+    const printWindow = window.open("", "_blank", "width=900,height=800");
+
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      return;
+    }
+
+    // Pop-ups blocked: print through an off-screen frame instead.
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText =
+      "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;";
+    iframe.srcdoc = html;
+    iframe.onload = () => {
+      const win = iframe.contentWindow;
+      win.focus();
+      win.onafterprint = () => setTimeout(() => iframe.remove(), 300);
+      setTimeout(() => win.print(), 250);
+    };
+    document.body.appendChild(iframe);
+  };
 
   // Digital money (banks / wallets)
   const [openingDigital, setOpeningDigital] =
@@ -6787,14 +7025,17 @@ export default function CashRegister() {
 
       {selectedHistoryRegister && (
         <div
-          className="cash-modal-overlay"
+          className={`cash-modal-overlay ${historyViewMode === "min" ? "is-minimized" : ""}`}
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
+            if (
+              event.target === event.currentTarget &&
+              historyViewMode !== "min"
+            ) {
               setSelectedHistoryRegister(null);
             }
           }}
         >
-          <div className="cash-history-detail-modal">
+          <div className={`cash-history-detail-modal mode-${historyViewMode}`}>
             <div className="cash-modal-head">
               <div className="cash-modal-title">
                 <div className="cash-modal-icon">
@@ -6812,13 +7053,48 @@ export default function CashRegister() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="cash-modal-close"
-                onClick={() => setSelectedHistoryRegister(null)}
-              >
-                <X size={17} />
-              </button>
+              <div className="cash-modal-window-actions">
+                <button
+                  type="button"
+                  className="cash-modal-close cash-modal-print-btn"
+                  title="Print"
+                  aria-label="Print"
+                  onClick={handlePrintSession}
+                >
+                  <Printer size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="cash-modal-close"
+                  title={historyViewMode === "min" ? "Restore" : "Minimize"}
+                  aria-label={historyViewMode === "min" ? "Restore" : "Minimize"}
+                  onClick={() =>
+                    setHistoryViewMode(historyViewMode === "min" ? "normal" : "min")
+                  }
+                >
+                  {historyViewMode === "min" ? <Maximize2 size={16} /> : <Minus size={17} />}
+                </button>
+                <button
+                  type="button"
+                  className="cash-modal-close cash-modal-max-btn"
+                  title={historyViewMode === "max" ? "Restore size" : "Maximize"}
+                  aria-label={historyViewMode === "max" ? "Restore size" : "Maximize"}
+                  onClick={() =>
+                    setHistoryViewMode(historyViewMode === "max" ? "normal" : "max")
+                  }
+                >
+                  {historyViewMode === "max" ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+                <button
+                  type="button"
+                  className="cash-modal-close"
+                  title="Close"
+                  aria-label="Close"
+                  onClick={() => setSelectedHistoryRegister(null)}
+                >
+                  <X size={17} />
+                </button>
+              </div>
             </div>
 
             <div className="cash-history-detail-summary">
@@ -7009,96 +7285,189 @@ export default function CashRegister() {
               </div>
             </div>
 
-            <div className="cash-history-daytotal">
-              <div>
-                <span>Cash</span>
-                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).cash)}</strong>
+            <div className="cash-history-section-title">
+              <Calculator size={14} />
+              Opening &amp; Closing Register
+            </div>
+
+            <div className="cash-history-breakdown-grid">
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker">OPEN</span>
+                    <h3>Opening Register</h3>
+                    <p>Cash and digital in hand when the register opened.</p>
+                  </div>
+                  <div className="cash-breakdown-total">
+                    {formatCurrency(getOpeningInHand(selectedHistoryRegister))}
+                  </div>
+                </div>
+
+                <div className="cash-history-denomination-list">
+                  <div className="cash-history-denomination has-value">
+                    <div className="cash-history-denomination-left">
+                      <div className="cash-history-denomination-icon note">
+                        <Banknote size={14} />
+                      </div>
+                      <div>
+                        <strong>Cash</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination-right">
+                      <strong className={""}>{formatCurrency(Number(selectedHistoryRegister.openingCash || 0))}</strong>
+                    </div>
+                  </div>
+                  <div className="cash-history-denomination has-value">
+                    <div className="cash-history-denomination-left">
+                      <div className="cash-history-denomination-icon note">
+                        <Smartphone size={14} />
+                      </div>
+                      <div>
+                        <strong>Digital</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination-right">
+                      <strong className={""}>{formatCurrency(calculateDigitalTotal(getOpeningDigital(selectedHistoryRegister)))}</strong>
+                    </div>
+                  </div>
+                  <div className="cash-history-denomination has-value">
+                    <div className="cash-history-denomination-left">
+                      <div className="cash-history-denomination-icon coin">
+                        <AlertCircle size={14} />
+                      </div>
+                      <div>
+                        <strong>Credit Not Paid</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination-right">
+                      <strong className={""}>{formatCurrency(calculateCreditTotal(getOpeningCredits(selectedHistoryRegister)))}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span>Digital</span>
-                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).digital)}</strong>
+
+              <div className="cash-history-breakdown-card">
+                <div className="cash-history-breakdown-head">
+                  <div>
+                    <span className="cash-breakdown-kicker close">CLOSE</span>
+                    <h3>Closing Register</h3>
+                    <p>Full day details when the register closed.</p>
+                  </div>
+                  <div className="cash-breakdown-total close">
+                    {selectedHistoryRegister.status === "closed"
+                      ? formatCurrency(getClosingTotal(selectedHistoryRegister))
+                      : "—"}
+                  </div>
+                </div>
+
+                {selectedHistoryRegister.status === "closed" ? (
+                  <div className="cash-history-denomination-list">
+                    <div className="cash-history-denomination has-value">
+                      <div className="cash-history-denomination-left">
+                        <div className="cash-history-denomination-icon note">
+                          <Banknote size={14} />
+                        </div>
+                        <div>
+                          <strong>Cash</strong>
+                        </div>
+                      </div>
+                      <div className="cash-history-denomination-right">
+                        <strong className={""}>{formatCurrency(getDayTotals(selectedHistoryRegister).cash)}</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination has-value">
+                      <div className="cash-history-denomination-left">
+                        <div className="cash-history-denomination-icon note">
+                          <Smartphone size={14} />
+                        </div>
+                        <div>
+                          <strong>Digital</strong>
+                        </div>
+                      </div>
+                      <div className="cash-history-denomination-right">
+                        <strong className={""}>{formatCurrency(getDayTotals(selectedHistoryRegister).digital)}</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination has-value">
+                      <div className="cash-history-denomination-left">
+                        <div className="cash-history-denomination-icon coin">
+                          <Receipt size={14} />
+                        </div>
+                        <div>
+                          <strong>Credit Given</strong>
+                        </div>
+                      </div>
+                      <div className="cash-history-denomination-right">
+                        <strong className={""}>{formatCurrency(getDayTotals(selectedHistoryRegister).creditGiven)}</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination has-value">
+                      <div className="cash-history-denomination-left">
+                        <div className="cash-history-denomination-icon note">
+                          <CheckCircle2 size={14} />
+                        </div>
+                        <div>
+                          <strong>Credit Paid</strong>
+                        </div>
+                      </div>
+                      <div className="cash-history-denomination-right">
+                        <strong className={""}>{formatCurrency(getRegisterCreditFlow(selectedHistoryRegister).paid)}</strong>
+                      </div>
+                    </div>
+                    <div className="cash-history-denomination has-value">
+                      <div className="cash-history-denomination-left">
+                        <div className="cash-history-denomination-icon coin">
+                          <AlertCircle size={14} />
+                        </div>
+                        <div>
+                          <strong>Credit Not Paid</strong>
+                        </div>
+                      </div>
+                      <div className="cash-history-denomination-right">
+                        <strong className={""}>{formatCurrency(getRegisterCreditFlow(selectedHistoryRegister).notPaid)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="cash-history-not-closed">
+                    <LockKeyhole size={18} />
+                    <strong>Register is still open</strong>
+                    <span>Closing details will appear after the register is closed.</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <span>Expenses</span>
-                <strong>−{formatCurrency(getDayTotals(selectedHistoryRegister).expenses)}</strong>
+            </div>
+
+            <div className="cash-history-breakdown-card cash-history-result-card">
+              <div className="cash-history-breakdown-head">
+                <div>
+                  <span className="cash-breakdown-kicker">RESULT</span>
+                  <h3>Day Result</h3>
+                  <p>Difference, day total and total money of this session.</p>
+                </div>
               </div>
-              <div>
-                <span>Credit Given</span>
-                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).creditGiven)}</strong>
-              </div>
-              <div>
-                <span>Credit Paid (+)</span>
-                <strong>+{formatCurrency(getDayTotals(selectedHistoryRegister).creditPaid)}</strong>
-              </div>
-              <div>
-                <span>Credit Not Paid</span>
-                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).credits)}</strong>
-              </div>
-              <div className="sum">
-                <span>Day Total</span>
-                <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).net)}</strong>
+
+              <div className="cash-history-result-grid">
+                <div>
+                  <span>Amt Diff Without Credit</span>
+                  <strong className={getDifferenceWithoutCredit(selectedHistoryRegister) > 0 ? "positive" : getDifferenceWithoutCredit(selectedHistoryRegister) < 0 ? "negative" : "zero"}>{selectedHistoryRegister.status !== "closed" ? "—" : (<>{getDifferenceWithoutCredit(selectedHistoryRegister) > 0 ? "+" : ""}{formatCurrency(getDifferenceWithoutCredit(selectedHistoryRegister))}</>)}</strong>
+                </div>
+                <div>
+                  <span>Amt Diff With Credit</span>
+                  <strong className={getOverallDifference(selectedHistoryRegister) > 0 ? "positive" : getOverallDifference(selectedHistoryRegister) < 0 ? "negative" : "zero"}>{selectedHistoryRegister.status !== "closed" ? "—" : (<>{getOverallDifference(selectedHistoryRegister) > 0 ? "+" : ""}{formatCurrency(getOverallDifference(selectedHistoryRegister))}</>)}</strong>
+                </div>
+                <div className="sum">
+                  <span>Day Total</span>
+                  <strong>{formatCurrency(getDayTotals(selectedHistoryRegister).net)}</strong>
+                </div>
+                <div className="sum">
+                  <span>Total Money</span>
+                  <strong>{formatCurrency(getTotalMoney(selectedHistoryRegister))}</strong>
+                </div>
               </div>
             </div>
 
             <div className="cash-history-detail-footer">
-              <div>
-                <span>Cash Added</span>
-                <strong>{formatCurrency(Number(selectedHistoryRegister.cashAdded || 0))}</strong>
-              </div>
-              <div>
-                <span>Cash Removed</span>
-                <strong>{formatCurrency(Number(selectedHistoryRegister.cashRemoved || 0))}</strong>
-              </div>
-              <div>
-                <span>Credit Paid</span>
-                <strong>{formatCurrency(getRegisterCreditFlow(selectedHistoryRegister).paid)}</strong>
-              </div>
-              <div>
-                <span>Credit Not Paid</span>
-                <strong>{formatCurrency(getRegisterCreditFlow(selectedHistoryRegister).notPaid)}</strong>
-              </div>
-              <div>
-                <span>Amt Diff Without Credit</span>
-                <strong className={
-                  getDifferenceWithoutCredit(selectedHistoryRegister) > 0
-                    ? "positive"
-                    : getDifferenceWithoutCredit(selectedHistoryRegister) < 0
-                      ? "negative"
-                      : "zero"
-                }>
-                  {selectedHistoryRegister.status !== "closed"
-                    ? "—"
-                    : (
-                      <>
-                        {getDifferenceWithoutCredit(selectedHistoryRegister) > 0 ? "+" : ""}
-                        {formatCurrency(getDifferenceWithoutCredit(selectedHistoryRegister))}
-                      </>
-                    )}
-                </strong>
-              </div>
-              <div>
-                <span>Amt Diff With Credit</span>
-                <strong className={
-                  getOverallDifference(selectedHistoryRegister) > 0
-                    ? "positive"
-                    : getOverallDifference(selectedHistoryRegister) < 0
-                      ? "negative"
-                      : "zero"
-                }>
-                  {selectedHistoryRegister.status !== "closed"
-                    ? "—"
-                    : (
-                      <>
-                        {getOverallDifference(selectedHistoryRegister) > 0 ? "+" : ""}
-                        {formatCurrency(getOverallDifference(selectedHistoryRegister))}
-                      </>
-                    )}
-                </strong>
-              </div>
-              <div>
-                <span>Total Money</span>
-                <strong>{formatCurrency(getTotalMoney(selectedHistoryRegister))}</strong>
-              </div>
               <button
                 type="button"
                 className="cash-cancel-btn"
@@ -7597,7 +7966,7 @@ export default function CashRegister() {
           </span>
         </button>
       </nav>
-
+      <FloatingCalculator />
     </div>
   );
 }
