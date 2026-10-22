@@ -29,13 +29,13 @@ import "./FloatingCalculator.css";
    ============================================================ */
 
 const FAB = 60;
-const PANEL_W = 232;
+const PANEL_W = 300;
 const MIN_OPACITY = 0.35;
 const MIN_W = 200;
 const MAX_W = 460;
 const EXPANDED_W = 340;
 const EDGE = 12;
-const DEFAULT_PANEL_H = 384;
+const DEFAULT_PANEL_H = 380;
 
 const POS_KEY = "attendant-calc-layout";
 const STATE_KEY = "attendant-calc-state";
