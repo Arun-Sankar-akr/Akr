@@ -4916,72 +4916,7 @@ export default function CashRegister() {
               </strong>
             </div>
 
-            <div
-              className={`cash-status-pill ${openRegister
-                ? "open"
-                : "closed"
-                }`}
-            >
-              <span />
-
-              {openRegister
-                ? "REGISTER OPEN"
-                : latestTodayRegister
-                  ? "REGISTER CLOSED"
-                  : "NO REGISTER"}
-            </div>
-
-          </div>
-
-          <div className="cash-mini-grid">
-
-            <div>
-              <span>
-                Opening
-              </span>
-
-              <strong>
-                {formatCurrency(
-                  openingCash
-                )}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Cash sales
-              </span>
-
-              <strong>
-                {formatCurrency(
-                  cashSales
-                )}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Added
-              </span>
-
-              <strong>
-                {formatCurrency(
-                  cashAdded
-                )}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Removed
-              </span>
-
-              <strong>
-                {formatCurrency(
-                  cashRemoved
-                )}
-              </strong>
-            </div>
+            
 
           </div>
 
@@ -5027,6 +4962,42 @@ export default function CashRegister() {
               </div>
             )}
 
+        </div>
+
+        <div className="cash-stat-card">
+          <div className="cash-stat-top">
+            <span>
+              Today's Status
+            </span>
+
+            <div className="cash-stat-icon purple">
+              {openRegister ? (
+                <UnlockKeyhole
+                  size={15}
+                />
+              ) : (
+                <LockKeyhole
+                  size={15}
+                />
+              )}
+            </div>
+          </div>
+
+          <strong>
+            {openRegister
+              ? "Open"
+              : latestTodayRegister
+                ? "Closed"
+                : "Not Opened"}
+          </strong>
+
+          <small>
+            {openRegister
+              ? "Register is active"
+              : latestTodayRegister
+                ? "Today's register is closed"
+                : "No register opened today"}
+          </small>
         </div>
 
         <div className="cash-main-action">
@@ -5102,137 +5073,7 @@ export default function CashRegister() {
 
       </section>
 
-      {/* ====================================================
-          STATS
-      ==================================================== */}
-
-      <section className="cash-stats-grid">
-
-        {/* STATUS */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Today's Status
-            </span>
-
-            <div className="cash-stat-icon purple">
-              {openRegister ? (
-                <UnlockKeyhole
-                  size={15}
-                />
-              ) : (
-                <LockKeyhole
-                  size={15}
-                />
-              )}
-            </div>
-          </div>
-
-          <strong>
-            {openRegister
-              ? "Open"
-              : latestTodayRegister
-                ? "Closed"
-                : "Not Opened"}
-          </strong>
-
-          <small>
-            {openRegister
-              ? "Register is active"
-              : latestTodayRegister
-                ? "Today's register is closed"
-                : "No register opened today"}
-          </small>
-        </div>
-
-        {/* OPENING CASH */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Opening Overall Total
-            </span>
-
-            <div className="cash-stat-icon blue">
-              <Banknote
-                size={15}
-              />
-            </div>
-          </div>
-
-          <strong>
-            {formatCurrency(
-              openingTotal
-            )}
-          </strong>
-
-          <small>
-            Cash + digital + credit paid
-          </small>
-        </div>
-
-        {/* CASH SALES */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              Cash Sales
-            </span>
-
-            <div className="cash-stat-icon green">
-              <ArrowUpRight
-                size={15}
-              />
-            </div>
-          </div>
-
-          <strong>
-            {formatCurrency(
-              cashSales
-            )}
-          </strong>
-
-          <small>
-            Cash received today
-          </small>
-        </div>
-
-        {/* EXPECTED CASH */}
-
-        <div className="cash-stat-card">
-          <div className="cash-stat-top">
-            <span>
-              {currentRegister?.status ===
-                "closed"
-                ? "Closing Overall Total"
-                : "Current Overall Total"}
-            </span>
-
-            <div className="cash-stat-icon orange">
-              <CircleDollarSign
-                size={15}
-              />
-            </div>
-          </div>
-
-          <strong>
-            {formatCurrency(
-              currentOverallTotal
-            )}
-          </strong>
-
-          <small>
-            {currentRegister?.status ===
-              "closed"
-              ? "Cash + digital + credit paid"
-              : "Expected cash + digital + credit paid"}
-          </small>
-        </div>
-
-      </section>
-
-      {/* ====================================================
+            {/* ====================================================
           DIGITAL MONEY + EXPENSES + DAY TOTAL
       ==================================================== */}
 
