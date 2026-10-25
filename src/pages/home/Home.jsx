@@ -1246,7 +1246,7 @@ const Home = () => {
                             </a>
 
                             <a
-                                href="https://arunakr.netlify.app"
+                                href="https://arunakr.vercel.app"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
