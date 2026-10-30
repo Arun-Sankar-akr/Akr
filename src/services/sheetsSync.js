@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 
 import { db } from "./firebase";
 import { useAuth } from "../context/AuthContext";
 
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxZUIjxodhYCZV0WS0UUCKgbb13k23yJXdrzdd1uPCLJNSFCBMiVi0L9jZ4GPeuMQwLlg/exec"
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxvzHYXITUbcYrhP4VptK9D5A8sll-aHURxfJBKYd8JdS0Q96a87AXqKIyx2YnNPhtyuA/exec"
 const SECRET = "akr@2025";
 
 export const SYNCED_COLLECTIONS = [
@@ -29,7 +28,7 @@ const LABELS = {
 };
 
 const CHUNK = 100;
-const CACHE_KEY = "sheetsSync:hashes:v1";
+const CACHE_KEY = "sheetsSync:hashes:v2";
 
 /* ---------------- value helpers ---------------- */
 
@@ -376,7 +375,7 @@ export function useSheetsSync() {
 
   useEffect(() => {
     if (!WEBAPP_URL || !SECRET) {
-      setStatus("error", "Sheets sync OFF: VITE_SHEETS_WEBAPP_URL / VITE_SHEETS_SECRET missing in .env (restart npm run dev)");
+      setStatus("error", "Sheets sync OFF: WEBAPP_URL or SECRET is empty in sheetsSync.js");
       return undefined;
     }
     if (!user?.uid) {
