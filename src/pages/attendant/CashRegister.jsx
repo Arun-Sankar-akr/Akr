@@ -123,6 +123,36 @@ const DIGITAL_ACCOUNTS = [
   { key: "PTM", label: "PTM", type: "wallet" },
 ];
 
+// Temporary (per browser tab session) storage for the PTM value typed
+// in the Open Register popup. Survives closing the popup / refresh,
+// and is cleared once the register is opened.
+const PTM_TEMP_KEY = "cashRegister_ptmTemp_";
+
+function readPtmTemp(dateKey) {
+  try {
+    const v = sessionStorage.getItem(PTM_TEMP_KEY + dateKey);
+    return v === null ? null : v;
+  } catch {
+    return null;
+  }
+}
+
+function writePtmTemp(dateKey, value) {
+  try {
+    sessionStorage.setItem(PTM_TEMP_KEY + dateKey, String(value ?? ""));
+  } catch {
+    /* storage unavailable - ignore */
+  }
+}
+
+function clearPtmTemp(dateKey) {
+  try {
+    sessionStorage.removeItem(PTM_TEMP_KEY + dateKey);
+  } catch {
+    /* ignore */
+  }
+}
+
 function emptyDigital() {
   return DIGITAL_ACCOUNTS.reduce((acc, item) => {
     acc[item.key] = "";
@@ -1202,6 +1232,18 @@ export default function CashRegister() {
   const [openingDigital, setOpeningDigital] =
     useState(emptyDigital());
 
+  // PTM wallet balance is always entered fresh (starts at 0) when the
+  // register opens. The previous (carried-over) PTM balance is only
+  // kept here temporarily, in memory, and is never saved.
+  const [ptmTempValue, setPtmTempValue] = useState(0);
+
+  // Remember what is typed in the PTM box while the Open Register popup
+  // is showing (temporary, per tab session).
+  useEffect(() => {
+    if (!showOpenModal) return;
+    writePtmTemp(getDateKey(), openingDigital?.PTM);
+  }, [showOpenModal, openingDigital?.PTM]);
+
   const [closingDigital, setClosingDigital] =
     useState(emptyDigital());
 
@@ -1285,6 +1327,8 @@ export default function CashRegister() {
   const [entryCloseDigital, setEntryCloseDigital] = useState(emptyDigital());
   // Credit / loan rows of the entry: { key, reason, amount, paid, orig }
   const [entryCredits, setEntryCredits] = useState([]);
+  // Expense rows of the entry: { key, reason, amount, orig }
+  const [entryExpenses, setEntryExpenses] = useState([]);
   const [deletingId, setDeletingId] = useState(null);
 
   // ----------------------------------------------------------
@@ -1671,7 +1715,7 @@ export default function CashRegister() {
           .trim()
           .toLowerCase();
 
-      return registers.filter(
+      const filtered = registers.filter(
         (item) => {
           const matchesSearch =
             !term ||
@@ -1704,6 +1748,28 @@ export default function CashRegister() {
           );
         }
       );
+
+      // Always show the list newest date first (descending),
+      // latest opened time first when two registers share a date.
+      return [...filtered].sort((a, b) => {
+        const dateA = String(a.dateKey || "");
+        const dateB = String(b.dateKey || "");
+
+        if (dateA !== dateB) {
+          return dateA < dateB ? 1 : -1;
+        }
+
+        const timeA = Math.max(
+          getTimestampValue(a.openedAt),
+          getTimestampValue(a.createdAt)
+        );
+        const timeB = Math.max(
+          getTimestampValue(b.openedAt),
+          getTimestampValue(b.createdAt)
+        );
+
+        return timeB - timeA;
+      });
     }, [
       registers,
       search,
@@ -1898,12 +1964,23 @@ export default function CashRegister() {
           return acc;
         }, {})
       );
-      setOpeningDigital(
-        digitalToInputs(getClosingDigital(lastClosed))
+      const carriedDigital = digitalToInputs(
+        getClosingDigital(lastClosed)
       );
+
+      // Keep the old PTM value temporarily, start the field at 0
+      setPtmTempValue(Number(carriedDigital.PTM) || 0);
+      setOpeningDigital({
+        ...carriedDigital,
+        PTM: readPtmTemp(getDateKey()) ?? "0",
+      });
     } else {
       setOpeningDenominations(emptyDenominations());
-      setOpeningDigital(emptyDigital());
+      setPtmTempValue(0);
+      setOpeningDigital({
+        ...emptyDigital(),
+        PTM: readPtmTemp(getDateKey()) ?? "0",
+      });
     }
 
     setOpeningCredits(
@@ -2050,6 +2127,8 @@ export default function CashRegister() {
         setOpeningDigital(
           emptyDigital()
         );
+        setPtmTempValue(0);
+        clearPtmTemp(getDateKey());
 
         setOpeningCredits([]);
         setOpeningCreditReason("");
@@ -4208,7 +4287,62 @@ export default function CashRegister() {
     return { list };
   };
 
+  const makeExpenseRow = (orig = null) => ({
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    reason: orig?.reason || "",
+    amount: orig ? String(Number(orig.amount) || 0) : "",
+    orig,
+  });
+
+  const updateEntryExpense = (key, field, value) =>
+    setEntryExpenses((rows) =>
+      rows.map((row) =>
+        row.key === key ? { ...row, [field]: value } : row
+      )
+    );
+
+  // Turns the form rows into expense records. Existing expenses keep
+  // their id, time and who added them.
+  const buildEntryExpenses = (rows, stampMs) => {
+    const list = [];
+
+    for (const row of rows) {
+      const reason = row.reason.trim();
+      const amount = Number(row.amount);
+
+      // completely empty row -> ignore
+      if (!reason && !row.amount) continue;
+
+      if (!reason) {
+        return { error: "Please enter the reason for every expense." };
+      }
+
+      if (!amount || amount <= 0) {
+        return { error: `Please enter a valid expense amount for "${reason}".` };
+      }
+
+      if (row.orig) {
+        list.push({ ...row.orig, reason, amount });
+      } else {
+        list.push({
+          id: row.key,
+          reason,
+          amount,
+          createdAtMs: stampMs,
+          addedBy:
+            profile?.name ||
+            user?.displayName ||
+            user?.email ||
+            "Attendant",
+        });
+      }
+    }
+
+    return { list };
+  };
+
   const openCreateEntry = () => {
+    setEntryExpenses([]);
     setEntryCredits([]);
     setEntryDate(getDateKey());
     setEntryOpenDen(emptyDenominations());
@@ -4219,6 +4353,9 @@ export default function CashRegister() {
   };
 
   const openEditEntry = (item) => {
+    setEntryExpenses(
+      getExpenseList(item).map((expense) => makeExpenseRow(expense))
+    );
     setEntryCredits(getCreditList(item).map((credit) => makeCreditRow(credit)));
     setEntryDate(item.dateKey || getDateKey());
     setEntryOpenDen(denominationsToInputs(item.openingDenominations));
@@ -4280,6 +4417,18 @@ export default function CashRegister() {
 
     const entryCreditList = credited.list;
 
+    const expensed = buildEntryExpenses(
+      entryExpenses,
+      new Date(entryYear, entryMonth - 1, entryDay, 12, 0, 0).getTime()
+    );
+
+    if (expensed.error) {
+      alert(expensed.error);
+      return;
+    }
+
+    const entryExpenseList = expensed.list;
+
     setSaving(true);
 
     try {
@@ -4313,7 +4462,7 @@ export default function CashRegister() {
           digitalBalances: cleanDigital(entryCloseDigital),
           closingDigital: cleanDigital(entryCloseDigital),
 
-          expenses: [],
+          expenses: entryExpenseList,
           credits: entryCreditList,
           openingCredits: [],
           closingCredits: entryCreditList,
@@ -4369,6 +4518,7 @@ export default function CashRegister() {
           openingDigital: newOpeningDigital,
           expectedCash,
           credits: entryCreditList,
+          expenses: entryExpenseList,
           updatedAt: serverTimestamp(),
         };
 
@@ -5886,7 +6036,7 @@ export default function CashRegister() {
                       <td data-label="Diff with credit">
                         {item.status === "closed" ? (
                           <span
-                            className={`cash-difference ${itemDifference > 0
+                            className={`cash-difference with-credit ${itemDifference > 0
                               ? "positive"
                               : itemDifference < 0
                                 ? "negative"
@@ -6826,6 +6976,85 @@ export default function CashRegister() {
               >
                 <Plus size={14} />
                 Add credit
+              </button>
+            </div>
+
+            <div className="cash-entry-section-title">
+              <Receipt size={14} />
+              Expenses
+            </div>
+
+            <div className="cash-entry-credit">
+              {entryExpenses.length === 0 ? (
+                <div className="cash-expense-empty">
+                  <Receipt size={16} />
+                  No expenses on this day
+                </div>
+              ) : (
+                <>
+                  <div className="cash-entry-credit-head cash-entry-expense-head">
+                    <span>Reason</span>
+                    <span>Amount</span>
+                    <span />
+                  </div>
+
+                  {entryExpenses.map((row) => (
+                    <div
+                      className="cash-entry-credit-row cash-entry-expense-row"
+                      key={row.key}
+                    >
+                      <div className="cash-expense-money">
+                        <input
+                          type="text"
+                          placeholder="Expense reason"
+                          value={row.reason}
+                          onChange={(event) =>
+                            updateEntryExpense(row.key, "reason", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="cash-expense-money">
+                        <b>₹</b>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          placeholder="Amount"
+                          value={row.amount}
+                          onChange={(event) =>
+                            updateEntryExpense(row.key, "amount", event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="cash-credit-icon-btn danger"
+                        title="Remove expense"
+                        onClick={() =>
+                          setEntryExpenses((rows) =>
+                            rows.filter((entry) => entry.key !== row.key)
+                          )
+                        }
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <button
+                type="button"
+                className="cash-credit-action-btn cash-entry-credit-add"
+                onClick={() =>
+                  setEntryExpenses((rows) => [...rows, makeExpenseRow()])
+                }
+              >
+                <Plus size={14} />
+                Add expense
               </button>
             </div>
 

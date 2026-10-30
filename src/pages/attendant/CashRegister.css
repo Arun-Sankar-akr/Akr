@@ -1654,6 +1654,27 @@ body:has(.cash-modal-overlay) {
     background: var(--cr-red-soft);
 }
 
+/* Diff With Credit column: violet pill (forced so no other rule overrides it) */
+.cash-register-page .cash-difference.with-credit.positive,
+.cash-register-page .cash-difference.with-credit.positive * {
+    color: #5b21b6 !important;
+    -webkit-text-fill-color: #5b21b6 !important;
+}
+
+.cash-register-page .cash-difference.with-credit.positive {
+    background: #ede9fe !important;
+}
+
+.cash-register-page[data-theme="dark"] .cash-difference.with-credit.positive,
+.cash-register-page[data-theme="dark"] .cash-difference.with-credit.positive * {
+    color: #ddd6fe !important;
+    -webkit-text-fill-color: #ddd6fe !important;
+}
+
+.cash-register-page[data-theme="dark"] .cash-difference.with-credit.positive {
+    background: rgba(139, 92, 246, 0.28) !important;
+}
+
 /* credit history: colour runs red -> green as the loan is repaid */
 .cash-credit-row td:first-child {
     box-shadow: inset 4px 0 0 hsl(var(--credit-hue, 0) 72% 48%);
@@ -2462,6 +2483,12 @@ body:has(.cash-modal-overlay) {
     align-self: flex-start;
 }
 
+/* expense rows in the edit-entry popup: reason + amount + delete */
+.cash-entry-expense-head,
+.cash-entry-expense-row {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 34px;
+}
+
 
 /* ---------------------------------------------------------
    15  EXPORT MODAL
@@ -2957,6 +2984,14 @@ body:has(.cash-modal-overlay) {
     }
 
     .cash-entry-credit-row> :first-child {
+        grid-column: 1 / -1;
+    }
+
+    .cash-entry-expense-row {
+        grid-template-columns: minmax(0, 1fr) 34px;
+    }
+
+    .cash-entry-expense-row> :first-child {
         grid-column: 1 / -1;
     }
 
