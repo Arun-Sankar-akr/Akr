@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 import { db } from "./firebase";
 import { useAuth } from "../context/AuthContext";
@@ -25,6 +25,18 @@ const LABELS = {
   customers: "Customers",
   credits: "Credits",
   cashRegisters: "CashRegisters",
+};
+
+// Attendants can only read THEIR OWN records in these collections (Firestore rules require
+// attendantId == their uid), so they must query with that filter or Firestore denies it.
+// Collections not listed here (customers) are readable by every signed-in user.
+const ATTENDANT_SCOPED = {
+  transactions: "attendantId",
+  moneyTransfers: "attendantId",
+  withdrawals: "attendantId",
+  ebBillPayments: "attendantId",
+  cashRegisters: "attendantId",
+  credits: "attendantId",
 };
 
 const CHUNK = 100;
@@ -126,8 +138,8 @@ function toCombined(col, id, d) {
       const items = Array.isArray(d.items)
         ? d.items
         : Array.isArray(d.cart)
-        ? d.cart
-        : [];
+          ? d.cart
+          : [];
       row.Type = "Sale";
       row["Customer / Name"] = d.customerName || d.customer || "";
       row["Mobile / Ref"] = d.customerMobile || d.mobile || "";
@@ -192,11 +204,10 @@ function toCombined(col, id, d) {
       row.Type = "Cash Register";
       row["Customer / Name"] = d.attendantName || "";
       row["Mobile / Ref"] = d.dateKey || "";
-      row.Details = `Opening ${num(d.openingCash)} | Closing ${num(d.closingCash)} | Expenses ${
-        Array.isArray(d.expenses)
+      row.Details = `Opening ${num(d.openingCash)} | Closing ${num(d.closingCash)} | Expenses ${Array.isArray(d.expenses)
           ? d.expenses.reduce((s, e) => s + num(e?.amount), 0)
           : 0
-      }`;
+        }`;
       row.Amount = num(d.closingCash ?? d.expectedCash);
       row.Total = row.Amount;
       break;
@@ -382,24 +393,35 @@ export function useSheetsSync() {
       setStatus("idle", "Sheets sync: waiting for login...");
       return undefined;
     }
-    // Only an admin can read every collection, so only admin syncs.
-    if (role !== "admin") {
-      setStatus("error", `Sheets sync OFF: logged in role is "${role}", must be "admin"`);
+    // Admin and attendant accounts both sync.
+    const SYNC_ROLES = ["admin", "attendant"];
+
+    if (!SYNC_ROLES.includes(role)) {
+      setStatus(
+        "error",
+        `Sheets sync OFF: logged in role is "${role}", must be admin or attendant`
+      );
       return undefined;
     }
 
     setStatus("idle", "Sheets sync: connected, reading records...");
 
+    const isAttendant = role === "attendant";
+
     const unsubs = SYNCED_COLLECTIONS.map((col) =>
       onSnapshot(
-        collection(db, col),
+        isAttendant && ATTENDANT_SCOPED[col]
+          ? query(collection(db, col), where(ATTENDANT_SCOPED[col], "==", user.uid))
+          : collection(db, col),
         (snapshot) => {
           console.log(`[SheetsSync] ${col}: ${snapshot.size} records, ${snapshot.docChanges().length} changes`);
           snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
 
             if (change.type === "removed") {
-              enqueueRemove(col, id);
+              // attendant listeners are filtered, so never delete sheet rows from them;
+              // the admin's sync handles removals
+              if (!isAttendant) enqueueRemove(col, id);
               return;
             }
 
