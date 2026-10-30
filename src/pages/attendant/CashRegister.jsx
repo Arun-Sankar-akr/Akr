@@ -7971,44 +7971,46 @@ export default function CashRegister() {
           BOTTOM NAVIGATION
       ==================================================== */}
 
-      <nav
-        className="cash-bottom-nav"
-        aria-label="Cash register sections"
-        style={{
-          "--n": navItems.length + 1,
-          "--i": activeNavIndex,
-        }}
-      >
-        <div className="cash-bottom-nav-bar" />
+      <div className="cash-dock">
+        <nav
+          className="cash-bottom-nav"
+          aria-label="Cash register sections"
+          style={{
+            "--n": navItems.length,
+            "--i": activeNavIndex,
+          }}
+        >
+          <span className="cash-nav-glider" aria-hidden="true" />
 
-        {navItems.map(({ id, label, Icon }, index) => (
-          <button
-            key={id}
-            type="button"
-            className={`cash-nav-item${index === activeNavIndex ? " active" : ""}`}
-            onClick={() => scrollToSection(id)}
-            aria-current={index === activeNavIndex ? "true" : undefined}
-          >
-            <span className="cash-nav-icon">
-              <Icon size={20} />
-            </span>
-            <span className="cash-nav-label">{label}</span>
-          </button>
-        ))}
+          {navItems.map(({ id, label, Icon }, index) => (
+            <button
+              key={id}
+              type="button"
+              className={`cash-nav-item${index === activeNavIndex ? " active" : ""}`}
+              onClick={() => scrollToSection(id)}
+              aria-current={index === activeNavIndex ? "true" : undefined}
+              aria-label={label}
+              title={label}
+            >
+              <Icon size={22} strokeWidth={1.8} />
+            </button>
+          ))}
+        </nav>
 
         <button
           type="button"
-          className={`cash-nav-item cash-nav-action${openRegister ? " danger" : ""}`}
+          className={`cash-nav-fab${openRegister ? " danger" : ""}`}
           onClick={openRegister ? () => openCloseModal() : openOpenModal}
+          aria-label={openRegister ? "Close register" : "Open register"}
+          title={openRegister ? "Close register" : "Open register"}
         >
-          <span className="cash-nav-icon">
-            {openRegister ? <LockKeyhole size={20} /> : <UnlockKeyhole size={20} />}
-          </span>
-          <span className="cash-nav-label">
-            {openRegister ? "Close" : "Open"}
-          </span>
+          {openRegister ? (
+            <LockKeyhole size={22} strokeWidth={1.8} />
+          ) : (
+            <UnlockKeyhole size={22} strokeWidth={1.8} />
+          )}
         </button>
-      </nav>
+      </div>
       <FloatingCalculator />
     </div>
   );

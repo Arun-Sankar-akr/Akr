@@ -13,8 +13,9 @@ import {
     FileClock,
     Settings,
     LogOut,
-    X,
-    Menu,
+    Plus,
+    FilePlus2,
+    History,
 } from "lucide-react";
 import "./theme.css";
 import "./Sidebar.css";
@@ -60,6 +61,12 @@ const mobilePrimary = {
     ],
 };
 
+// Mobile tabs are icon-only, so give each one its own icon
+const mobileIcons = {
+    "/attendant/new-transaction": FilePlus2,
+    "/attendant/transactions": History,
+};
+
 export default function Sidebar({ open, onClose, onOpen }) {
     const { profile, logout } = useAuth();
     const { pathname } = useLocation();
@@ -84,7 +91,7 @@ export default function Sidebar({ open, onClose, onOpen }) {
     const tabs = primaryDefs.map(([path, short]) => ({
         path,
         label: short,
-        Icon: itemByPath[path][2],
+        Icon: mobileIcons[path] || itemByPath[path][2],
     }));
 
     const primaryPaths = tabs.map((tab) => tab.path);
@@ -96,8 +103,7 @@ export default function Sidebar({ open, onClose, onOpen }) {
             : pathname === path || pathname.startsWith(`${path}/`);
 
     const foundIndex = tabs.findIndex((tab) => isActivePath(tab.path));
-    const moreIndex = tabs.length;
-    const activeIndex = open || foundIndex === -1 ? moreIndex : foundIndex;
+    const moreActive = moreItems.some(([, path]) => isActivePath(path));
 
     return (
         <>
@@ -155,96 +161,96 @@ export default function Sidebar({ open, onClose, onOpen }) {
             </div>
         </aside>
 
-            {/* MOBILE BOTTOM BAR */}
-            <nav
-                className="m-nav"
-                aria-label="Main navigation"
-                style={{ "--mn": tabs.length + 1, "--mi": activeIndex }}
-            >
-                <div className="m-nav-bar" />
-
-                {tabs.map(({ path, label, Icon }, index) => (
-                    <NavLink
-                        key={path}
-                        to={path}
-                        end={path === "/admin" || path === "/attendant"}
-                        onClick={onClose}
-                        className={`m-nav-item${index === activeIndex ? " active" : ""}`}
-                    >
-                        <span className="m-nav-icon">
-                            <Icon size={20} />
-                        </span>
-                        <span className="m-nav-label">{label}</span>
-                    </NavLink>
-                ))}
-
-                <button
-                    type="button"
-                    className={`m-nav-item${activeIndex === moreIndex ? " active" : ""}`}
-                    onClick={open ? onClose : onOpen}
-                    aria-expanded={open}
-                >
-                    <span className="m-nav-icon">
-                        <Menu size={20} />
-                    </span>
-                    <span className="m-nav-label">More</span>
-                </button>
-            </nav>
-
-            {/* MOBILE "MORE" SHEET */}
+            {/* MOBILE DOCK (glass pill + round "+" button) */}
             <div
-                className={`m-sheet${open ? " open" : ""}`}
-                role="dialog"
-                aria-label="More menu"
-                aria-hidden={!open}
-            >
-                <div className="m-sheet-head">
-                    <strong>Menu</strong>
-                    <button
-                        type="button"
-                        className="mobile-close"
-                        onClick={onClose}
-                        aria-label="Close menu"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
+                className={`m-scrim${open ? " show" : ""}`}
+                onClick={onClose}
+                aria-hidden="true"
+            />
 
-                <div className="m-sheet-grid">
-                    {moreItems.map(([label, path, Icon]) => (
+            <div className={`m-dock${open ? " is-open" : ""}`}>
+                <nav
+                    className="m-nav"
+                    aria-label="Main navigation"
+                    style={{ "--mn": tabs.length, "--mi": Math.max(foundIndex, 0) }}
+                >
+                    <span
+                        className={`m-glider${foundIndex === -1 ? " hidden" : ""}`}
+                        aria-hidden="true"
+                    />
+
+                    {tabs.map(({ path, label, Icon }, index) => (
                         <NavLink
                             key={path}
                             to={path}
+                            end={path === "/admin" || path === "/attendant"}
                             onClick={onClose}
-                            className={({ isActive }) =>
-                                `m-sheet-item${isActive ? " active" : ""}`
-                            }
+                            title={label}
+                            aria-label={label}
+                            className={`m-nav-item${index === foundIndex ? " active" : ""}`}
                         >
-                            <span className="m-sheet-icon">
-                                <Icon size={20} />
-                            </span>
-                            <span>{label}</span>
+                            <Icon size={22} strokeWidth={1.8} />
                         </NavLink>
                     ))}
-                </div>
+                </nav>
 
-                <div className="user-mini">
-                    <div className="avatar" aria-hidden="true">
-                        {avatarLetter}
-                    </div>
-
-                    <div className="user-details">
-                        <b title={displayName}>{displayName}</b>
-                        <span>{roleName}</span>
-                    </div>
-
-                    <div className="user-status" title="Online" />
-                </div>
-
-                <button type="button" className="logout-btn" onClick={logout}>
-                    <LogOut size={16} />
-                    <span>Sign out</span>
+                <button
+                    type="button"
+                    className={`m-fab${moreActive && !open ? " active" : ""}`}
+                    onClick={open ? onClose : onOpen}
+                    aria-expanded={open}
+                    aria-label={open ? "Close menu" : "Open menu"}
+                >
+                    <Plus size={24} strokeWidth={1.8} />
                 </button>
+
+                {/* MORE PANEL - opens in place of the pill */}
+                <div
+                    className={`m-sheet${open ? " open" : ""}`}
+                    role="dialog"
+                    aria-label="More menu"
+                    aria-hidden={!open}
+                >
+                    <div className="m-sheet-grid">
+                        {moreItems.map(([label, path, Icon], index) => (
+                            <NavLink
+                                key={path}
+                                to={path}
+                                onClick={onClose}
+                                style={{ "--i": index }}
+                                className={({ isActive }) =>
+                                    `m-tile${isActive ? " active" : ""}`
+                                }
+                            >
+                                <span className="m-tile-icon">
+                                    <Icon size={22} strokeWidth={1.8} />
+                                </span>
+                                <span className="m-tile-label">{label}</span>
+                            </NavLink>
+                        ))}
+                    </div>
+
+                    <div className="user-mini">
+                        <div className="avatar" aria-hidden="true">
+                            {avatarLetter}
+                        </div>
+
+                        <div className="user-details">
+                            <b title={displayName}>{displayName}</b>
+                            <span>{roleName}</span>
+                        </div>
+
+                        <button
+                            type="button"
+                            className="m-signout"
+                            onClick={logout}
+                            aria-label="Sign out"
+                            title="Sign out"
+                        >
+                            <LogOut size={17} />
+                        </button>
+                    </div>
+                </div>
             </div>
         </>
     );
