@@ -63,6 +63,7 @@ import FloatingCalculator from "./FloatingCalculator";
 import { db } from "../../services/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { formatCurrency } from "../../utils/currency";
+import { useAppTheme } from "../../utils/theme";
 
 import "./CashRegister.css";
 
@@ -905,39 +906,11 @@ export default function CashRegister() {
   const navigate = useNavigate();
 
   // ----------------------------------------------------------
-  // THEME  (light / dark) - saved in the browser, starts from the
-  // saved choice, then the app theme, then the device setting.
+  // THEME  (light / dark) - shared by the whole website. Clicking
+  // the toggle here changes every page, and the choice is saved.
   // ----------------------------------------------------------
 
-  const [theme, setTheme] = useState(() => {
-    try {
-      const saved = window.localStorage.getItem("cash-register-theme");
-      if (saved === "dark" || saved === "light") return saved;
-    } catch {
-      /* storage not available */
-    }
-
-    const appTheme = document.documentElement.getAttribute("data-theme");
-    if (appTheme === "dark" || appTheme === "light") return appTheme;
-
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  });
-
-  const toggleTheme = () => {
-    setTheme((current) => {
-      const next = current === "dark" ? "light" : "dark";
-
-      try {
-        window.localStorage.setItem("cash-register-theme", next);
-      } catch {
-        /* storage not available */
-      }
-
-      return next;
-    });
-  };
+  const { theme, toggleTheme } = useAppTheme();
 
   // ----------------------------------------------------------
   // STATE
