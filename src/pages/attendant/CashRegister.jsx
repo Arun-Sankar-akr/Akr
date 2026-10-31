@@ -4009,9 +4009,12 @@ export default function CashRegister() {
 
                 <input
                   type="number"
+                  onWheel={(event) => event.currentTarget.blur()}
                   min="0"
                   inputMode="numeric"
-                  value={pcs}
+                  placeholder="0"
+                  value={pcs > 0 ? pcs : ""}
+                  onFocus={(event) => event.target.select()}
                   onChange={(
                     event
                   ) =>
@@ -4097,6 +4100,7 @@ export default function CashRegister() {
 
             <input
               type="number"
+              onWheel={(event) => event.currentTarget.blur()}
               min="0"
               step="any"
               inputMode="decimal"
@@ -5256,6 +5260,7 @@ export default function CashRegister() {
                       <b>₹</b>
                       <input
                         type="number"
+                        onWheel={(event) => event.currentTarget.blur()}
                         min="0"
                         step="any"
                         inputMode="decimal"
@@ -5347,6 +5352,7 @@ export default function CashRegister() {
                       <b>₹</b>
                       <input
                         type="number"
+                        onWheel={(event) => event.currentTarget.blur()}
                         min="0"
                         step="any"
                         inputMode="decimal"
@@ -5369,6 +5375,7 @@ export default function CashRegister() {
                       <b>₹</b>
                       <input
                         type="number"
+                        onWheel={(event) => event.currentTarget.blur()}
                         min="0"
                         step="any"
                         inputMode="decimal"
@@ -6151,6 +6158,7 @@ export default function CashRegister() {
                   <b>₹</b>
                   <input
                     type="number"
+                    onWheel={(event) => event.currentTarget.blur()}
                     min="0"
                     step="any"
                     inputMode="decimal"
@@ -6173,6 +6181,7 @@ export default function CashRegister() {
                   <b>₹</b>
                   <input
                     type="number"
+                    onWheel={(event) => event.currentTarget.blur()}
                     min="0"
                     step="any"
                     inputMode="decimal"
@@ -6483,6 +6492,7 @@ export default function CashRegister() {
                     <b>₹</b>
                     <input
                       type="number"
+                      onWheel={(event) => event.currentTarget.blur()}
                       min="0"
                       step="any"
                       inputMode="decimal"
@@ -6505,6 +6515,7 @@ export default function CashRegister() {
                     <b>₹</b>
                     <input
                       type="number"
+                      onWheel={(event) => event.currentTarget.blur()}
                       min="0"
                       step="any"
                       inputMode="decimal"
@@ -6864,6 +6875,7 @@ export default function CashRegister() {
                         <b>₹</b>
                         <input
                           type="number"
+                          onWheel={(event) => event.currentTarget.blur()}
                           min="0"
                           step="any"
                           inputMode="decimal"
@@ -6879,6 +6891,7 @@ export default function CashRegister() {
                         <b>₹</b>
                         <input
                           type="number"
+                          onWheel={(event) => event.currentTarget.blur()}
                           min="0"
                           step="any"
                           inputMode="decimal"
@@ -6958,6 +6971,7 @@ export default function CashRegister() {
                         <b>₹</b>
                         <input
                           type="number"
+                          onWheel={(event) => event.currentTarget.blur()}
                           min="0"
                           step="any"
                           inputMode="decimal"
@@ -7702,6 +7716,7 @@ export default function CashRegister() {
                       <b>₹</b>
                       <input
                         type="number"
+                        onWheel={(event) => event.currentTarget.blur()}
                         min="0"
                         step="any"
                         inputMode="decimal"
@@ -7761,6 +7776,7 @@ export default function CashRegister() {
                       <b>₹</b>
                       <input
                         type="number"
+                        onWheel={(event) => event.currentTarget.blur()}
                         min="0"
                         step="any"
                         inputMode="decimal"
@@ -7838,6 +7854,7 @@ export default function CashRegister() {
                             <b>₹</b>
                             <input
                               type="number"
+                              onWheel={(event) => event.currentTarget.blur()}
                               min="0"
                               step="any"
                               inputMode="decimal"

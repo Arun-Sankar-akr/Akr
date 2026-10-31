@@ -2168,6 +2168,22 @@ body:has(.cash-modal-overlay) {
     background: transparent;
 }
 
+.cash-pcs-control input::placeholder {
+    color: var(--cr-text-3);
+    opacity: 1;
+}
+
+.cash-pcs-control input::-webkit-outer-spin-button,
+.cash-pcs-control input::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+
+.cash-pcs-control input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .cash-denomination-total {
     min-width: 84px;
     color: var(--cr-ink);
@@ -2214,6 +2230,17 @@ body:has(.cash-modal-overlay) {
     border: 0;
     outline: 0;
     background: transparent;
+}
+
+.cash-digital-input input::-webkit-outer-spin-button,
+.cash-digital-input input::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+
+.cash-digital-input input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .cash-digital-row.disabled .cash-digital-input {
