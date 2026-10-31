@@ -5205,42 +5205,9 @@ export default function CashRegister() {
 
           <div className="cash-money-grid">
 
-            {/* DIGITAL MONEY */}
+            {/* EXPENSES + CREDIT (side by side) */}
 
-            <div className="cash-panel">
-
-              <div className="cash-panel-head">
-                <div className="cash-panel-icon blue">
-                  <Landmark size={16} />
-                </div>
-
-                <div>
-                  <div className="cash-section-label">
-                    DIGITAL MONEY
-                  </div>
-                  <h3>Bank &amp; wallet balances</h3>
-                </div>
-
-                <div className="cash-panel-total">
-                  {formatCurrency(
-                    openRegister
-                      ? digitalDraftTotal
-                      : dayTotals.digital
-                  )}
-                </div>
-              </div>
-
-              {/* Read-only: balances are set when opening / closing the register */}
-              {renderDigitalEditor(
-                digitalDraft,
-                setDigitalDraft,
-                true
-              )}
-            </div>
-
-            {/* EXPENSES + CREDIT (stacked) */}
-
-            <div className="cash-panel-stack">
+            <>
 
               {/* EXPENSES */}
 
@@ -5445,7 +5412,7 @@ export default function CashRegister() {
 
               </div>
 
-            </div>
+            </>
 
           </div>
 
