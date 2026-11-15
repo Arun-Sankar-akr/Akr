@@ -189,7 +189,8 @@ export default function Sidebar({ open, onClose, onOpen }) {
                             aria-label={label}
                             className={`m-nav-item${index === foundIndex ? " active" : ""}`}
                         >
-                            <Icon size={22} strokeWidth={1.8} />
+                            <Icon size={20} strokeWidth={1.8} />
+                            <span className="m-nav-label">{label}</span>
                         </NavLink>
                     ))}
                 </nav>

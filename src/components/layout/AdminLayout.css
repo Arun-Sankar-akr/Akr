@@ -244,3 +244,59 @@ body {
         scroll-behavior: auto !important;
     }
 }
+
+/* =========================================================
+   ATTENDANT MODE  -  soft pastel "unfold" backdrop
+   Only applies to /attendant routes (class set in AdminLayout.jsx).
+   ========================================================= */
+
+.app-shell.attendant-mode {
+    background:
+        radial-gradient(560px 460px at 0% 0%, rgba(186, 168, 240, .62), transparent 70%),
+        radial-gradient(480px 440px at 100% 18%, rgba(244, 170, 200, .5), transparent 70%),
+        radial-gradient(560px 460px at 0% 100%, rgba(250, 205, 140, .5), transparent 70%),
+        radial-gradient(560px 460px at 100% 100%, rgba(247, 160, 120, .45), transparent 70%),
+        #e6e2ec;
+    background-attachment: fixed;
+}
+
+:root[data-theme="dark"] .app-shell.attendant-mode {
+    background:
+        radial-gradient(560px 460px at 0% 0%, rgba(212, 175, 55, .13), transparent 70%),
+        radial-gradient(480px 440px at 100% 20%, rgba(232, 104, 58, .10), transparent 70%),
+        radial-gradient(560px 460px at 0% 100%, rgba(212, 175, 55, .08), transparent 70%),
+        #0b0a07;
+    background-attachment: fixed;
+}
+
+/* the page area becomes part of the backdrop (no boxed card) */
+.attendant-mode .main {
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.attendant-mode .page {
+    background: transparent;
+}
+
+.attendant-mode .page::before,
+.attendant-mode .page::after {
+    display: none;
+}
+
+/* backdrop now comes from the shell, so the dashboard's own blobs are not needed */
+.attendant-mode .attendant-dashboard::before {
+    display: none;
+}
+
+@media (max-width: 820px) {
+    .app-shell.attendant-mode {
+        padding: 0;
+    }
+
+    .attendant-mode .main {
+        min-height: 100dvh;
+    }
+}

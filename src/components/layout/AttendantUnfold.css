@@ -1,0 +1,382 @@
+/* =========================================================
+   ATTENDANT UNFOLD  -  shared look for every attendant page
+   Cash Register, Credit Manager, New Transaction, My
+   Transactions, Customers, EB Bill, Money Transfer, Withdrawal.
+
+   - Light theme only: pastel backdrop, frosted cards, solid
+     black buttons, round pills.  Dark theme (black & gold)
+     is left exactly as it was.
+   - Only active under .attendant-mode (set by AdminLayout.jsx
+     on /attendant routes), so admin pages are not touched.
+   - Import once, in AdminLayout.jsx.
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   1.  TOKEN PAGES  (cr-*  and  nt-*)
+   --------------------------------------------------------- */
+
+/* Cash Register + Credit Manager */
+:root:not([data-theme="dark"]) .app-shell.attendant-mode .cash-register-page:not([data-theme="dark"]),
+:root:not([data-theme="dark"]) .app-shell.attendant-mode .credit-page:not([data-theme="dark"]) {
+    --cr-primary: #111111;
+    --cr-primary-2: #2b2b30;
+    --cr-primary-soft: rgba(17, 17, 17, .07);
+    --cr-primary-line: rgba(17, 17, 17, .14);
+    --cr-grad: linear-gradient(145deg, #2b2b30, #111111);
+    --cr-on-primary: #ffffff;
+    --cr-glow: rgba(17, 17, 17, .22);
+
+    --cr-gold: #e8683a;
+
+    --cr-ink: #111111;
+    --cr-text: #26252d;
+    --cr-text-2: #5d5b66;
+    --cr-text-3: #9a98a4;
+    --cr-line: rgba(17, 17, 17, .08);
+    --cr-surface: rgba(255, 255, 255, .68);
+    --cr-surface-2: rgba(255, 255, 255, .5);
+    --cr-surface-hover: rgba(255, 255, 255, .88);
+    --cr-glass: rgba(255, 255, 255, .72);
+
+    --cr-hero:
+        radial-gradient(420px 260px at 0% 0%, rgba(190, 175, 240, .55), transparent 70%),
+        radial-gradient(400px 280px at 100% 100%, rgba(247, 180, 140, .55), transparent 70%),
+        linear-gradient(160deg, rgba(247, 243, 239, .94), rgba(241, 237, 240, .88));
+    --cr-hero-shadow: 0 22px 50px rgba(110, 90, 160, .14);
+    --cr-hero-text: #111111;
+    --cr-hero-muted: #5d5b66;
+    --cr-hero-label: #111111;
+    --cr-hero-line: rgba(17, 17, 17, .1);
+    --cr-hero-tile: rgba(255, 255, 255, .7);
+    --cr-hero-tile-line: rgba(255, 255, 255, .92);
+    --cr-hero-tile-hover: #ffffff;
+    --cr-hero-icon-bg: rgba(17, 17, 17, .07);
+    --cr-hero-sum: linear-gradient(145deg, #2b2b30, #111111);
+
+    --cr-panel:
+        radial-gradient(420px 260px at 92% -10%, rgba(232, 104, 58, .45), transparent 65%),
+        radial-gradient(380px 240px at -5% 110%, rgba(186, 168, 240, .28), transparent 65%),
+        linear-gradient(145deg, #26252b 0%, #121216 100%);
+    --cr-panel-shadow: 0 26px 54px rgba(17, 17, 17, .28);
+    --cr-panel-text: #ffffff;
+
+    --cr-page-bg: transparent;
+
+    --cr-overlay: rgba(17, 17, 17, .4);
+    --cr-handle: rgba(17, 17, 17, .15);
+    --cr-shadow-sm: 0 2px 10px rgba(80, 60, 130, .06);
+    --cr-shadow: 0 16px 38px rgba(110, 90, 160, .12);
+    --cr-shadow-lg: 0 30px 80px rgba(17, 17, 17, .28);
+    --cr-elev: 0 1px 2px rgba(80, 60, 130, .05), 0 12px 28px rgba(110, 90, 160, .10);
+    --cr-elev-pop: 0 2px 4px rgba(80, 60, 130, .06), 0 20px 44px rgba(110, 90, 160, .16);
+    --cr-focus-ring: rgba(17, 17, 17, .12);
+    --cr-nav-shadow: rgba(80, 60, 130, .22);
+    --cr-nav-bg-top: rgba(255, 255, 255, .78);
+    --cr-nav-bg: rgba(255, 255, 255, .7);
+    --cr-nav-line: rgba(255, 255, 255, .9);
+    --cr-nav-ring: rgba(255, 255, 255, .6);
+
+    --cr-r-xl: 30px;
+    --cr-r-lg: 24px;
+    --cr-r-md: 18px;
+    --cr-r-sm: 14px;
+}
+
+/* New Transaction */
+:root:not([data-theme="dark"]) .app-shell.attendant-mode {
+    --nt-page: transparent;
+    --nt-shell: #f5f3f8;
+    --nt-surface: rgba(255, 255, 255, .78);
+    --nt-raised: rgba(255, 255, 255, .9);
+    --nt-panel: #ffffff;
+    --nt-panel-card: #ece9f1;
+    --nt-border: rgba(17, 17, 17, .08);
+
+    --nt-text: #111111;
+    --nt-text-dim: #4a4852;
+    --nt-text-faint: #8d8a98;
+
+    --nt-accent: #e8683a;
+    --nt-accent-soft: rgba(232, 104, 58, .14);
+    --nt-on-accent: #ffffff;
+
+    --nt-cta-bg: #111111;
+    --nt-cta-text: #ffffff;
+    --nt-chip-bg: #ffffff;
+    --nt-chip-text: #111111;
+
+    --nt-green: #12a150;
+    --nt-green-soft: rgba(18, 161, 80, .13);
+
+    --nt-dash: rgba(17, 17, 17, .22);
+
+    --nt-radius-xl: 32px;
+    --nt-radius-lg: 24px;
+    --nt-radius-md: 18px;
+    --nt-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 12px 28px rgba(110, 90, 160, .12);
+    --nt-shadow-lg: 0 28px 64px rgba(60, 40, 110, .24);
+}
+
+/* ---------------------------------------------------------
+   2.  HARD-COLOUR PAGES
+   Customers, EB Bill, Money Transfer, Withdrawal, My Transactions
+   --------------------------------------------------------- */
+
+/* page background comes from the shell */
+:root:not([data-theme="dark"]) .attendant-mode :is(.customers-page,
+    .eb-bill-page,
+    .money-transfer-page,
+    .withdrawal-page,
+    .my-transactions-page) {
+    color: #111111;
+    background: transparent;
+}
+
+/* titles + eyebrows */
+:root:not([data-theme="dark"]) .attendant-mode :is(.page-head h1,
+    .eb-header h1,
+    .money-header h1,
+    .transactions-page-header h1) {
+    color: #111111;
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.page-head p,
+    .eb-header p,
+    .money-header p,
+    .transactions-page-header p) {
+    color: #5d5b66;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.eyebrow,
+    .eb-eyebrow,
+    .money-eyebrow,
+    .transactions-eyebrow,
+    .section-label,
+    .eb-section-label,
+    .money-section-label,
+    .transactions-section-label) {
+    color: #8d8a98;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.eyebrow,
+    .eb-eyebrow,
+    .money-eyebrow,
+    .transactions-eyebrow)::before {
+    background: #e8683a;
+}
+
+/* header icon tiles */
+:root:not([data-theme="dark"]) .attendant-mode :is(.module-icon,
+    .eb-icon-main,
+    .money-icon-main,
+    .transactions-main-icon) {
+    color: #ffffff;
+    background: linear-gradient(145deg, #2b2b30, #111111);
+    border-radius: 50%;
+    box-shadow: 0 10px 22px rgba(17, 17, 17, .22);
+}
+
+/* primary buttons: solid black pills */
+:root:not([data-theme="dark"]) .attendant-mode :is(.primary-btn,
+    .save-btn,
+    .eb-add-btn,
+    .money-add-btn,
+    .transactions-add-btn,
+    .save-eb-btn,
+    .save-money-btn,
+    .footer-primary) {
+    color: #ffffff;
+    border-radius: 999px;
+    background: #111111;
+    box-shadow: 0 10px 22px rgba(17, 17, 17, .22);
+}
+
+/* secondary buttons: glass pills */
+:root:not([data-theme="dark"]) .attendant-mode :is(.secondary-btn,
+    .cancel-btn,
+    .cancel-eb-btn,
+    .cancel-money-btn,
+    .eb-export-btn,
+    .money-export-btn,
+    .transactions-export-btn,
+    .refresh-transactions,
+    .clear-filters-btn,
+    .today-date-btn) {
+    color: #111111;
+    border: 1px solid rgba(255, 255, 255, .9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .72);
+    box-shadow: 0 6px 16px rgba(110, 90, 160, .08);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.secondary-btn,
+    .cancel-btn,
+    .eb-export-btn,
+    .money-export-btn,
+    .transactions-export-btn):hover {
+    background: #ffffff;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode .icon-btn {
+    border-radius: 50%;
+}
+
+/* stat cards */
+:root:not([data-theme="dark"]) .attendant-mode :is(.withdrawal-stat-card,
+    .eb-stat-card,
+    .money-stat-card,
+    .customer-stat-card,
+    .transaction-stat-card) {
+    border: 1px solid rgba(255, 255, 255, .85);
+    border-radius: 26px;
+    background: rgba(255, 255, 255, .66);
+    box-shadow: 0 16px 36px rgba(110, 90, 160, .10);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.withdrawal-stat-card,
+    .eb-stat-card,
+    .money-stat-card,
+    .customer-stat-card,
+    .transaction-stat-card) strong {
+    color: #111111;
+    font-weight: 800;
+    letter-spacing: -.03em;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.withdrawal-stat-icon,
+    .eb-stat-icon,
+    .money-stat-icon,
+    .customer-stat-icon,
+    .transaction-stat-icon) {
+    border-radius: 50%;
+}
+
+/* main panels */
+:root:not([data-theme="dark"]) .attendant-mode :is(.panel,
+    .eb-records-panel,
+    .money-records-panel,
+    .transactions-panel) {
+    border: 1px solid rgba(255, 255, 255, .85);
+    border-radius: 30px;
+    background: rgba(255, 255, 255, .66);
+    box-shadow: 0 18px 40px rgba(110, 90, 160, .10);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.panel-header h2,
+    .eb-panel-header h2,
+    .money-panel-header h2,
+    .transactions-panel-top h2) {
+    color: #111111;
+    letter-spacing: -.03em;
+}
+
+/* search bars become soft pills */
+:root:not([data-theme="dark"]) .attendant-mode :is(.search-bar,
+    .eb-search,
+    .money-search,
+    .transactions-search) {
+    border-color: transparent;
+    border-radius: 999px;
+    background: rgba(17, 17, 17, .06);
+    box-shadow: none;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.search-bar,
+    .eb-search,
+    .money-search,
+    .transactions-search) input {
+    background: transparent;
+}
+
+/* form fields */
+:root:not([data-theme="dark"]) .attendant-mode :is(.eb-input,
+    .money-input,
+    .input,
+    .transaction-select,
+    .profit-input) {
+    border-color: rgba(17, 17, 17, .1);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .78);
+}
+
+/* tables */
+:root:not([data-theme="dark"]) .attendant-mode :is(.customer-table,
+    .eb-table,
+    .money-table,
+    .withdrawal-table,
+    .transactions-table) th {
+    color: #8d8a98;
+    background: transparent;
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.customer-table,
+    .eb-table,
+    .money-table,
+    .withdrawal-table,
+    .transactions-table) td {
+    border-color: rgba(17, 17, 17, .06);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.customer-table,
+    .eb-table,
+    .money-table,
+    .withdrawal-table,
+    .transactions-table) tbody tr:hover {
+    background: rgba(255, 255, 255, .7);
+}
+
+/* avatars, badges */
+:root:not([data-theme="dark"]) .attendant-mode :is(.customer-avatar,
+    .consumer-avatar) {
+    color: #111111;
+    border-radius: 50%;
+    background: rgba(17, 17, 17, .08);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.payment-badge,
+    .status-badge,
+    .customer-status) {
+    border-radius: 999px;
+}
+
+/* selected payment method / transaction kind */
+:root:not([data-theme="dark"]) .attendant-mode :is(.payment-method.active,
+    .tx-kind-btn.active) {
+    color: #ffffff;
+    border-color: #111111;
+    background: #111111;
+}
+
+/* modals */
+:root:not([data-theme="dark"]) .attendant-mode :is(.customer-modal,
+    .eb-modal,
+    .money-modal,
+    .withdrawal-modal,
+    .transaction-modal,
+    .tx-form-modal,
+    .tx-confirm-modal) {
+    border: 1px solid rgba(255, 255, 255, .9);
+    border-radius: 32px;
+    background: rgba(250, 248, 252, .94);
+    box-shadow: 0 30px 80px rgba(17, 17, 17, .28);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.modal-backdrop,
+    .eb-modal-backdrop,
+    .money-modal-backdrop,
+    .transaction-modal-backdrop) {
+    background: rgba(17, 17, 17, .38);
+}
+
+:root:not([data-theme="dark"]) .attendant-mode :is(.modal-close,
+    .transaction-modal-close) {
+    border-radius: 50%;
+}

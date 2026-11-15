@@ -1,20 +1,18 @@
 import React, { useMemo, useState } from "react";
 import {
+  ArrowLeftRight,
   ArrowUpRight,
   Banknote,
-  CheckCircle2,
-  Clock3,
+  CreditCard,
+  Eye,
+  EyeOff,
   Plus,
   ReceiptText,
   RefreshCw,
   Search,
   Smartphone,
   WalletCards,
-  CreditCard,
-  Eye,
-  EyeOff,
   Zap,
-  ArrowLeftRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +20,10 @@ import { useTransactions } from "../../hooks/useTransactions";
 import { formatCurrency } from "../../utils/currency";
 import FloatingCalculator from "./FloatingCalculator";
 import "./AttendantDashboard.css";
+
+/* ------------------------------------------------------------------ */
+/* helpers                                                             */
+/* ------------------------------------------------------------------ */
 
 function getDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -80,18 +82,14 @@ function getTransactionDate(transaction) {
 function getTransactionTotal(transaction) {
   return Number(
     transaction?.total ??
-    transaction?.amount ??
-    transaction?.grandTotal ??
-    0
+      transaction?.amount ??
+      transaction?.grandTotal ??
+      0
   );
 }
 
 function getTransactionProfit(transaction) {
-  return Number(
-    transaction?.profit ??
-    transaction?.grossProfit ??
-    0
-  );
+  return Number(transaction?.profit ?? transaction?.grossProfit ?? 0);
 }
 
 function getPaymentLabel(method) {
@@ -116,27 +114,23 @@ function getPaymentIcon(method) {
   return WalletCards;
 }
 
-function getStatusLabel(status) {
+function getPaymentTone(method) {
+  const label = getPaymentLabel(method);
+
+  if (label === "UPI") return "upi";
+  if (label === "Card") return "card";
+  if (label === "Bank") return "bank";
+
+  return "cash";
+}
+
+function getStatusKey(status) {
   const value = String(status || "completed").toLowerCase();
 
-  if (
-    value === "completed" ||
-    value === "paid" ||
-    value === "success" ||
-    value === "successful"
-  ) {
-    return "Completed";
-  }
+  if (value === "pending") return "pending";
+  if (value === "cancelled" || value === "canceled") return "cancelled";
 
-  if (value === "pending") {
-    return "Pending";
-  }
-
-  if (value === "cancelled" || value === "canceled") {
-    return "Cancelled";
-  }
-
-  return status || "Completed";
+  return "completed";
 }
 
 function getGreeting() {
@@ -147,10 +141,32 @@ function getGreeting() {
   return "Good evening";
 }
 
+function formatAmount(value) {
+  return Math.round(Number(value) || 0).toLocaleString("en-IN");
+}
+
+function formatCompact(value) {
+  const number = Number(value) || 0;
+
+  if (number >= 100000) return `₹${+(number / 100000).toFixed(1)}L`;
+  if (number >= 1000) return `₹${+(number / 1000).toFixed(1)}K`;
+
+  return `₹${Math.round(number)}`;
+}
+
+const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
 const PAYMENT_ROWS = [
-  { key: "cash", label: "Cash", Icon: WalletCards },
-  { key: "upi", label: "UPI", Icon: Smartphone },
-  { key: "card", label: "Card", Icon: CreditCard },
+  { key: "cash", label: "Cash" },
+  { key: "upi", label: "UPI" },
+  { key: "card", label: "Card" },
+];
+
+const PAYMENT_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "cash", label: "Cash" },
+  { key: "upi", label: "UPI" },
+  { key: "card", label: "Card" },
 ];
 
 const QUICK_ACTIONS = [
@@ -159,6 +175,10 @@ const QUICK_ACTIONS = [
   ["Transfer", "/attendant/money-transfer", ArrowLeftRight],
   ["Cash", "/attendant/cash", Banknote],
 ];
+
+/* ------------------------------------------------------------------ */
+/* component                                                           */
+/* ------------------------------------------------------------------ */
 
 export default function AttendantDashboard() {
   const { user, profile } = useAuth();
@@ -172,28 +192,23 @@ export default function AttendantDashboard() {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [hideAmounts, setHideAmounts] = useState(false);
+  const [range, setRange] = useState("week"); // "week" | "month"
 
-  const money = (value) =>
-    hideAmounts ? "₹ ••••" : formatCurrency(value);
+  const money = (value) => (hideAmounts ? "₹ ••••" : formatCurrency(value));
 
-  const transactions = Array.isArray(rawTransactions)
-    ? rawTransactions
-    : [];
+  const transactions = Array.isArray(rawTransactions) ? rawTransactions : [];
 
   /*
    * Filter by the logged-in attendant.
-   *
-   * Supports both the new `attendantId` field and the
-   * older `staffId` field so existing records continue
-   * to work.
+   * Supports both the new `attendantId` field and the older
+   * `staffId` field so existing records continue to work.
    */
   const myTransactions = useMemo(() => {
     if (!user?.uid) return [];
 
     return transactions.filter((transaction) => {
       const transactionAttendant =
-        transaction.attendantId ||
-        transaction.staffId;
+        transaction.attendantId || transaction.staffId;
 
       return transactionAttendant === user.uid;
     });
@@ -207,45 +222,26 @@ export default function AttendantDashboard() {
         return transaction.dateKey === todayKey;
       }
 
-      const transactionDate =
-        getTransactionDate(transaction);
+      const transactionDate = getTransactionDate(transaction);
 
-      return (
-        transactionDate &&
-        getDateKey(transactionDate) === todayKey
-      );
+      return transactionDate && getDateKey(transactionDate) === todayKey;
     });
   }, [myTransactions]);
 
   const totals = useMemo(() => {
     return todayTransactions.reduce(
       (acc, transaction) => {
-        const total =
-          getTransactionTotal(transaction);
-
-        const profit =
-          getTransactionProfit(transaction);
-
-        const payment =
-          getPaymentLabel(
-            transaction.paymentMethod
-          );
+        const total = getTransactionTotal(transaction);
+        const profit = getTransactionProfit(transaction);
+        const payment = getPaymentLabel(transaction.paymentMethod);
 
         acc.sales += total;
         acc.profit += profit;
         acc.transactions += 1;
 
-        if (payment === "Cash") {
-          acc.cash += total;
-        }
-
-        if (payment === "UPI") {
-          acc.upi += total;
-        }
-
-        if (payment === "Card") {
-          acc.card += total;
-        }
+        if (payment === "Cash") acc.cash += total;
+        if (payment === "UPI") acc.upi += total;
+        if (payment === "Card") acc.card += total;
 
         return acc;
       },
@@ -260,34 +256,115 @@ export default function AttendantDashboard() {
     );
   }, [todayTransactions]);
 
+  /* ---------- week / month chart ---------- */
+  const chart = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let buckets = [];
+    let bucketDays = 1;
+    let elapsedDays = 1;
+
+    if (range === "week") {
+      const mondayOffset = (today.getDay() + 6) % 7;
+      const start = new Date(today);
+      start.setDate(today.getDate() - mondayOffset);
+
+      buckets = WEEK_LABELS.map((label, index) => {
+        const day = new Date(start);
+        day.setDate(start.getDate() + index);
+
+        return {
+          label,
+          key: getDateKey(day),
+          total: 0,
+          future: day > today,
+          current: index === mondayOffset,
+        };
+      });
+
+      bucketDays = 1;
+      elapsedDays = mondayOffset + 1;
+
+      myTransactions.forEach((transaction) => {
+        const date = getTransactionDate(transaction);
+        const key =
+          transaction.dateKey || (date ? getDateKey(date) : null);
+        const bucket = buckets.find((item) => item.key === key);
+
+        if (bucket) bucket.total += getTransactionTotal(transaction);
+      });
+    } else {
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const count = Math.ceil(daysInMonth / 7);
+      const currentIndex = Math.floor((today.getDate() - 1) / 7);
+
+      buckets = Array.from({ length: count }, (_, index) => ({
+        label: `W${index + 1}`,
+        total: 0,
+        future: index * 7 + 1 > today.getDate(),
+        current: index === currentIndex,
+      }));
+
+      bucketDays = 7;
+      elapsedDays = today.getDate();
+
+      myTransactions.forEach((transaction) => {
+        const date = getTransactionDate(transaction);
+
+        if (!date) return;
+        if (date.getFullYear() !== year || date.getMonth() !== month) return;
+
+        const index = Math.floor((date.getDate() - 1) / 7);
+
+        if (buckets[index]) {
+          buckets[index].total += getTransactionTotal(transaction);
+        }
+      });
+    }
+
+    const total = buckets.reduce((sum, bucket) => sum + bucket.total, 0);
+    const dailyAverage = elapsedDays > 0 ? total / elapsedDays : 0;
+    const limit = dailyAverage * bucketDays;
+    const max = Math.max(...buckets.map((bucket) => bucket.total), 1);
+
+    const bars = buckets.map((bucket) => {
+      const over =
+        !bucket.current && limit > 0 && bucket.total > limit
+          ? bucket.total - limit
+          : 0;
+
+      return {
+        ...bucket,
+        over,
+        base: bucket.total - over,
+        height: (bucket.total / max) * 100,
+      };
+    });
+
+    return { bars, total, dailyAverage, max };
+  }, [myTransactions, range]);
+
   const filteredTransactions = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return [...todayTransactions]
       .sort((a, b) => {
-        const dateA =
-          getTransactionDate(a)?.getTime() || 0;
-
-        const dateB =
-          getTransactionDate(b)?.getTime() || 0;
+        const dateA = getTransactionDate(a)?.getTime() || 0;
+        const dateB = getTransactionDate(b)?.getTime() || 0;
 
         return dateB - dateA;
       })
       .filter((transaction) => {
-        const payment =
-          getPaymentLabel(
-            transaction.paymentMethod
-          );
+        const payment = getPaymentLabel(transaction.paymentMethod);
 
         const matchesPayment =
           paymentFilter === "all" ||
-          payment.toLowerCase() ===
-          paymentFilter.toLowerCase();
+          payment.toLowerCase() === paymentFilter.toLowerCase();
 
-        if (!matchesPayment) {
-          return false;
-        }
-
+        if (!matchesPayment) return false;
         if (!query) return true;
 
         const invoice =
@@ -296,30 +373,19 @@ export default function AttendantDashboard() {
           transaction.id ||
           "";
 
-        const serviceText =
-          Array.isArray(transaction.items)
-            ? transaction.items
-              .map(
-                (item) =>
-                  item.serviceName ||
-                  item.name ||
-                  ""
-              )
+        const serviceText = Array.isArray(transaction.items)
+          ? transaction.items
+              .map((item) => item.serviceName || item.name || "")
               .join(" ")
-            : "";
+          : "";
 
         return `${invoice} ${payment} ${serviceText}`
           .toLowerCase()
           .includes(query);
       });
-  }, [
-    todayTransactions,
-    search,
-    paymentFilter,
-  ]);
+  }, [todayTransactions, search, paymentFilter]);
 
-  const paymentTotal =
-    totals.cash + totals.upi + totals.card;
+  const paymentTotal = totals.cash + totals.upi + totals.card;
 
   const attendantName =
     profile?.name ||
@@ -335,184 +401,226 @@ export default function AttendantDashboard() {
     .join("")
     .toUpperCase();
 
+  const hasFilters = Boolean(search) || paymentFilter !== "all";
+
+  const heroLabel = range === "week" ? "Sales this week" : "Sales this month";
+
   return (
     <div className="attendant-dashboard">
-      {/* HERO */}
-      <section className="att-hero">
-        <div className="att-hero-top">
-          <div className="att-hero-avatar">{initials || "A"}</div>
-
-          <div className="att-hero-hello">
-            <span>{getGreeting()}!</span>
-            <strong>{attendantName}</strong>
-          </div>
-
-          <span className="att-live-status">
-            <span className="att-live-pulse" />
-            Live
-          </span>
+      {/* ============ TOP BAR ============ */}
+      <header className="att-top">
+        <div className="att-brand">
+          <span>{getGreeting()}</span>
+          <strong>
+            {attendantName}
+            <i className="att-brand-dot" />
+          </strong>
         </div>
 
-        <div className="att-hero-label">
-          Today's sales
+        <div className="att-top-right">
           <button
             type="button"
-            className="att-eye"
+            className="att-pill att-icon-pill"
             onClick={() => setHideAmounts((value) => !value)}
             aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
           >
-            {hideAmounts ? <EyeOff size={15} /> : <Eye size={15} />}
+            {hideAmounts ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
-        </div>
 
-        <strong className="att-hero-value">{money(totals.sales)}</strong>
-
-        <div className="att-hero-sub">
-          <span>
-            <ReceiptText size={13} />
-            {totals.transactions} transaction
-            {totals.transactions === 1 ? "" : "s"}
-          </span>
-          <span>
-            <Clock3 size={13} />
+          <span className="att-pill att-date-pill">
+            <span className="att-live-pulse" />
             {new Date().toLocaleDateString("en-IN", {
               day: "2-digit",
               month: "short",
-              year: "numeric",
             })}
           </span>
+
+          <div className="att-avatar" aria-label="Signed in">
+            {initials || "A"}
+            <span className="att-online" />
+          </div>
         </div>
+      </header>
 
-        <div className="att-hero-actions">
-          <Link to="/attendant/new-transaction" className="att-hero-btn">
-            <Plus size={17} />
-            New transaction
-          </Link>
-
-          <Link to="/attendant/transactions" className="att-hero-btn">
-            <ReceiptText size={17} />
-            My transactions
-          </Link>
-        </div>
-      </section>
-
-      {/* QUICK ACTIONS */}
-      <section className="att-quick-wrap">
-        <h3 className="att-section-title">Quick Actions</h3>
-
-        <div className="att-quick">
-          {QUICK_ACTIONS.map(([label, to, Icon]) => (
-            <Link to={to} className="att-quick-tile" key={to}>
-              <Icon size={22} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ERROR */}
+      {/* ============ ERROR ============ */}
       {error && (
         <div className="att-alert error">
-          <div className="att-alert-icon">
-            !
-          </div>
+          <div className="att-alert-icon">!</div>
 
           <div>
-            <strong>
-              Unable to load transactions
-            </strong>
-
-            <span>
-              Check your Firebase connection
-              and Firestore permissions.
-            </span>
+            <strong>Unable to load transactions</strong>
+            <span>Check your Firebase connection and Firestore permissions.</span>
           </div>
         </div>
       )}
 
-      {/* MAIN GRID */}
-      <section className="att-main-grid">
-        {/* ACTIVITY */}
-        <div className="att-panel att-activity-panel">
-          <div className="att-panel-head">
-            <div>
-              <span className="att-panel-kicker">
-                TODAY
-              </span>
+      <div className="att-grid">
+        {/* ============ HERO ============ */}
+        <section className="att-card att-hero">
+          <div className="att-hero-head">
+            <span className="att-hero-label">{heroLabel}</span>
 
-              <h2>
-                Your activity
-              </h2>
+            <div className="att-toggle" role="tablist" aria-label="Range">
+              {["week", "month"].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  role="tab"
+                  aria-selected={range === item}
+                  className={range === item ? "active" : ""}
+                  onClick={() => setRange(item)}
+                >
+                  {item === "week" ? "Week" : "Month"}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <p>
-                Latest transactions from
-                your counter.
-              </p>
+          <div className="att-hero-value">
+            <span className="att-hero-cur">₹</span>
+            {hideAmounts ? "••••" : formatAmount(chart.total)}
+          </div>
+
+          <div className="att-hero-avg">
+            Daily average{" "}
+            <strong>
+              {hideAmounts ? "₹ ••••" : `₹${formatAmount(chart.dailyAverage)}`}
+            </strong>
+          </div>
+
+          {/* chart */}
+          <div className="att-chart">
+            <div className="att-chart-plot">
+              {chart.bars.map((bar, index) => (
+                <div className="att-bar-col" key={`${bar.label}-${index}`}>
+                  <div className="att-bar-track">
+                    <div
+                      className={`att-bar${bar.current ? " current" : ""}${
+                        bar.total <= 0 ? " empty" : ""
+                      }`}
+                      style={{ height: bar.total > 0 ? `${bar.height}%` : undefined }}
+                      title={hideAmounts ? "" : formatCurrency(bar.total)}
+                    >
+                      {bar.over > 0 && (
+                        <span
+                          className="att-bar-over"
+                          style={{ flexGrow: bar.over }}
+                        />
+                      )}
+                      {bar.base > 0 && (
+                        <span
+                          className="att-bar-base"
+                          style={{ flexGrow: bar.base }}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <span className={`att-bar-label${bar.current ? " current" : ""}`}>
+                    {bar.label}
+                  </span>
+                </div>
+              ))}
             </div>
 
-            <Link
-              to="/attendant/transactions"
-              className="att-text-link"
-            >
-              View all
+            <div className="att-chart-axis" aria-hidden="true">
+              <span>{hideAmounts ? "••" : formatCompact(chart.max)}</span>
+              <span>{hideAmounts ? "••" : formatCompact(chart.max / 2)}</span>
+              <span>0</span>
+            </div>
+          </div>
+
+          <div className="att-legend">
+            <span className="att-legend-swatch" />
+            Striped part is above your daily average
+            {range === "month" ? " (per week)" : ""}
+          </div>
+
+          <div className="att-stats">
+            <div>
+              <span>Today</span>
+              <strong className="pos">{money(totals.sales)}</strong>
+            </div>
+
+            <div>
+              <span>Profit</span>
+              <strong>{money(totals.profit)}</strong>
+            </div>
+
+            <div>
+              <span>Bills</span>
+              <strong>{totals.transactions}</strong>
+            </div>
+          </div>
+        </section>
+
+        {/* ============ QUICK ACTIONS ============ */}
+        <section className="att-quick">
+          {QUICK_ACTIONS.map(([label, to, Icon]) => (
+            <Link to={to} className="att-quick-tile" key={to}>
+              <span className="att-quick-icon">
+                <Icon size={19} />
+              </span>
+              <span>{label}</span>
+            </Link>
+          ))}
+        </section>
+
+        {/* ============ LATEST ============ */}
+        <section className="att-card att-latest">
+          <div className="att-latest-head">
+            <h2>Latest</h2>
+
+            <Link to="/attendant/transactions" className="att-text-link">
+              All transactions
               <ArrowUpRight size={14} />
             </Link>
           </div>
 
-          {/* SEARCH */}
           <div className="att-toolbar">
             <div className="att-search">
-              <Search size={17} />
+              <Search size={16} />
 
               <input
                 type="text"
                 value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
-                }
-                placeholder="Search invoice or service..."
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search invoice or service"
               />
 
               {search && (
                 <button
                   type="button"
                   className="att-search-clear"
-                  onClick={() =>
-                    setSearch("")
-                  }
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
                 >
                   ×
                 </button>
               )}
             </div>
 
-            <select
-              value={paymentFilter}
-              onChange={(event) =>
-                setPaymentFilter(
-                  event.target.value
-                )
-              }
-              className="att-filter"
-            >
-              <option value="all">
-                All payments
-              </option>
-              <option value="cash">
-                Cash
-              </option>
-              <option value="upi">
-                UPI
-              </option>
-              <option value="card">
-                Card
-              </option>
-            </select>
+            <div className="att-chips">
+              {PAYMENT_FILTERS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={paymentFilter === key ? "active" : ""}
+                  onClick={() => setPaymentFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* LOADING */}
+          <div className="att-day-row">
+            <span>Today</span>
+            <em>
+              {hideAmounts ? "₹ ••••" : formatCurrency(totals.sales)} collected
+            </em>
+          </div>
+
           {loading && (
             <div className="att-loading">
               <div className="att-spinner">
@@ -520,283 +628,144 @@ export default function AttendantDashboard() {
               </div>
 
               <div>
-                <strong>
-                  Loading activity
-                </strong>
-
-                <span>
-                  Syncing with Firebase...
-                </span>
+                <strong>Loading activity</strong>
+                <span>Syncing with Firebase...</span>
               </div>
             </div>
           )}
 
-          {/* EMPTY */}
-          {!loading &&
-            !error &&
-            filteredTransactions.length ===
-            0 && (
-              <div className="att-empty">
-                <div className="att-empty-icon">
-                  <ReceiptText size={24} />
-                </div>
-
-                <h3>
-                  {search ||
-                    paymentFilter !==
-                    "all"
-                    ? "No matching transactions"
-                    : "No transactions yet"}
-                </h3>
-
-                <p>
-                  {search ||
-                    paymentFilter !==
-                    "all"
-                    ? "Try changing your search or payment filter."
-                    : "Your completed bills will appear here automatically."}
-                </p>
-
-                {!search &&
-                  paymentFilter ===
-                  "all" && (
-                    <Link
-                      to="/attendant/new-transaction"
-                      className="att-empty-btn"
-                    >
-                      <Plus size={16} />
-                      Create first bill
-                    </Link>
-                  )}
+          {!loading && !error && filteredTransactions.length === 0 && (
+            <div className="att-empty">
+              <div className="att-empty-icon">
+                <ReceiptText size={22} />
               </div>
-            )}
 
-          {/* TRANSACTION LIST */}
-          {!loading &&
-            filteredTransactions.length >
-            0 && (
-              <div className="att-transaction-list">
-                {filteredTransactions
-                  .slice(0, 8)
-                  .map(
-                    (
-                      transaction
-                    ) => {
-                      const total =
-                        getTransactionTotal(
-                          transaction
-                        );
+              <h3>
+                {hasFilters ? "No matching transactions" : "No transactions yet"}
+              </h3>
 
-                      const payment =
-                        getPaymentLabel(
-                          transaction.paymentMethod
-                        );
+              <p>
+                {hasFilters
+                  ? "Try changing your search or payment filter."
+                  : "Your completed bills will appear here automatically."}
+              </p>
 
-                      const PaymentIcon =
-                        getPaymentIcon(
-                          payment
-                        );
-
-                      const invoice =
-                        transaction.invoiceNo ||
-                        transaction.invoiceNumber ||
-                        `#${String(
-                          transaction.id ||
-                          ""
-                        ).slice(
-                          0,
-                          8
-                        )}`;
-
-                      const serviceNames =
-                        Array.isArray(
-                          transaction.items
-                        )
-                          ? transaction.items
-                            .slice(
-                              0,
-                              2
-                            )
-                            .map(
-                              (
-                                item
-                              ) =>
-                                item.serviceName ||
-                                item.name ||
-                                "Service"
-                            )
-                            .join(
-                              ", "
-                            )
-                          : "Shop service";
-
-                      return (
-                        <div
-                          className="att-transaction-row"
-                          key={
-                            transaction.id
-                          }
-                        >
-                          <div className="att-tx-icon">
-                            <ReceiptText
-                              size={
-                                18
-                              }
-                            />
-                          </div>
-
-                          <div className="att-tx-main">
-                            <div className="att-tx-title">
-                              <strong>
-                                {
-                                  invoice
-                                }
-                              </strong>
-
-                              <span className="att-status">
-                                <CheckCircle2
-                                  size={
-                                    12
-                                  }
-                                />
-                                {getStatusLabel(
-                                  transaction.status
-                                )}
-                              </span>
-                            </div>
-
-                            <span className="att-tx-services">
-                              {
-                                serviceNames
-                              }
-                            </span>
-                          </div>
-
-                          <div className="att-tx-meta">
-                            <span className="att-tx-payment">
-                              <PaymentIcon size={13} />
-                              {payment}
-                            </span>
-
-                            <span className="att-tx-time">
-                              <Clock3 size={12} />
-                              {formatTime(transaction.createdAt)}
-                            </span>
-                          </div>
-
-                          <strong className="att-tx-amount">
-                            {formatCurrency(
-                              total
-                            )}
-                          </strong>
-
-                        </div>
-                      );
-                    }
-                  )}
-              </div>
-            )}
-
-          {!loading &&
-            filteredTransactions.length >
-            8 && (
-              <Link
-                to="/attendant/transactions"
-                className="att-view-more"
-              >
-                View all today's transactions
-                <ArrowUpRight
-                  size={15}
-                />
-              </Link>
-            )}
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div className="att-side-column">
-          {/* PAYMENT CARD */}
-          <div className="att-panel att-payment-panel">
-            <div className="att-panel-head compact">
-              <div>
-                <span className="att-panel-kicker">
-                  COLLECTION
-                </span>
-
-                <h2>
-                  Payment overview
-                </h2>
-              </div>
+              {!hasFilters && (
+                <Link to="/attendant/new-transaction" className="att-empty-btn">
+                  <Plus size={16} />
+                  Create first bill
+                </Link>
+              )}
             </div>
+          )}
 
-            <div className="att-payment-total">
-              <span>
-                Today's collection
-              </span>
+          {!loading && filteredTransactions.length > 0 && (
+            <div className="att-transaction-list">
+              {filteredTransactions.slice(0, 8).map((transaction) => {
+                const total = getTransactionTotal(transaction);
+                const payment = getPaymentLabel(transaction.paymentMethod);
+                const PaymentIcon = getPaymentIcon(payment);
+                const tone = getPaymentTone(payment);
+                const status = getStatusKey(transaction.status);
 
-              <strong>
-                {money(totals.sales)}
-              </strong>
-            </div>
+                const invoice =
+                  transaction.invoiceNo ||
+                  transaction.invoiceNumber ||
+                  `#${String(transaction.id || "").slice(0, 8)}`;
 
-            <div className="att-payment-bars">
-              {PAYMENT_ROWS.map(({ key, label }) => {
-                const percent =
-                  paymentTotal > 0
-                    ? Math.round((totals[key] / paymentTotal) * 100)
-                    : 0;
+                const serviceNames = Array.isArray(transaction.items)
+                  ? transaction.items
+                      .slice(0, 2)
+                      .map((item) => item.serviceName || item.name || "Service")
+                      .join(", ")
+                  : "Shop service";
 
                 return (
-                  <div className="att-payment-item" key={key}>
-                    <div className="att-payment-bar-row">
-                      <div className="att-payment-label">
-                        <span className={`att-payment-dot ${key}`} />
-                        {label}
-                        <em>{percent}%</em>
-                      </div>
-
-                      <strong>{money(totals[key])}</strong>
+                  <div className="att-transaction-row" key={transaction.id}>
+                    <div className={`att-tx-icon ${tone}`}>
+                      <PaymentIcon size={18} />
                     </div>
 
-                    <div className="att-bar">
-                      <span
-                        className={key}
-                        style={{ width: `${percent}%` }}
-                      />
+                    <div className="att-tx-main">
+                      <strong className="att-tx-name">
+                        {serviceNames || "Shop service"}
+                      </strong>
+
+                      <span className="att-tx-sub">
+                        {payment} · {invoice} · {formatTime(transaction.createdAt)}
+                      </span>
+                    </div>
+
+                    <div className="att-tx-right">
+                      <strong className={`att-tx-amount ${status}`}>
+                        {hideAmounts ? "₹ ••••" : `+${formatCurrency(total)}`}
+                      </strong>
+
+                      {status !== "completed" && (
+                        <span className={`att-tx-status ${status}`}>
+                          {status === "pending" ? "Pending" : "Cancelled"}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
+          )}
+
+          {!loading && filteredTransactions.length > 8 && (
+            <Link to="/attendant/transactions" className="att-view-more">
+              View all today's transactions
+              <ArrowUpRight size={15} />
+            </Link>
+          )}
+        </section>
+
+        {/* ============ PAYMENT OVERVIEW ============ */}
+        <section className="att-card att-payment">
+          <div className="att-payment-head">
+            <h2>Payment overview</h2>
+            <span>Today</span>
           </div>
 
-          {/* ATTENDANT PROFILE */}
-          <div className="att-profile-card">
-            <div className="att-profile-avatar">
-              {initials || "A"}
-            </div>
+          <div className="att-payment-total">{money(totals.sales)}</div>
 
-            <div className="att-profile-info">
-              <span>
-                SIGNED IN AS
-              </span>
-
-              <strong>
-                {attendantName}
-              </strong>
-
-              <small>
-                {profile?.role ||
-                  "attendant"}
-              </small>
-            </div>
-
-            <div className="att-profile-online">
-              <span />
-              Online
-            </div>
+          <div className="att-payment-split" aria-hidden="true">
+            {PAYMENT_ROWS.map(({ key }) => (
+              <span
+                key={key}
+                className={key}
+                style={{
+                  width:
+                    paymentTotal > 0
+                      ? `${(totals[key] / paymentTotal) * 100}%`
+                      : "0%",
+                }}
+              />
+            ))}
           </div>
-        </div>
-      </section>
+
+          <div className="att-payment-items">
+            {PAYMENT_ROWS.map(({ key, label }) => {
+              const percent =
+                paymentTotal > 0
+                  ? Math.round((totals[key] / paymentTotal) * 100)
+                  : 0;
+
+              return (
+                <div className="att-payment-item" key={key}>
+                  <span className={`att-payment-dot ${key}`} />
+                  <span className="att-payment-name">
+                    {label}
+                    <em>{percent}%</em>
+                  </span>
+                  <strong>{money(totals[key])}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
 
       {/* FLOATING CALCULATOR */}
       <FloatingCalculator />

@@ -109,3 +109,45 @@
             border-color 0.25s ease, box-shadow 0.25s ease;
     }
 }
+
+
+/* =========================================================
+   ATTENDANT MODE (light) - soft pastel "unfold" tokens
+   Applied when AdminLayout adds .attendant-mode to the shell.
+   Dark theme keeps the black & gold tokens above.
+   ========================================================= */
+
+:root:not([data-theme="dark"]) .app-shell.attendant-mode {
+    --bg: #e6e2ec;
+    --shell-bg: #e6e2ec;
+    --surface: rgba(255, 255, 255, 0.66);
+    --surface-glass: rgba(255, 255, 255, 0.58);
+    --surface-hover: rgba(17, 17, 17, 0.05);
+
+    --text: #111111;
+    --text-soft: #5d5b66;
+    --muted: #9a98a4;
+    --icon: #8d8a98;
+
+    --border: rgba(17, 17, 17, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.82);
+
+    --accent: #111111;
+    --accent-strong: #000000;
+    --accent-soft: rgba(17, 17, 17, 0.07);
+    --accent-border: rgba(17, 17, 17, 0.12);
+    --accent-on: #ffffff;
+    --accent-grad: linear-gradient(145deg, #2b2b30, #111111);
+    --accent-glow: rgba(17, 17, 17, 0.22);
+
+    --main-shadow: 0 18px 40px rgba(110, 90, 160, 0.10);
+    --sidebar-shadow: 0 18px 40px rgba(110, 90, 160, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+    --blob-1: rgba(186, 168, 240, 0.45);
+    --blob-2: rgba(247, 170, 130, 0.35);
+    --page-wash: none;
+
+    --scroll-thumb: #cfc9d8;
+    --scroll-thumb-hover: #b3acc0;
+}
