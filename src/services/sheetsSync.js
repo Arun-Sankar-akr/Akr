@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { useAuth } from "../context/AuthContext";
 
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxvzHYXITUbcYrhP4VptK9D5A8sll-aHURxfJBKYd8JdS0Q96a87AXqKIyx2YnNPhtyuA/exec"
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw5BJ2X4HcPo5de_iEQLpJmeQ-ljqAQSP69r8jGRwETDZMaRI-dFELNT-9NVAUijbYkrw/exec"
 const SECRET = "akr@2025";
 
 export const SYNCED_COLLECTIONS = [

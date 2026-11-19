@@ -29,8 +29,9 @@
     }
 
     .main {
-        position: absolute;
-        left: 3%;
+        position: relative;
+        left: auto;
+        margin: 0 auto;
         width: 94%
     }
 
